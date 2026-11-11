@@ -25,6 +25,7 @@ output/
 *.bak
 _scratch/
 .practical_test/
+tools/harness-workbench/data/
 
 # 本地私有数据（绝不入库）
 # 说明：竞赛论文全文、写作引用库、决策日志属于本地私有资产，不进仓库

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>数模工作台</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/details.css">
+  <link rel="stylesheet" href="/theme.css">
+  <script src="/ranking.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sidebar-top"><div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path fill="#DB8A54" d="M20 2 36 10 20 18 4 10Z"/><path fill="#A94B1C" d="M4 10 20 18v19L4 28Z"/><path fill="#6C3420" d="M20 18 36 10v18L20 37Z"/><path fill="#FFF4E8" d="m20 7 9 4.5-9 4.5-9-4.5Z"/></svg></span><div><strong>数模工作台</strong></div></div><button type="button" class="mobile-nav-toggle" id="nav-toggle" aria-label="展开导航" aria-expanded="false" aria-controls="nav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>
+      <p class="nav-label">工作空间</p>
+      <nav id="nav" aria-label="主要导航"></nav>
+      <div class="sidebar-footer"><span class="live-dot"></span> 本地工作台 </div>
+    </aside>
+    <main class="main">
+      <div class="page">
+        <div class="heading"><div><h1 id="page-title">比赛总览</h1><p id="page-subtitle">让比赛进度、角色和成果一目了然。</p></div><div class="project-tools"><div class="project-search-wrap"><svg class="project-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg><input id="project-search" type="search" autocomplete="off" placeholder="搜索项目" aria-label="搜索项目" aria-expanded="false" aria-controls="project-search-panel"><div id="project-search-panel" class="project-search-panel" hidden><div class="project-search-caption">已有项目</div><div id="project-candidates" aria-live="polite"></div><p id="project-search-error" class="error" role="alert" hidden></p></div></div><button type="button" class="project-add" id="add-project" aria-label="添加已有项目" title="添加已有项目"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><button type="button" class="icon-button" id="refresh" title="刷新项目" aria-label="刷新项目">↻</button><span class="sync-status sr-only" id="sync-status" role="status" aria-live="polite">等待同步</span></div></div>
+        <div id="error" class="error" hidden></div>
+        <div id="content"><div class="loading">正在读取项目记录…</div></div>
+      </div>
+    </main>
+  </div>
+  <dialog id="project-dialog"><form id="project-form"><div class="dialog-head"><div><h2>添加已有项目</h2></div><button type="button" class="icon-button" data-close="project-dialog" aria-label="关闭添加项目">×</button></div><p>输入已有 Harness 项目的文件夹路径。</p><p id="project-error" class="error" role="alert" hidden></p><label>项目目录<input id="project-path" autocomplete="off" placeholder="C:\Users\...\比赛项目"></label><p class="hint">添加的目录保存在当前浏览器；比赛文件保持只读。</p><div class="dialog-actions"><button type="button" class="button secondary" data-close="project-dialog">取消</button><button class="button primary">添加并打开</button></div></form></dialog>
+  <dialog id="role-dialog"><form id="role-form"><div class="dialog-head"><div><h2>登记角色会话</h2></div><button type="button" class="icon-button" data-close="role-dialog">×</button></div><p>填写用户可访问的真实 Codex 会话 ID。角色实例 ID 不一定是会话 ID。</p><label>角色名称<input id="role-name" required maxlength="80" placeholder="例如：解题"></label><label>Codex 会话 ID<input id="thread-id" required placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></label><p class="hint">更新时保留旧会话登记。保存后可尝试打开，工作台不会自动验证会话是否可访问。</p><div class="dialog-actions"><button type="button" class="button secondary" data-close="role-dialog">取消</button><button class="button primary">保存登记</button></div></form></dialog>
+  <dialog id="node-dialog" class="node-dialog" aria-labelledby="node-title"><div class="dialog-head"><div><h2 id="node-title">阶段详情</h2></div><button type="button" class="icon-button" data-close="node-dialog" aria-label="关闭阶段详情">×</button></div><div id="node-body"></div></dialog>
+  <dialog id="file-dialog" class="file-dialog"><div class="dialog-head"><div><h2 id="file-title">文件预览</h2></div><button type="button" class="icon-button" data-close="file-dialog">×</button></div><div id="file-body"></div></dialog>
+</body>
+</html>

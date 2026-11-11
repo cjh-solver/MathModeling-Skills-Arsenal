@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-12 — local Harness workbench
+
+- Add a Chinese local viewer for existing Harness projects, with per-tab project selection, automatic read-only refresh and document previews.
+- Document setup, contest use, privacy boundaries and verification; the workbench does not replace human approval or run contest tasks.
+- Update repository links to the current GitHub account.
+
 ## 2026-10-31 — workflow and documentation update
 
 - Sync the recent scoped MathorCup evidence, reproduction, role-registration and writing improvements across six skills.
