@@ -610,7 +610,7 @@ class Handler(BaseHTTPRequestHandler):
                             continue
                     if rows is None:
                         raise ValueError("无法识别 CSV 编码")
-                    return self.respond(200, {"type": "csv", "rows": rows, "note": f"最多显示前 30 行、20 列；读取编码：{encoding}。"})
+                    return self.respond(200, {"type": "csv", "rows": rows, "note": f"最多显示前 30 行、20 列，每个单元格最多显示 5000 字符；读取编码：{encoding}。"})
                 if target.suffix.lower() == ".docx":
                     if docx is None:
                         raise ValueError("缺少 python-docx，无法预览 Word 文件")
@@ -621,7 +621,7 @@ class Handler(BaseHTTPRequestHandler):
                         raise ValueError("文档内容格式错误，无法预览") from error
                     paragraphs = [p.text[:5000] for p in document.paragraphs[:300]]
                     tables = [[[cell.text[:5000] for cell in row.cells[:20]] for row in table.rows[:30]] for table in document.tables[:10]]
-                    return self.respond(200, {"type": "docx", "paragraphs": paragraphs, "tables": tables, "note": "只显示前 300 段及前 10 个表格，图片、公式和原排版可能无法完整呈现。"})
+                    return self.respond(200, {"type": "docx", "paragraphs": paragraphs, "tables": tables, "note": "最多显示前 300 段及前 10 个表格，每表前 30 行、20 列，每段或单元格最多 5000 字符；图片、公式和原排版可能无法完整呈现。"})
                 if target.suffix.lower() == ".xlsx":
                     if openpyxl is None:
                         raise ValueError("缺少 openpyxl，无法预览 Excel 文件")
@@ -636,7 +636,7 @@ class Handler(BaseHTTPRequestHandler):
                             raise ValueError("未找到指定工作表")
                         sheet = workbook[sheet_name]
                         rows = [[str(value)[:5000] if value is not None else "" for value in row] for row in sheet.iter_rows(max_row=30, max_col=min(sheet.max_column or 1, 20), values_only=True)]
-                        return self.respond(200, {"type": "xlsx", "sheets": workbook.sheetnames, "sheet": sheet_name, "rows": rows, "note": "最多显示前 30 行、20 列；公式以原文显示，不重新计算。"})
+                        return self.respond(200, {"type": "xlsx", "sheets": workbook.sheetnames, "sheet": sheet_name, "rows": rows, "note": "最多显示前 30 行、20 列，每个单元格最多显示 5000 字符；公式以原文显示，不重新计算。"})
                     except SyntaxError as error:
                         raise ValueError("文档内容格式错误，无法预览") from error
                     finally:
