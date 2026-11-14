@@ -19,6 +19,10 @@ from urllib.parse import parse_qs, urlsplit
 
 import yaml
 
+# CSV previews already reject files larger than 20 MB; allow individual fields
+# up to the same bound so long fields can be safely truncated for display.
+csv.field_size_limit(20 * 1024 * 1024)
+
 try:
     import pymupdf as fitz
 except ImportError:

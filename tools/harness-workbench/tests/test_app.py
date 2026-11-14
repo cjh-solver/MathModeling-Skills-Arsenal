@@ -393,7 +393,7 @@ nodes:
         (self.project / 'sample.csv').write_text('name,value\n"a,b",3\n', encoding='utf-8')
         with urllib.request.urlopen(base + '/api/document?path=sample.csv') as response:
             self.assertEqual(json.load(response)['rows'][1], ['a,b', '3'])
-        (self.project / 'long.csv').write_text('x' * 5001, encoding='utf-8')
+        (self.project / 'long.csv').write_text('x' * 150000, encoding='utf-8')
         with urllib.request.urlopen(base + '/api/document?path=long.csv') as response:
             preview = json.load(response)
             self.assertEqual(len(preview['rows'][0][0]), 5000)
