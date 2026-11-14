@@ -151,6 +151,7 @@ test('a project can be opened when persistent browser storage is unavailable', a
   const context = {
     $: selector => ({ ...errors, '#project-dialog': dialog, '#project-search': search })[selector],
     post: async () => {}, savedProjects: () => [], projectStorageKey: 'projects',
+    selectedProjectInMemory: null,
     localStorage: { setItem() { throw new Error('storage unavailable'); } },
     sessionStorage: { setItem(_key, value) { selected = value; } },
     closeProjectSearch() {}, refresh: async () => { refreshed = true; },
@@ -160,6 +161,32 @@ test('a project can be opened when persistent browser storage is unavailable', a
   await context.switchProject('C:\\Contest', true);
   assert.equal(selected, 'C:\\Contest');
   assert.equal(refreshed, true);
-  assert.match(warning, /无法保存项目路径/);
+  assert.match(warning, /无法保存项目选择/);
   assert.equal(errors['#project-error'].hidden, true);
+});
+
+test('blocked session storage keeps the current project in memory', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const helperStart = source.indexOf('function selectedProjectPath()');
+  const helperEnd = source.indexOf('\nconst $ =', helperStart);
+  const switchStart = source.indexOf('async function switchProject(');
+  const switchEnd = source.indexOf('\nfunction closeProjectSearch(', switchStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart && switchStart >= 0 && switchEnd > switchStart);
+  const error = {}, dialog = { open: false }, search = {};
+  let loadedProject, warning = '';
+  const context = {
+    selectedProjectInMemory: null,
+    $: selector => ({ '#project-error': error, '#project-dialog': dialog, '#project-search': search })[selector],
+    post: async () => {}, savedProjects: () => [], projectStorageKey: 'projects',
+    localStorage: { setItem() {} },
+    sessionStorage: { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } },
+    closeProjectSearch() {}, refresh: async () => { loadedProject = context.selectedProjectPath(); },
+    alert: message => { warning = message; },
+  };
+  vm.runInNewContext(source.slice(helperStart, helperEnd) + source.slice(switchStart, switchEnd), context);
+  assert.equal(context.selectedProjectPath(), null);
+  await context.switchProject('C:\\Contest', true);
+  assert.equal(loadedProject, 'C:\\Contest');
+  assert.match(warning, /刷新页面后可能需要重新选择/);
+  assert.equal(error.hidden, true);
 });

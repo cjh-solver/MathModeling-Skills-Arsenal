@@ -52,6 +52,12 @@ let syncSnapshot = '';
 let syncCandidate = '';
 let syncGeneration = 0;
 let syncBusy = false;
+let selectedProjectInMemory = null;
+function selectedProjectPath() {
+  if (selectedProjectInMemory !== null) return selectedProjectInMemory;
+  try { return sessionStorage.getItem('harness-workbench-project'); }
+  catch { return null; }
+}
 const $ = (selector) => document.querySelector(selector);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const display = (value) => value === null || value === undefined || value === '' ? '未登记' : typeof value === 'object' ? JSON.stringify(value) : String(value);
@@ -483,7 +489,7 @@ function render() {
 async function refresh() {
   const generation = ++syncGeneration;
   try {
-    const selected = sessionStorage.getItem('harness-workbench-project');
+    const selected = selectedProjectPath();
     const response = await fetch(`/api/state${selected ? `?project=${encodeURIComponent(selected)}` : ''}`);
     const result = await response.json();
     if (!response.ok) throw new Error(result.error);
@@ -787,6 +793,7 @@ async function switchProject(path, remember) {
   const error = $(remember ? '#project-error' : '#project-search-error');
   error.hidden = true;
   let saveFailed = false;
+  let sessionSaveFailed = false;
   try {
     if (!path.trim()) throw new Error('请填写已有项目目录');
     await post('/api/project', { path: path.trim() });
@@ -796,12 +803,14 @@ async function switchProject(path, remember) {
       try { localStorage.setItem(projectStorageKey, JSON.stringify(saved)); }
       catch { saveFailed = true; }
     }
-    sessionStorage.setItem('harness-workbench-project', path.trim());
+    selectedProjectInMemory = path.trim();
+    try { sessionStorage.setItem('harness-workbench-project', selectedProjectInMemory); }
+    catch { sessionSaveFailed = true; }
     if ($('#project-dialog').open) $('#project-dialog').close();
     closeProjectSearch();
     $('#project-search').value = '';
     await refresh();
-    if (saveFailed) alert('浏览器无法保存项目路径，下次可能需要重新添加。');
+    if (saveFailed || sessionSaveFailed) alert('浏览器无法保存项目选择；刷新页面后可能需要重新选择或添加。');
   } catch (err) { error.textContent = err.message; error.hidden = false; }
 }
 function closeProjectSearch() { $('#project-search-panel').hidden = true; $('#project-search').setAttribute('aria-expanded', 'false'); }
