@@ -674,7 +674,15 @@ async function openFile(path) {
     try {
       const response = await fetch(url);
       if (!response.ok) throw new Error('文件不存在或无法读取');
-      pre.textContent = await response.text();
+      const text = await response.text();
+      pre.textContent = text.length > 40000 ? `${text.slice(0, 40000)}\n\n（预览已截断）` : text;
+      if (text.length > 40000) {
+        const expand = document.createElement('button');
+        expand.className = 'row-action';
+        expand.textContent = '展开完整内容';
+        expand.addEventListener('click', () => { pre.textContent = text; expand.remove(); }, { once: true });
+        pre.after(expand);
+      }
     } catch (error) {
       pre.textContent = `文件预览不可用：${error.message}`;
     }

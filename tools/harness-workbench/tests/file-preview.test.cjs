@@ -14,7 +14,7 @@ function createPreview(fetch) {
   const title = {};
   const context = {
     $: selector => ({ '#file-dialog': dialog, '#file-title': title, '#file-body': body })[selector],
-    document: { createElement: () => ({ textContent: '' }) },
+    document: { createElement: () => ({ textContent: '', addEventListener(type, callback) { this[type] = callback; }, remove() { this.removed = true; }, after(item) { const index = body.children.indexOf(this); if (index >= 0) body.children.splice(index + 1, 0, item); } }) },
     fileUrl: value => value,
     fetch,
     resultPreferences: () => ({ views: {} }),
@@ -38,6 +38,30 @@ test('text preview shows successfully loaded content', async () => {
   const { context, body } = createPreview(async () => ({ ok: true, text: async () => '已有内容' }));
   await context.openFile('paper.md');
   assert.equal(body.children[0].textContent, '已有内容');
+});
+
+test('long text preview starts bounded and can be expanded', async () => {
+  const text = 'x'.repeat(40001);
+  const { context, body } = createPreview(async () => ({ ok: true, text: async () => text }));
+  await context.openFile('long.md');
+  assert.match(body.children[0].textContent, /预览已截断/);
+  assert.equal(body.children[1].textContent, '展开完整内容');
+  body.children[1].click();
+  assert.equal(body.children[0].textContent, text);
+  assert.equal(body.children[1].removed, true);
+});
+
+test('a delayed long text preview does not change a newer preview', async () => {
+  let finish;
+  const pending = new Promise(resolve => { finish = resolve; });
+  const { context, body } = createPreview(() => pending);
+  const older = context.openFile('old.md');
+  context.fetch = async () => ({ ok: true, text: async () => 'new content' });
+  await context.openFile('new.md');
+  finish({ ok: true, text: async () => 'x'.repeat(40001) });
+  await older;
+  assert.equal(body.children.length, 1);
+  assert.equal(body.children[0].textContent, 'new content');
 });
 
 test('view history stays with the original project while a file is loading', async () => {
