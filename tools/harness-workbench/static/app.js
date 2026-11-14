@@ -209,7 +209,7 @@ function openNode(id) {
 function gateNeedsReview(node) {
   const approval = [...state.approvals].reverse().find(item => item.gate === node.id);
   if (approval?.digests?.status === 'issues') return true;
-  return node.status === 'approved' && /^H[2-9]$/.test(node.id) && (!approval || approval.decision !== 'approved' || approval.digests?.status !== 'matches');
+  return ['approved', 'frozen'].includes(node.status) && /^H[2-9]$/.test(node.id) && (Boolean(state.approval_error) || !approval || approval.decision !== 'approved' || approval.digests?.status !== 'matches');
 }
 
 function projectCard() {
@@ -295,7 +295,7 @@ function chapterRows() {
     const decision = approval ? `批准记录：${approval.decision || '未记录'}${approval.digests?.status === 'issues' ? '（文件变化或待核）' : ''}` : '未找到章节批准记录';
     const visual = c.visuals_required === false ? '记录为不需要图表' : c.visuals_required === true ? '记录为需要图表' : '图表需求未记录';
     const draftCovered = c.draft && approval?.digests?.files?.some(file => file.path === c.draft && file.status === 'matches');
-    const transferReady = approval?.decision === 'approved' && approval?.digests?.status === 'matches' && draftCovered && c.draft_hash === 'matches';
+    const transferReady = !state.approval_error && approval?.decision === 'approved' && approval?.digests?.status === 'matches' && draftCovered && c.draft_hash === 'matches';
     return `<div class="row">${fileIcon(c.draft)}<div class="row-main"><div class="row-title">${esc(c.id)}</div><div class="row-meta">正文：${esc(c.draft || '未登记')} · ${esc(decision)}<br>${visual} · 提示词版本：${c.prompt_revisions}</div>${c.prompts?.length ? `<details class="history"><summary>查看图表提示词版本</summary>${c.prompts.map((p, index) => { const ready = transferReady && index === c.prompts.length - 1 && p.hash === 'matches' && p.visual_plan_hash === 'matches'; return `<div>${esc(p.revision || '版本未登记')} · ${esc(p.path || '文件未登记')} ${p.path ? fileLink(p.path, '查看') : ''}${ready ? `<button class="row-action" data-copy-file="${esc(p.path)}">复制供手动转交</button>` : '<span> · 非最新版本或批准、提示词、视觉计划的哈希待核</span>'}</div>`; }).join('')}</details>` : ''}</div>${c.draft ? fileLink(c.draft) : ''}</div>`;
   }).join('');
 }

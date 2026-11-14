@@ -36,3 +36,26 @@ test('overview and workflow surface stale and evidence-gap nodes', () => {
   context.current = 'flow';
   assert.match(context.tracker(), /data-node="H6" aria-pressed="true"/);
 });
+
+test('frozen gates and chapter transfers remain conservative when approval records are invalid', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const gateStart = source.indexOf('function gateNeedsReview(');
+  const gateEnd = source.indexOf('\nfunction projectCard(', gateStart);
+  const chapterStart = source.indexOf('function chapterRows(');
+  const chapterEnd = source.indexOf('\nfunction writingPlan(', chapterStart);
+  assert.ok(gateStart >= 0 && gateEnd > gateStart && chapterStart >= 0 && chapterEnd > chapterStart);
+  const state = { approvals: [], approval_error: null, chapters: [] };
+  const context = { state, fileIcon: () => '', fileLink: () => '', esc: String, empty: String };
+  vm.runInNewContext(source.slice(gateStart, gateEnd) + source.slice(chapterStart, chapterEnd), context);
+  const node = { id: 'H6', status: 'frozen' };
+  assert.equal(context.gateNeedsReview(node), true);
+  state.approvals = [{ gate: 'H6', decision: 'approved', digests: { status: 'matches' } }];
+  assert.equal(context.gateNeedsReview(node), false);
+  state.approval_error = '批准记录包含格式错误的条目';
+  assert.equal(context.gateNeedsReview(node), true);
+  state.chapters = [{ id: 'Q1', draft: 'q1.tex', draft_hash: 'matches', prompts: [{ path: 'prompt.md', hash: 'matches', visual_plan_hash: 'matches' }] }];
+  state.approvals.push({ gate: 'H7_CHAPTER:Q1', decision: 'approved', digests: { status: 'matches', files: [{ path: 'q1.tex', status: 'matches' }] } });
+  assert.doesNotMatch(context.chapterRows(), /data-copy-file/);
+  state.approval_error = null;
+  assert.match(context.chapterRows(), /data-copy-file/);
+});

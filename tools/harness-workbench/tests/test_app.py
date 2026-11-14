@@ -424,6 +424,18 @@ nodes:
         (self.project / 'result.txt').write_text('changed', encoding='utf-8')
         self.assertEqual(app.digest_status(self.project, {'result.txt': expected})['files'][0]['status'], 'changed')
 
+    def test_invalid_approval_entries_are_reported_without_discarding_valid_ones(self):
+        self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
+        log = self.project / '.contest' / 'approval_log.yaml'
+        log.write_text('approvals: invalid\n', encoding='utf-8')
+        result = app.build_state(self.project, self.links)
+        self.assertEqual(result['approval_error'], '批准记录列表格式错误')
+        self.assertEqual(result['approvals'], [])
+        log.write_text('approvals:\n  - gate: H6\n    decision: approved\n  - invalid\n', encoding='utf-8')
+        result = app.build_state(self.project, self.links)
+        self.assertEqual(result['approval_error'], '批准记录包含格式错误的条目')
+        self.assertEqual(result['approvals'][0]['gate'], 'H6')
+
     def test_existing_report_is_displayed_as_recorded_not_recomputed(self):
         report = self.project / 'report.json'
         report.write_text(json.dumps({'passed': False, 'issues': ['build failed']}), encoding='utf-8')

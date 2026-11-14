@@ -443,6 +443,9 @@ def build_state(project, links_path=LINKS_PATH):
     approvals_list = approvals.get("approvals", [])
     if not isinstance(approvals_list, list):
         approvals_list = []
+        approval_error = approval_error or "批准记录列表格式错误"
+    elif any(not isinstance(item, dict) for item in approvals_list):
+        approval_error = approval_error or "批准记录包含格式错误的条目"
     scope = control.get("problem_scope") if isinstance(control.get("problem_scope"), dict) else {}
     subproblems = scope.get("subproblems", [])
     h7 = nodes.get("H7") if isinstance(nodes.get("H7"), dict) else {}
