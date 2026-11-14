@@ -637,6 +637,8 @@ class Handler(BaseHTTPRequestHandler):
                         sheet = workbook[sheet_name]
                         rows = [[str(value)[:5000] if value is not None else "" for value in row] for row in sheet.iter_rows(max_row=30, max_col=min(sheet.max_column or 1, 20), values_only=True)]
                         return self.respond(200, {"type": "xlsx", "sheets": workbook.sheetnames, "sheet": sheet_name, "rows": rows, "note": "最多显示前 30 行、20 列；公式以原文显示，不重新计算。"})
+                    except SyntaxError as error:
+                        raise ValueError("文档内容格式错误，无法预览") from error
                     finally:
                         workbook.close()
                 raise ValueError("不支持此文档类型")

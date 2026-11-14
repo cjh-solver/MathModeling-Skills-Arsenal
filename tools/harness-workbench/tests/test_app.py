@@ -367,6 +367,15 @@ nodes:
             workbook.active['A1'] = '=1+1'
             workbook.save(self.project / 'sample.xlsx')
             workbook.close()
+            with zipfile.ZipFile(self.project / 'sample.xlsx') as source, zipfile.ZipFile(self.project / 'broken-sheet.xlsx', 'w') as target:
+                for entry in source.infolist():
+                    content = source.read(entry.filename)
+                    if entry.filename == 'xl/worksheets/sheet1.xml':
+                        content = b'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:A1"/><sheetData><row><broken'
+                    target.writestr(entry, content)
+            with self.assertRaises(urllib.error.HTTPError) as error:
+                urllib.request.urlopen(base + '/api/document?path=broken-sheet.xlsx')
+            self.assertEqual(error.exception.code, 400)
             with urllib.request.urlopen(base + '/api/document?path=sample.xlsx') as response:
                 self.assertEqual(json.load(response)['rows'][0][0], '=1+1')
         if app.docx is not None:
