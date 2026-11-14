@@ -138,3 +138,28 @@ test('file search explains when there are no matches and clears the message', ()
   assert.equal(items[0].hidden, false);
   assert.equal(message.hidden, true);
 });
+
+test('a project can be opened when persistent browser storage is unavailable', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('async function switchProject(');
+  const end = source.indexOf('\nfunction closeProjectSearch(', start);
+  assert.ok(start >= 0 && end > start);
+  const errors = { '#project-error': {}, '#project-search-error': {} };
+  const dialog = { open: false };
+  const search = { value: 'query' };
+  let selected, refreshed = false, warning = '';
+  const context = {
+    $: selector => ({ ...errors, '#project-dialog': dialog, '#project-search': search })[selector],
+    post: async () => {}, savedProjects: () => [], projectStorageKey: 'projects',
+    localStorage: { setItem() { throw new Error('storage unavailable'); } },
+    sessionStorage: { setItem(_key, value) { selected = value; } },
+    closeProjectSearch() {}, refresh: async () => { refreshed = true; },
+    alert: message => { warning = message; },
+  };
+  vm.runInNewContext(source.slice(start, end), context);
+  await context.switchProject('C:\\Contest', true);
+  assert.equal(selected, 'C:\\Contest');
+  assert.equal(refreshed, true);
+  assert.match(warning, /无法保存项目路径/);
+  assert.equal(errors['#project-error'].hidden, true);
+});

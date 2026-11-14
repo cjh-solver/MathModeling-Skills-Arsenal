@@ -786,19 +786,22 @@ function showProjects() {
 async function switchProject(path, remember) {
   const error = $(remember ? '#project-error' : '#project-search-error');
   error.hidden = true;
+  let saveFailed = false;
   try {
     if (!path.trim()) throw new Error('请填写已有项目目录');
     await post('/api/project', { path: path.trim() });
     if (remember) {
       const saved = savedProjects().filter(p => p.path.toLowerCase().replace(/[\\/]+$/, '') !== path.trim().toLowerCase().replace(/[\\/]+$/, ''));
       saved.push({ name: path.trim().replace(/[\\/]+$/, '').split(/[\\/]/).pop(), path: path.trim() });
-      localStorage.setItem(projectStorageKey, JSON.stringify(saved));
+      try { localStorage.setItem(projectStorageKey, JSON.stringify(saved)); }
+      catch { saveFailed = true; }
     }
     sessionStorage.setItem('harness-workbench-project', path.trim());
     if ($('#project-dialog').open) $('#project-dialog').close();
     closeProjectSearch();
     $('#project-search').value = '';
     await refresh();
+    if (saveFailed) alert('浏览器无法保存项目路径，下次可能需要重新添加。');
   } catch (err) { error.textContent = err.message; error.hidden = false; }
 }
 function closeProjectSearch() { $('#project-search-panel').hidden = true; $('#project-search').setAttribute('aria-expanded', 'false'); }
