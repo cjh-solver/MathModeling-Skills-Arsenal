@@ -66,6 +66,16 @@ def read_yaml(path):
         return {}, str(error)
 
 
+def recorded_timestamp(value):
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return parsed.isoformat() if parsed.tzinfo is not None else None
+    except (ValueError, OverflowError):
+        return None
+
+
 def ref_path(value):
     if isinstance(value, str):
         return value
@@ -480,15 +490,26 @@ def build_state(project, links_path=LINKS_PATH):
                 plan = revision.get("visual_plan") if isinstance(revision.get("visual_plan"), dict) else {}
                 plan_path = plan.get("path")
                 plan_hash = digest_status(project, {plan_path: plan.get("sha256")}) if isinstance(plan_path, str) else {"status": "unrecorded"}
+                visual_plan, visual_error = read_project_yaml(project, plan_path)
+                revision_id = revision.get("revision_id")
+                slots = visual_plan.get("slots")
+                chapter_id = item.get("chapter_id")
+                plan_binding = not visual_error and isinstance(chapter_id, str) and bool(chapter_id.strip()) and isinstance(revision_id, str) and bool(revision_id.strip()) and (
+                    visual_plan.get("chapter_id") == item.get("chapter_id") and
+                    visual_plan.get("revision_id") == revision_id and
+                    visual_plan.get("draft") == draft and isinstance(slots, list) and bool(slots)
+                )
                 prompts.append({"revision": revision.get("revision_id"), "path": prompt_path,
                                 "hash": prompt_hash["status"], "sha256": ref.get("sha256"), "visual_plan_path": plan_path,
-                                "visual_plan_hash": plan_hash["status"], "supersedes": revision.get("supersedes")})
+                                "visual_plan_hash": plan_hash["status"], "plan_binding": plan_binding,
+                                "prepared_at": recorded_timestamp(revision.get("prepared_at")), "supersedes": revision.get("supersedes")})
             draft_path = draft.get("path")
             draft_hash = digest_status(project, {draft_path: draft.get("sha256")}) if isinstance(draft_path, str) else {"status": "unrecorded"}
             quality = item.get("quality_review") if isinstance(item.get("quality_review"), dict) else {}
             quality_path = quality.get("path")
             quality_hash = digest_status(project, {quality_path: quality.get("sha256")}) if isinstance(quality_path, str) else {"status": "unrecorded"}
             chapters.append({"id": str(item.get("chapter_id") or "未命名章节"), "draft": draft_path, "draft_hash": draft_hash["status"],
+                             "draft_completed_at": recorded_timestamp(item.get("draft_completed_at")),
                              "quality_review": quality_path, "quality_hash": quality_hash["status"],
                              "review_packet": ref_path(item.get("review_packet")), "visuals_required": item.get("visuals_required"),
                              "prompt_revisions": len(prompts), "prompts": prompts})
@@ -555,7 +576,7 @@ def build_state(project, links_path=LINKS_PATH):
         "skills": skills, "capabilities": {"pdf_preview": fitz is not None, "docx_preview": docx is not None, "xlsx_preview": openpyxl is not None},
         "approvals": [
             {"gate": a.get("gate"), "decision": a.get("decision"),
-             "timestamp": a.get("timestamp") if isinstance(a.get("timestamp"), str) else None,
+             "timestamp": recorded_timestamp(a.get("timestamp")),
              "digests": digest_status(project, a.get("artifact_digests"))}
             for a in approvals_list if isinstance(a, dict)
         ],

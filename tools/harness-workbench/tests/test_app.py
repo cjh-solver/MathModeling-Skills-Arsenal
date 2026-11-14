@@ -242,6 +242,12 @@ dispatch_records:
         ], [], [], None, 'figures.yaml')
         self.assertEqual(result['materials'], [])
 
+    def test_recorded_timestamp_requires_valid_timezone(self):
+        self.assertEqual(app.recorded_timestamp('2026-11-14T13:00:00Z'), '2026-11-14T13:00:00+00:00')
+        self.assertIsNone(app.recorded_timestamp('2026-11-14T13:00:00'))
+        self.assertIsNone(app.recorded_timestamp('2026-02-30T13:00:00Z'))
+        self.assertIsNone(app.recorded_timestamp(None))
+
     def test_chapter_parallel_plan_and_prompt_follow_documented_schema(self):
         plan = self.project / 'plan.yaml'
         draft = self.project / 'q1.tex'
@@ -252,11 +258,11 @@ dispatch_records:
         plan.write_text('writing_order: [Q1, abstract]\nchapter_order: [abstract, Q1]\ncentral_thesis: Example', encoding='utf-8')
         draft.write_text('Example chapter', encoding='utf-8')
         prompt.write_text('Example figure prompt', encoding='utf-8')
-        visual_plan.write_text('slots: []', encoding='utf-8')
         quality.write_text('status: ready', encoding='utf-8')
         packet.write_text('node_id: H7_CHAPTER:Q1', encoding='utf-8')
         plan_hash = hashlib.sha256(plan.read_bytes()).hexdigest()
         draft_hash = hashlib.sha256(draft.read_bytes()).hexdigest()
+        visual_plan.write_text(f'chapter_id: Q1\nrevision_id: r1\ndraft: {{path: q1.tex, sha256: {draft_hash}}}\nslots: [{{slot_id: figure1}}]\n', encoding='utf-8')
         prompt_hash = hashlib.sha256(prompt.read_bytes()).hexdigest()
         visual_hash = hashlib.sha256(visual_plan.read_bytes()).hexdigest()
         quality_hash = hashlib.sha256(quality.read_bytes()).hexdigest()
@@ -270,10 +276,11 @@ nodes:
       chapters:
         - chapter_id: Q1
           draft: {{path: q1.tex, sha256: {draft_hash}}}
+          draft_completed_at: "2026-11-14T11:00:00+08:00"
           quality_review: {{path: quality.yaml, sha256: {quality_hash}}}
           review_packet: review.yaml
           visual_prompts:
-            - {{revision_id: r1, prompt: {{path: prompt.md, sha256: {prompt_hash}}}, visual_plan: {{path: visual.yaml, sha256: {visual_hash}}}, supersedes: null}}
+            - {{revision_id: r1, prompt: {{path: prompt.md, sha256: {prompt_hash}}}, visual_plan: {{path: visual.yaml, sha256: {visual_hash}}}, prepared_at: "2026-11-14T13:00:00+08:00", supersedes: null}}
 ''')
         (self.project / '.contest' / 'approval_log.yaml').write_text(f'''approvals:
   - gate: H7_CHAPTER:Q1
@@ -288,12 +295,21 @@ nodes:
         self.assertEqual(result['chapters'][0]['prompts'][0]['hash'], 'matches')
         self.assertEqual(result['chapters'][0]['prompts'][0]['sha256'], prompt_hash)
         self.assertEqual(result['chapters'][0]['prompts'][0]['visual_plan_hash'], 'matches')
+        self.assertTrue(result['chapters'][0]['prompts'][0]['plan_binding'])
+        self.assertEqual(result['chapters'][0]['prompts'][0]['prepared_at'], '2026-11-14T13:00:00+08:00')
         self.assertEqual(result['chapters'][0]['draft_hash'], 'matches')
+        self.assertEqual(result['chapters'][0]['draft_completed_at'], '2026-11-14T11:00:00+08:00')
         self.assertEqual(result['chapters'][0]['quality_review'], 'quality.yaml')
         self.assertEqual(result['chapters'][0]['quality_hash'], 'matches')
         self.assertEqual(result['chapters'][0]['review_packet'], 'review.yaml')
         self.assertEqual(result['approvals'][0]['timestamp'], '2026-11-14T12:00:00+08:00')
         self.assertEqual(result['approvals'][0]['digests']['status'], 'matches')
+        visual_plan.write_text(f'chapter_id: WRONG\nrevision_id: r1\ndraft: {{path: q1.tex, sha256: {draft_hash}}}\nslots: [{{slot_id: figure1}}]\n', encoding='utf-8')
+        updated_visual_hash = hashlib.sha256(visual_plan.read_bytes()).hexdigest()
+        self.control.write_text(self.control.read_text(encoding='utf-8').replace(visual_hash, updated_visual_hash), encoding='utf-8')
+        mismatched = app.build_state(self.project, self.links)
+        self.assertEqual(mismatched['chapters'][0]['prompts'][0]['visual_plan_hash'], 'matches')
+        self.assertFalse(mismatched['chapters'][0]['prompts'][0]['plan_binding'])
         draft.write_text('Changed chapter', encoding='utf-8')
         changed = app.build_state(self.project, self.links)
         self.assertEqual(changed['approvals'][0]['digests']['status'], 'issues')

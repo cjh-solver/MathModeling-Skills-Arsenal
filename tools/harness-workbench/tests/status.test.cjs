@@ -54,7 +54,7 @@ test('frozen gates and chapter transfers remain conservative when approval recor
   assert.equal(context.gateNeedsReview(node), false);
   state.approval_error = '批准记录包含格式错误的条目';
   assert.equal(context.gateNeedsReview(node), true);
-  state.chapters = [{ id: 'Q1', draft: 'q1.tex', draft_hash: 'matches', quality_review: 'quality.yaml', quality_hash: 'matches', review_packet: 'review.yaml', prompts: [{ path: 'prompt.md', sha256: 'a'.repeat(64), hash: 'matches', visual_plan_hash: 'matches' }] }];
+  state.chapters = [{ id: 'Q1', draft: 'q1.tex', draft_hash: 'matches', draft_completed_at: '2026-11-14T11:00:00+08:00', quality_review: 'quality.yaml', quality_hash: 'matches', review_packet: 'review.yaml', prompts: [{ path: 'prompt.md', sha256: 'a'.repeat(64), hash: 'matches', visual_plan_hash: 'matches', plan_binding: true, prepared_at: '2026-11-14T13:00:00+08:00' }] }];
   state.approvals.push({ gate: 'H7_CHAPTER:Q1', decision: 'approved', timestamp: '2026-11-14T12:00:00+08:00', digests: { status: 'matches', files: ['q1.tex', 'quality.yaml', 'review.yaml'].map(path => ({ path, status: 'matches' })) } });
   assert.doesNotMatch(context.chapterRows(), /data-copy-file/);
   assert.match(context.chapterRows(), /批准记录不完整，待核/);
@@ -91,9 +91,9 @@ test('copying a chapter prompt rechecks current approval and the exact bytes', a
   assert.ok(readyStart >= 0 && readyEnd > readyStart && copyStart >= 0 && copyEnd > copyStart);
   const text = 'synthetic prompt';
   const hash = createHash('sha256').update(text).digest('hex');
-  for (const scenario of ['valid', 'changed-file', 'revoked-before', 'revoked-after', 'project-changed', 'workflow-changed', 'wrong-project', 'visuals-cancelled', 'quality-changed', 'missing-review', 'invalid-timestamp']) {
-    const prompt = { path: 'prompt.md', revision: 'r1', sha256: hash, hash: 'matches', visual_plan_hash: 'matches' };
-    const chapter = { id: 'Q1', draft: 'q1.tex', draft_hash: 'matches', quality_review: 'quality.yaml', quality_hash: 'matches', review_packet: 'review.yaml', prompts: [prompt] };
+  for (const scenario of ['valid', 'changed-file', 'revoked-before', 'revoked-after', 'project-changed', 'workflow-changed', 'wrong-project', 'visuals-cancelled', 'quality-changed', 'missing-review', 'invalid-timestamp', 'approval-before-draft', 'prompt-before-approval', 'unbound-plan']) {
+    const prompt = { path: 'prompt.md', revision: 'r1', sha256: hash, hash: 'matches', visual_plan_hash: 'matches', plan_binding: true, prepared_at: '2026-11-14T13:00:00+08:00' };
+    const chapter = { id: 'Q1', draft: 'q1.tex', draft_hash: 'matches', draft_completed_at: '2026-11-14T11:00:00+08:00', quality_review: 'quality.yaml', quality_hash: 'matches', review_packet: 'review.yaml', prompts: [prompt] };
     const approval = { gate: 'H7_CHAPTER:Q1', decision: 'approved', timestamp: '2026-11-14T12:00:00+08:00', digests: { status: 'matches', files: ['q1.tex', 'quality.yaml', 'review.yaml'].map(path => ({ path, status: 'matches' })) } };
     const snapshot = { project: 'project-a', visual_workflow: 'chapter_parallel', approval_error: null, approvals: [approval], chapters: [chapter] };
     const state = { project: 'project-a' };
@@ -112,6 +112,9 @@ test('copying a chapter prompt rechecks current approval and the exact bytes', a
             if (scenario === 'quality-changed' && snapshots === 2) return { ...snapshot, chapters: [{ ...chapter, quality_hash: 'issues' }] };
             if (scenario === 'missing-review' && snapshots === 2) return { ...snapshot, approvals: [{ ...approval, digests: { status: 'matches', files: approval.digests.files.slice(0, 2) } }] };
             if (scenario === 'invalid-timestamp' && snapshots === 2) return { ...snapshot, approvals: [{ ...approval, timestamp: '2026-11-14T12:00:00' }] };
+            if (scenario === 'approval-before-draft' && snapshots === 2) return { ...snapshot, chapters: [{ ...chapter, draft_completed_at: '2026-11-14T12:30:00+08:00' }] };
+            if (scenario === 'prompt-before-approval' && snapshots === 2) return { ...snapshot, chapters: [{ ...chapter, prompts: [{ ...prompt, prepared_at: '2026-11-14T11:30:00+08:00' }] }] };
+            if (scenario === 'unbound-plan' && snapshots === 2) return { ...snapshot, chapters: [{ ...chapter, prompts: [{ ...prompt, plan_binding: false }] }] };
             return snapshot;
           } };
         }
