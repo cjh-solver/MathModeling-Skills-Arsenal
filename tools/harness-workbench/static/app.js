@@ -700,8 +700,8 @@ document.addEventListener('click', (event) => {
   const deliverySelection = event.target.closest('[data-delivery-file]');
   if (page) { if (current !== page.dataset.page) catalogQuery = ''; current = page.dataset.page; closeMobileNav(); render(); }
   if (node) openNode(node.dataset.node);
-  if (question) { selectedQuestion = question.dataset.question; render(); [...document.querySelectorAll('[data-question]')].find(item => item.dataset.question === selectedQuestion)?.focus(); }
-  if (roleSelection) { selectedRole = roleSelection.dataset.selectRole; render(); [...document.querySelectorAll('[data-select-role]')].find(item => item.dataset.selectRole === selectedRole)?.focus(); }
+  if (question) { const y = window.scrollY; selectedQuestion = question.dataset.question; render(); [...document.querySelectorAll('[data-question]')].find(item => item.dataset.question === selectedQuestion)?.focus({preventScroll: true}); window.scrollTo(0, y); }
+  if (roleSelection) { const y = window.scrollY; selectedRole = roleSelection.dataset.selectRole; render(); [...document.querySelectorAll('[data-select-role]')].find(item => item.dataset.selectRole === selectedRole)?.focus({preventScroll: true}); window.scrollTo(0, y); }
   if (catalogSelection) { const y = window.scrollY; if (catalogSelection.dataset.catalogKind === 'library') selectedLibraryFile = catalogSelection.dataset.catalogSelect; else selectedArtifact = catalogSelection.dataset.catalogSelect; render(); [...document.querySelectorAll('[data-catalog-select]')].find(item => item.dataset.catalogSelect === catalogSelection.dataset.catalogSelect)?.focus({preventScroll: true}); window.scrollTo(0, y); }
   if (directorySelection) { libraryDirectory = directorySelection.dataset.libraryDirectory; catalogQuery = ''; selectedLibraryFile = null; render(); }
   if (skillSelection) { const y = window.scrollY; selectedSkill = skillSelection.dataset.selectSkill; render(); [...document.querySelectorAll('[data-select-skill]')].find(item => item.dataset.selectSkill === selectedSkill)?.focus({preventScroll: true}); window.scrollTo(0, y); }

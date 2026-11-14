@@ -220,3 +220,23 @@ test('only the latest project choice applies when validation returns out of orde
     assert.equal(error.hidden, true);
   }
 });
+
+test('selecting a question or role preserves the reading position', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  for (const [name, key] of [['question', 'question'], ['roleSelection', 'selectRole']]) {
+    const line = source.split('\n').find(value => value.trimStart().startsWith(`if (${name}) {`));
+    assert.ok(line);
+    let focusOptions;
+    const item = { dataset: { [key]: 'choice' }, focus(options) { focusOptions = options; } };
+    const window = { scrollY: 350, scrollTo(_x, y) { this.scrollY = y; } };
+    const context = {
+      [name]: item, window, document: { querySelectorAll: () => [item] },
+      selectedQuestion: null, selectedRole: null,
+      render() { window.scrollY = 0; },
+    };
+    vm.runInNewContext(line, context);
+    assert.equal(window.scrollY, 350);
+    assert.equal(focusOptions.preventScroll, true);
+    assert.equal(context[name === 'question' ? 'selectedQuestion' : 'selectedRole'], 'choice');
+  }
+});
