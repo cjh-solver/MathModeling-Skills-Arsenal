@@ -435,6 +435,10 @@ nodes:
         result = app.build_state(self.project, self.links)
         self.assertEqual(result['approval_error'], '批准记录包含格式错误的条目')
         self.assertEqual(result['approvals'][0]['gate'], 'H6')
+        for entry in ['{gate: H7}', '{decision: approved}', '{gate: H7, decision: ""}']:
+            log.write_text(f'approvals:\n  - gate: H6\n    decision: approved\n  - {entry}\n', encoding='utf-8')
+            result = app.build_state(self.project, self.links)
+            self.assertEqual(result['approval_error'], '批准记录包含格式错误的条目')
 
     def test_existing_report_is_displayed_as_recorded_not_recomputed(self):
         report = self.project / 'report.json'
