@@ -60,6 +60,9 @@ test('frozen gates and chapter transfers remain conservative when approval recor
   assert.match(context.chapterRows(), /批准记录不完整，待核/);
   state.approval_error = null;
   assert.match(context.chapterRows(), /data-copy-file/);
+  state.chapters[0].visuals_required = false;
+  assert.doesNotMatch(context.chapterRows(), /data-copy-file/);
+  assert.match(context.chapterRows(), /记录为无需图表，请核对提示词/);
 });
 
 test('readable approval entries remain visible alongside an incomplete-record warning', () => {
@@ -88,7 +91,7 @@ test('copying a chapter prompt rechecks current approval and the exact bytes', a
   assert.ok(readyStart >= 0 && readyEnd > readyStart && copyStart >= 0 && copyEnd > copyStart);
   const text = 'synthetic prompt';
   const hash = createHash('sha256').update(text).digest('hex');
-  for (const scenario of ['valid', 'changed-file', 'revoked-before', 'revoked-after', 'project-changed', 'workflow-changed', 'wrong-project']) {
+  for (const scenario of ['valid', 'changed-file', 'revoked-before', 'revoked-after', 'project-changed', 'workflow-changed', 'wrong-project', 'visuals-cancelled']) {
     const prompt = { path: 'prompt.md', revision: 'r1', sha256: hash, hash: 'matches', visual_plan_hash: 'matches' };
     const chapter = { id: 'Q1', draft: 'q1.tex', draft_hash: 'matches', prompts: [prompt] };
     const approval = { gate: 'H7_CHAPTER:Q1', decision: 'approved', digests: { status: 'matches', files: [{ path: 'q1.tex', status: 'matches' }] } };
@@ -105,6 +108,7 @@ test('copying a chapter prompt rechecks current approval and the exact bytes', a
             if (scenario === 'revoked-before' || (scenario === 'revoked-after' && snapshots === 2)) return { ...snapshot, approval_error: '记录待核' };
             if (scenario === 'workflow-changed' && snapshots === 2) return { ...snapshot, visual_workflow: 'writer_first_draft' };
             if (scenario === 'wrong-project' && snapshots === 2) return { ...snapshot, project: 'project-b' };
+            if (scenario === 'visuals-cancelled' && snapshots === 2) return { ...snapshot, chapters: [{ ...chapter, visuals_required: false }] };
             return snapshot;
           } };
         }
