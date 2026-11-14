@@ -383,7 +383,9 @@ nodes:
             document.add_paragraph('sample paragraph')
             document.save(self.project / 'sample.docx')
             with urllib.request.urlopen(base + '/api/document?path=sample.docx') as response:
-                self.assertEqual(json.load(response)['paragraphs'][0], 'sample paragraph')
+                preview = json.load(response)
+                self.assertEqual(preview['paragraphs'][0], 'sample paragraph')
+                self.assertIn('不保留原文顺序', preview['note'])
         (self.project / 'sample.csv').write_text('name,value\n"a,b",3\n', encoding='utf-8')
         with urllib.request.urlopen(base + '/api/document?path=sample.csv') as response:
             self.assertEqual(json.load(response)['rows'][1], ['a,b', '3'])
