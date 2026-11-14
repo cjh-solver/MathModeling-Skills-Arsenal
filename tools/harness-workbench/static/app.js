@@ -295,9 +295,12 @@ function approvalRow(approval) {
 
 function promptReady(snapshot, chapter, prompt) {
   const approval = [...snapshot.approvals].reverse().find(a => a.gate === `H7_CHAPTER:${chapter.id}`);
-  const covered = chapter.draft && approval?.digests?.files?.some(file => file.path === chapter.draft && file.status === 'matches');
+  const required = [chapter.draft, chapter.quality_review, chapter.review_packet];
+  const covered = required.every(path => path && approval?.digests?.files?.some(file => file.path === path && file.status === 'matches'));
+  const time = approval?.timestamp;
+  const validTime = typeof time === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}.*(?:Z|[+-]\d{2}:?\d{2})$/i.test(time) && Number.isFinite(Date.parse(time));
   return snapshot.visual_workflow === 'chapter_parallel' && chapter.visuals_required !== false && !snapshot.approval_error && approval?.decision === 'approved' && approval?.digests?.status === 'matches' &&
-    covered && chapter.draft_hash === 'matches' && chapter.prompts?.[chapter.prompts.length - 1] === prompt &&
+    covered && validTime && chapter.draft_hash === 'matches' && chapter.quality_hash === 'matches' && chapter.prompts?.[chapter.prompts.length - 1] === prompt &&
     prompt?.hash === 'matches' && prompt.visual_plan_hash === 'matches' &&
     typeof prompt.sha256 === 'string' && /^[0-9a-f]{64}$/i.test(prompt.sha256);
 }

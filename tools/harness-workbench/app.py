@@ -485,7 +485,13 @@ def build_state(project, links_path=LINKS_PATH):
                                 "visual_plan_hash": plan_hash["status"], "supersedes": revision.get("supersedes")})
             draft_path = draft.get("path")
             draft_hash = digest_status(project, {draft_path: draft.get("sha256")}) if isinstance(draft_path, str) else {"status": "unrecorded"}
-            chapters.append({"id": str(item.get("chapter_id") or "未命名章节"), "draft": draft_path, "draft_hash": draft_hash["status"], "visuals_required": item.get("visuals_required"), "prompt_revisions": len(prompts), "prompts": prompts})
+            quality = item.get("quality_review") if isinstance(item.get("quality_review"), dict) else {}
+            quality_path = quality.get("path")
+            quality_hash = digest_status(project, {quality_path: quality.get("sha256")}) if isinstance(quality_path, str) else {"status": "unrecorded"}
+            chapters.append({"id": str(item.get("chapter_id") or "未命名章节"), "draft": draft_path, "draft_hash": draft_hash["status"],
+                             "quality_review": quality_path, "quality_hash": quality_hash["status"],
+                             "review_packet": ref_path(item.get("review_packet")), "visuals_required": item.get("visuals_required"),
+                             "prompt_revisions": len(prompts), "prompts": prompts})
     h1 = nodes.get("H1") if isinstance(nodes.get("H1"), dict) else {}
     h3 = nodes.get("H3") if isinstance(nodes.get("H3"), dict) else {}
     h5 = nodes.get("H5") if isinstance(nodes.get("H5"), dict) else {}
@@ -549,6 +555,7 @@ def build_state(project, links_path=LINKS_PATH):
         "skills": skills, "capabilities": {"pdf_preview": fitz is not None, "docx_preview": docx is not None, "xlsx_preview": openpyxl is not None},
         "approvals": [
             {"gate": a.get("gate"), "decision": a.get("decision"),
+             "timestamp": a.get("timestamp") if isinstance(a.get("timestamp"), str) else None,
              "digests": digest_status(project, a.get("artifact_digests"))}
             for a in approvals_list if isinstance(a, dict)
         ],

@@ -247,14 +247,20 @@ dispatch_records:
         draft = self.project / 'q1.tex'
         prompt = self.project / 'prompt.md'
         visual_plan = self.project / 'visual.yaml'
+        quality = self.project / 'quality.yaml'
+        packet = self.project / 'review.yaml'
         plan.write_text('writing_order: [Q1, abstract]\nchapter_order: [abstract, Q1]\ncentral_thesis: Example', encoding='utf-8')
         draft.write_text('Example chapter', encoding='utf-8')
         prompt.write_text('Example figure prompt', encoding='utf-8')
         visual_plan.write_text('slots: []', encoding='utf-8')
+        quality.write_text('status: ready', encoding='utf-8')
+        packet.write_text('node_id: H7_CHAPTER:Q1', encoding='utf-8')
         plan_hash = hashlib.sha256(plan.read_bytes()).hexdigest()
         draft_hash = hashlib.sha256(draft.read_bytes()).hexdigest()
         prompt_hash = hashlib.sha256(prompt.read_bytes()).hexdigest()
         visual_hash = hashlib.sha256(visual_plan.read_bytes()).hexdigest()
+        quality_hash = hashlib.sha256(quality.read_bytes()).hexdigest()
+        packet_hash = hashlib.sha256(packet.read_bytes()).hexdigest()
         self.write_control(f'''active_mode: full-contest-harness
 visual_workflow: chapter_parallel
 nodes:
@@ -264,13 +270,16 @@ nodes:
       chapters:
         - chapter_id: Q1
           draft: {{path: q1.tex, sha256: {draft_hash}}}
+          quality_review: {{path: quality.yaml, sha256: {quality_hash}}}
+          review_packet: review.yaml
           visual_prompts:
             - {{revision_id: r1, prompt: {{path: prompt.md, sha256: {prompt_hash}}}, visual_plan: {{path: visual.yaml, sha256: {visual_hash}}}, supersedes: null}}
 ''')
         (self.project / '.contest' / 'approval_log.yaml').write_text(f'''approvals:
   - gate: H7_CHAPTER:Q1
     decision: approved
-    artifact_digests: {{q1.tex: {draft_hash}}}
+    timestamp: "2026-11-14T12:00:00+08:00"
+    artifact_digests: {{q1.tex: {draft_hash}, quality.yaml: {quality_hash}, review.yaml: {packet_hash}}}
 ''', encoding='utf-8')
         result = app.build_state(self.project, self.links)
         self.assertEqual(result['writing_plan']['hash'], 'matches')
@@ -280,6 +289,10 @@ nodes:
         self.assertEqual(result['chapters'][0]['prompts'][0]['sha256'], prompt_hash)
         self.assertEqual(result['chapters'][0]['prompts'][0]['visual_plan_hash'], 'matches')
         self.assertEqual(result['chapters'][0]['draft_hash'], 'matches')
+        self.assertEqual(result['chapters'][0]['quality_review'], 'quality.yaml')
+        self.assertEqual(result['chapters'][0]['quality_hash'], 'matches')
+        self.assertEqual(result['chapters'][0]['review_packet'], 'review.yaml')
+        self.assertEqual(result['approvals'][0]['timestamp'], '2026-11-14T12:00:00+08:00')
         self.assertEqual(result['approvals'][0]['digests']['status'], 'matches')
         draft.write_text('Changed chapter', encoding='utf-8')
         changed = app.build_state(self.project, self.links)
