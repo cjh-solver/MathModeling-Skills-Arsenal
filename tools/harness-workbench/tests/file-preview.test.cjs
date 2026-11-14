@@ -151,7 +151,7 @@ test('a project can be opened when persistent browser storage is unavailable', a
   const context = {
     $: selector => ({ ...errors, '#project-dialog': dialog, '#project-search': search })[selector],
     post: async () => {}, savedProjects: () => [], projectStorageKey: 'projects',
-    selectedProjectInMemory: null,
+    selectedProjectInMemory: null, switchGeneration: 0,
     localStorage: { setItem() { throw new Error('storage unavailable'); } },
     sessionStorage: { setItem(_key, value) { selected = value; } },
     closeProjectSearch() {}, refresh: async () => { refreshed = true; },
@@ -175,7 +175,7 @@ test('blocked session storage keeps the current project in memory', async () => 
   const error = {}, dialog = { open: false }, search = {};
   let loadedProject, warning = '';
   const context = {
-    selectedProjectInMemory: null,
+    selectedProjectInMemory: null, switchGeneration: 0,
     $: selector => ({ '#project-error': error, '#project-dialog': dialog, '#project-search': search })[selector],
     post: async () => {}, savedProjects: () => [], projectStorageKey: 'projects',
     localStorage: { setItem() {} },
@@ -189,4 +189,34 @@ test('blocked session storage keeps the current project in memory', async () => 
   assert.equal(loadedProject, 'C:\\Contest');
   assert.match(warning, /刷新页面后可能需要重新选择/);
   assert.equal(error.hidden, true);
+});
+
+test('only the latest project choice applies when validation returns out of order', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('async function switchProject(');
+  const end = source.indexOf('\nfunction closeProjectSearch(', start);
+  assert.ok(start >= 0 && end > start);
+  for (const failFirst of [false, true]) {
+    const error = {}, dialog = { open: false }, search = {};
+    let finishFirst, failFirstRequest, finishSecond, selected;
+    const first = new Promise((resolve, reject) => { finishFirst = resolve; failFirstRequest = reject; });
+    const second = new Promise(resolve => { finishSecond = resolve; });
+    const context = {
+      selectedProjectInMemory: null, switchGeneration: 0,
+      $: selector => ({ '#project-search-error': error, '#project-dialog': dialog, '#project-search': search })[selector],
+      post: (_url, body) => body.path === 'first' ? first : second,
+      sessionStorage: { setItem(_key, value) { selected = value; } },
+      closeProjectSearch() {}, refresh: async () => {}, alert() {},
+    };
+    vm.runInNewContext(source.slice(start, end), context);
+    const older = context.switchProject('first', false);
+    const newer = context.switchProject('second', false);
+    finishSecond();
+    await newer;
+    if (failFirst) failFirstRequest(new Error('stale error')); else finishFirst();
+    await older;
+    assert.equal(selected, 'second');
+    assert.equal(context.selectedProjectInMemory, 'second');
+    assert.equal(error.hidden, true);
+  }
 });

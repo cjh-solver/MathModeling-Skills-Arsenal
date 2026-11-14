@@ -52,6 +52,7 @@ let syncSnapshot = '';
 let syncCandidate = '';
 let syncGeneration = 0;
 let syncBusy = false;
+let switchGeneration = 0;
 let selectedProjectInMemory = null;
 function selectedProjectPath() {
   if (selectedProjectInMemory !== null) return selectedProjectInMemory;
@@ -790,6 +791,7 @@ function showProjects() {
   $('#project-candidates').innerHTML = matches.length ? matches.map(p => `<button type="button" class="project-candidate" data-project-path="${esc(p.path)}"><b>${esc(p.name)}</b>${p.path === state?.project ? '<span>当前项目</span>' : '<span>打开 ›</span>'}<small>${esc(p.path)}</small></button>`).join('') : '<div class="empty">没有匹配的项目，可在下方添加已有项目目录。</div>';
 }
 async function switchProject(path, remember) {
+  const generation = ++switchGeneration;
   const error = $(remember ? '#project-error' : '#project-search-error');
   error.hidden = true;
   let saveFailed = false;
@@ -797,6 +799,7 @@ async function switchProject(path, remember) {
   try {
     if (!path.trim()) throw new Error('请填写已有项目目录');
     await post('/api/project', { path: path.trim() });
+    if (generation !== switchGeneration) return;
     if (remember) {
       const saved = savedProjects().filter(p => p.path.toLowerCase().replace(/[\\/]+$/, '') !== path.trim().toLowerCase().replace(/[\\/]+$/, ''));
       saved.push({ name: path.trim().replace(/[\\/]+$/, '').split(/[\\/]/).pop(), path: path.trim() });
@@ -810,8 +813,8 @@ async function switchProject(path, remember) {
     closeProjectSearch();
     $('#project-search').value = '';
     await refresh();
-    if (saveFailed || sessionSaveFailed) alert('浏览器无法保存项目选择；刷新页面后可能需要重新选择或添加。');
-  } catch (err) { error.textContent = err.message; error.hidden = false; }
+    if (generation === switchGeneration && (saveFailed || sessionSaveFailed)) alert('浏览器无法保存项目选择；刷新页面后可能需要重新选择或添加。');
+  } catch (err) { if (generation === switchGeneration) { error.textContent = err.message; error.hidden = false; } }
 }
 function closeProjectSearch() { $('#project-search-panel').hidden = true; $('#project-search').setAttribute('aria-expanded', 'false'); }
 $('#project-search').addEventListener('focus', () => {
