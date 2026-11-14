@@ -95,3 +95,25 @@ test('Word preview preserves the order of paragraphs and tables', async () => {
   assert.ok(container.innerHTML.indexOf('first paragraph') < container.innerHTML.indexOf('table value'));
   assert.ok(container.innerHTML.indexOf('table value') < container.innerHTML.indexOf('last paragraph'));
 });
+
+test('file search explains when there are no matches and clears the message', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  assert.match(source, /class="file-no-match" hidden/);
+  const start = source.indexOf("document.addEventListener('input',");
+  const end = source.indexOf("\nconst projectStorageKey", start);
+  assert.ok(start >= 0 && end > start);
+  let handler;
+  const items = [{ dataset: { searchText: 'paper.tex 论文' }, hidden: false }];
+  const message = { hidden: true };
+  const card = { querySelectorAll: () => items, querySelector: () => message };
+  const context = { document: { addEventListener(_type, callback) { handler = callback; } } };
+  vm.runInNewContext(source.slice(start, end), context);
+  const input = { value: 'missing', matches: selector => selector === '[data-file-search]', closest: () => card };
+  handler({ target: input });
+  assert.equal(items[0].hidden, true);
+  assert.equal(message.hidden, false);
+  input.value = '';
+  handler({ target: input });
+  assert.equal(items[0].hidden, false);
+  assert.equal(message.hidden, true);
+});

@@ -321,7 +321,7 @@ function flow() {
 
 function filePage(title, predicate, explanation) {
   const files = state.files.filter((file) => predicate(file.path.toLowerCase()));
-  return `<section class="card">${head(title, `找到 ${files.length} 个文件`)}<p class="subdued" style="margin-bottom:15px">${esc(explanation)}</p>${files.length ? `<label class="file-search">按路径筛选<input type="search" data-file-search placeholder="输入文件名或路径"></label><div class="file-grid">${files.map((file) => file.previewable !== false ? `<button class="file-button" data-file="${esc(file.path)}" data-search-text="${esc(`${file.path} ${fileDisplayName(file.path)}`.toLowerCase())}">${fileIcon(file.path)}<div class="file-type">${esc(file.path.split('.').pop().toUpperCase())}　↗</div><div class="file-name">${esc(fileDisplayName(file.path))}</div><div class="file-original">${esc(file.path)}</div></button>` : `<div class="file-button" data-search-text="${esc(`${file.path} ${fileDisplayName(file.path)}`.toLowerCase())}">${fileIcon(file.path)}<div class="file-type">${esc(file.path.split('.').pop().toUpperCase())} · 暂不支持预览</div><div class="file-name">${esc(fileDisplayName(file.path))}</div><div class="file-original">${esc(file.path)}</div><button class="row-action" data-copy-path="${esc(file.path)}">复制完整路径</button></div>`).join('')}</div>` : empty('项目中暂未找到相关文件。')}${state.files_truncated ? '<p class="hint">扫描受到数量、深度或读取限制，列表可能不完整。</p>' : ''}</section>`;
+  return `<section class="card">${head(title, `找到 ${files.length} 个文件`)}<p class="subdued" style="margin-bottom:15px">${esc(explanation)}</p>${files.length ? `<label class="file-search">按路径筛选<input type="search" data-file-search placeholder="输入文件名或路径"></label><div class="file-grid">${files.map((file) => file.previewable !== false ? `<button class="file-button" data-file="${esc(file.path)}" data-search-text="${esc(`${file.path} ${fileDisplayName(file.path)}`.toLowerCase())}">${fileIcon(file.path)}<div class="file-type">${esc(file.path.split('.').pop().toUpperCase())}　↗</div><div class="file-name">${esc(fileDisplayName(file.path))}</div><div class="file-original">${esc(file.path)}</div></button>` : `<div class="file-button" data-search-text="${esc(`${file.path} ${fileDisplayName(file.path)}`.toLowerCase())}">${fileIcon(file.path)}<div class="file-type">${esc(file.path.split('.').pop().toUpperCase())} · 暂不支持预览</div><div class="file-name">${esc(fileDisplayName(file.path))}</div><div class="file-original">${esc(file.path)}</div><button class="row-action" data-copy-path="${esc(file.path)}">复制完整路径</button></div>`).join('')}</div><p class="file-no-match" hidden>没有匹配的文件。</p>` : empty('项目中暂未找到相关文件。')}${state.files_truncated ? '<p class="hint">扫描受到数量、深度或读取限制，列表可能不完整。</p>' : ''}</section>`;
 }
 
 function questionPage() {
@@ -760,7 +760,10 @@ document.addEventListener('input', (event) => {
   }
   if (!event.target.matches('[data-file-search]')) return;
   const query = event.target.value.toLowerCase().trim();
-  event.target.closest('.card').querySelectorAll('[data-search-text]').forEach(item => { item.hidden = !item.dataset.searchText.includes(query); });
+  const card = event.target.closest('.card');
+  const items = [...card.querySelectorAll('[data-search-text]')];
+  items.forEach(item => { item.hidden = !item.dataset.searchText.includes(query); });
+  card.querySelector('.file-no-match').hidden = items.some(item => !item.hidden);
 });
 const projectStorageKey = 'harness-workbench-saved-projects';
 function savedProjects() {
