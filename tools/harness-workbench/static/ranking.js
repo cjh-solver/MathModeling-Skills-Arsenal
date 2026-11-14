@@ -1,6 +1,7 @@
 /* Deterministic, evidence-based file ranking. Scores are not probabilities. */
 const WorkbenchRanking = (() => {
   const categories = ['论文', '图表', '模型与结果', '数据与代码', '审查与交付', '其他'];
+  const needsAttention = value => /pending|pause|block|fail|evidence_gap|stale/i.test(String(value || ''));
   function build(state, preferences = {}, contextNode = null) {
     const pins = new Set(preferences.pins || []);
     const views = preferences.views || {};
@@ -19,7 +20,7 @@ const WorkbenchRanking = (() => {
     for (const node of state.nodes || []) {
       const nodeApprovals = (state.approvals || []).filter(a => a.gate === node.id);
       const approval = nodeApprovals[nodeApprovals.length - 1];
-      const pending = /pending|paused|blocked|failed/i.test(node.status || '');
+      const pending = needsAttention(node.status);
       const changed = approval?.digests?.status === 'issues';
       const urgent = pending ? `${node.id} 节点记录待处理` : changed ? `${node.id} 批准文件待核` : null;
       add(node.review, { node: node.id, artifact: true, category: '审查与交付', urgent });
@@ -62,7 +63,7 @@ const WorkbenchRanking = (() => {
     }
     return result;
   }
-  return { build, diverse, categories };
+  return { build, diverse, categories, needsAttention };
 })();
 if (typeof module !== 'undefined') module.exports = WorkbenchRanking;
 

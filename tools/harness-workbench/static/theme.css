@@ -69,7 +69,7 @@ h2, .section-head h2, .node-section h3 { color: #30251f; }
 .track-item { min-width: 66px; }
 .track-button:hover { background: #fff8f2; border-color: #e9c5a9; }
 .track-dot.approved, .track-dot.completed { background: #b94708; border-color: #b94708; }
-.track-dot.review_pending, .track-dot.paused, .track-dot.blocked { border-color: #b95d20; background: #fff4e9; }
+.track-dot.review_pending, .track-dot.pending, .track-dot.paused, .track-dot.pause, .track-dot.blocked, .track-dot.failed, .track-dot.evidence_gap, .track-dot.stale { border-color: #b95d20; background: #fff4e9; }
 .track-link { color: #884018; background: #fffaf5; border-color: #ead5c5; font-size: 11px; padding: 3px 4px; }
 .track-button:hover .track-link { color: #873006; border-color: #c88456; }
 .section-head { gap: 10px; margin-bottom: 16px; }

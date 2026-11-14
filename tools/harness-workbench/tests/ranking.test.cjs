@@ -33,6 +33,24 @@ test('changed approval evidence is prioritized without inferring approval', () =
   assert.match(items.find(item => item.path === 'figure.png').reasons[0], /待核/);
 });
 
+test('evidence gaps and stale records receive attention without treating frozen records as pending', () => {
+  const modified = {
+    files: [{ path: 'gap.yaml' }, { path: 'stale.yaml' }, { path: 'frozen.yaml' }],
+    nodes: [
+      { id: 'H5', status: 'evidence_gap', review: 'gap.yaml' },
+      { id: 'H6', status: 'stale', review: 'stale.yaml' },
+      { id: 'H7', status: 'frozen', review: 'frozen.yaml' },
+    ],
+  };
+  const items = ranking.build(modified);
+  assert.equal(items.find(item => item.path === 'gap.yaml').tier, 4);
+  assert.equal(items.find(item => item.path === 'stale.yaml').tier, 4);
+  assert.notEqual(items.find(item => item.path === 'frozen.yaml').tier, 4);
+  assert.equal(ranking.needsAttention('evidence_gap'), true);
+  assert.equal(ranking.needsAttention('stale'), true);
+  assert.equal(ranking.needsAttention('frozen'), false);
+});
+
 test('categories distinguish recorded associations from file type inference', () => {
   const items = ranking.build(state);
   assert.equal(items.find(item => item.path === 'paper.pdf').categorySource, '项目登记');

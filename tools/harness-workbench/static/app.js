@@ -31,7 +31,7 @@ const iconPaths = {
 };
 const icon = (name) => `<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name] || iconPaths.file}</svg>`;
 const sectionIcons = { '需要关注': 'alert', '小问进度': 'layers', '角色会话': 'users', '论文与图表': 'file', '最近成果': 'layers', '成果中心': 'layers' };
-const statusNames = { approved: '记录为已批准', completed: '记录为已完成', review_pending: '待审查', not_started: '未开始', pending: '待处理', paused: '已暂停', pause: '已暂停', blocked: '已阻塞', failed: '失败', draft: '草稿', unknown: '未知', merged: '已合并' };
+const statusNames = { approved: '记录为已批准', completed: '记录为已完成', frozen: '记录为已冻结', review_pending: '待审查', evidence_gap: '证据缺口', stale: '记录已过期', not_started: '未开始', pending: '待处理', paused: '已暂停', pause: '已暂停', blocked: '已阻塞', failed: '失败', draft: '草稿', unknown: '未知', merged: '已合并' };
 let state = null;
 let current = 'overview';
 let resultTab = 'recommended';
@@ -63,7 +63,7 @@ const $ = (selector) => document.querySelector(selector);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const display = (value) => value === null || value === undefined || value === '' ? '未登记' : typeof value === 'object' ? JSON.stringify(value) : String(value);
 const status = (value) => statusNames[String(value).toLowerCase()] || String(value || '未知');
-const pillClass = (value) => ['approved', 'completed'].includes(String(value).toLowerCase()) ? '' : ['review_pending', 'blocked', 'failed', 'paused', 'pause'].includes(String(value).toLowerCase()) ? 'amber' : 'muted';
+const pillClass = (value) => ['approved', 'completed'].includes(String(value).toLowerCase()) ? '' : WorkbenchRanking.needsAttention(value) ? 'amber' : 'muted';
 const badge = (value) => `<span class="pill ${pillClass(value)}">${esc(status(value))}</span>`;
 const head = (title, detail = '') => `<div class="section-head"><h2>${sectionIcons[title] ? icon(sectionIcons[title]) : ''}${esc(title)}</h2>${detail ? `<small>${esc(detail)}</small>` : ''}</div>`;
 const empty = (text) => `<div class="empty">${esc(text)}</div>`;
@@ -165,8 +165,8 @@ function rolePage() {
 }
 
 function tracker() {
-  const selected = current === 'flow' ? (state.nodes.find(n => n.id === contextNode) || state.nodes.find(n => /pending|pause|block|fail/i.test(n.status)) || state.nodes[0])?.id : null;
-  const attention = current === 'overview' ? state.nodes.find(n => /review_pending|paused|pause|blocked|failed/i.test(n.status))?.id : null;
+  const selected = current === 'flow' ? (state.nodes.find(n => n.id === contextNode) || state.nodes.find(n => WorkbenchRanking.needsAttention(n.status)) || state.nodes[0])?.id : null;
+  const attention = current === 'overview' ? state.nodes.find(n => WorkbenchRanking.needsAttention(n.status))?.id : null;
   const stageIcons = { H0: 'flag', H1: 'file', H2: 'flow', H3: 'solve', H4: 'book', H5: 'calculate', H6: 'search', H7: 'chart', H8: 'pencil', H9: 'layers' };
   return `<div class="tracker">${state.nodes.map((node) => { const issue = gateNeedsReview(node); const highlighted = node.id === attention; return `<div class="track-item"><button type="button" class="track-button${highlighted ? ' track-attention' : ''}" data-node="${esc(node.id)}" ${current === 'flow' ? `aria-pressed="${node.id === selected}"` : ''} aria-label="查看 ${esc(node.id)} ${esc(node.name)} 阶段详情" title="${esc(status(node.status))}${issue ? '；批准记录或文件待核' : ''}"><span class="stage-icon">${icon(stageIcons[node.id] || 'file')}</span><span class="track-text"><span class="track-code">${esc(node.id)}</span><span class="track-name">${esc(node.name)}${issue ? ' · 待核' : ''}</span></span>${highlighted ? `<span class="track-status">${esc(status(node.status))}</span><span class="track-detail" aria-hidden="true">查看阶段详情 ›</span>` : `<span class="track-dot ${issue ? 'review_pending' : esc(node.status)}" aria-hidden="true"></span>`}</button></div>`; }).join('')}</div>`;
 }
@@ -271,7 +271,7 @@ function resultPanel() {
 }
 
 function overview() {
-  const pending = state.nodes.filter((n) => /pending|pause|block|fail/i.test(n.status));
+  const pending = state.nodes.filter((n) => WorkbenchRanking.needsAttention(n.status));
   const changed = state.nodes.filter(gateNeedsReview);
   const reportIssues = (state.reports || []).filter(report => report.passed === false || report.error);
   const pendingRows = pending.map(n => `<div class="row"><span class="row-icon">${icon('alert')}</span><div class="row-main"><div class="row-title">${esc(n.id)} · ${esc(n.name)}</div><div class="row-meta">${esc(status(n.status))} · 来源：节点记录</div></div><button class="row-action" data-node="${esc(n.id)}">查看详情 ›</button></div>`).join('');
@@ -309,7 +309,7 @@ function writingPlan() {
 
 function flow() {
   const chapterView = state.visual_workflow === 'chapter_parallel' ? `<section class="card">${head('逐章写作与并行图表', '来源：H7 章节和批准记录')}<div class="notice">每章需经用户批准后才准备转交图表提示词；图表可与后续章节并行。批准记录和文件对比不能替代 Harness 门禁。</div>${writingPlan()}${chapterRows()}</section>` : '';
-  const selected = state.nodes.find(n => n.id === contextNode) || state.nodes.find(n => /pending|pause|block|fail/i.test(n.status)) || state.nodes[0];
+  const selected = state.nodes.find(n => n.id === contextNode) || state.nodes.find(n => WorkbenchRanking.needsAttention(n.status)) || state.nodes[0];
   if (!selected) return `<div class="stack flow-workspace"><div class="overview-project">${projectCard()}</div>${empty('项目没有可展示的阶段记录。')}</div>`;
   const evidence = selected.evidence || {};
   const approvals = state.approvals.filter(item => item.gate === selected.id);
