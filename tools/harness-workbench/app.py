@@ -441,7 +441,9 @@ def build_state(project, links_path=LINKS_PATH):
     approvals_path = project / ".contest" / "approval_log.yaml"
     approvals, approval_error = read_yaml(approvals_path) if approvals_path.exists() else ({}, "记录缺失")
     approvals_list = approvals.get("approvals", [])
-    if not isinstance(approvals_list, list):
+    if "approvals" not in approvals and not approval_error:
+        approval_error = "批准记录列表未登记"
+    elif not isinstance(approvals_list, list):
         approvals_list = []
         approval_error = approval_error or "批准记录列表格式错误"
     elif any(not isinstance(item, dict) or

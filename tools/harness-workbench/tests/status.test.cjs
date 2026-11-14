@@ -56,6 +56,24 @@ test('frozen gates and chapter transfers remain conservative when approval recor
   state.chapters = [{ id: 'Q1', draft: 'q1.tex', draft_hash: 'matches', prompts: [{ path: 'prompt.md', hash: 'matches', visual_plan_hash: 'matches' }] }];
   state.approvals.push({ gate: 'H7_CHAPTER:Q1', decision: 'approved', digests: { status: 'matches', files: [{ path: 'q1.tex', status: 'matches' }] } });
   assert.doesNotMatch(context.chapterRows(), /data-copy-file/);
+  assert.match(context.chapterRows(), /批准记录不完整，待核/);
   state.approval_error = null;
   assert.match(context.chapterRows(), /data-copy-file/);
+});
+
+test('readable approval entries remain visible alongside an incomplete-record warning', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('function approvalRecords(');
+  const end = source.indexOf('\nfunction nodeContent(', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {
+    state: { approval_error: '批准记录包含格式错误的条目' },
+    empty: String,
+    approvalRow: item => `记录：${item.gate}`,
+  };
+  vm.runInNewContext(source.slice(start, end), context);
+  const result = context.approvalRecords([{ gate: 'H6' }]);
+  assert.match(result, /批准记录不完整或不可读取/);
+  assert.match(result, /记录：H6/);
+  assert.doesNotMatch(context.approvalRecords([]), /未找到批准记录/);
 });

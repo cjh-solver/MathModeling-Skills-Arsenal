@@ -176,6 +176,11 @@ function evidenceRows(items, fallback) {
   return items.map(item => `<div class="evidence-row">${fileIcon(item.path)}<div class="evidence-info"><div class="row-title">${esc(fileDisplayName(item.path))}</div><div class="row-meta">${esc(item.path)}<br>${item.field ? `控制记录字段：${esc(item.field)} · ` : ''}${item.present ? '文件存在（内容未核验）' : '文件缺失或无法访问'}</div></div>${item.previewable ? fileLink(item.path, '查看') : ''}</div>`).join('');
 }
 
+function approvalRecords(approvals) {
+  const warning = state.approval_error ? empty(`批准记录不完整或不可读取：${state.approval_error}`) : '';
+  return warning + (approvals.length ? approvals.map(approvalRow).join('') : state.approval_error ? '' : empty('未找到批准记录。'));
+}
+
 function nodeContent(node) {
   const evidence = node.evidence || {};
   const approvals = state.approvals.filter(item => item.gate === node.id);
@@ -183,7 +188,7 @@ function nodeContent(node) {
     <div class="node-grid"><section class="node-section"><h3>${icon('book')} 阶段输入</h3><p class="subdued">来源：${esc(evidence.task_path || '任务卡未登记')}${evidence.task_error ? `（${esc(evidence.task_error)}）` : ''}</p>${evidenceRows(evidence.inputs, '任务卡中未登记输入。')}</section>
     <section class="node-section"><h3>${icon('checklist')} 任务要求输出</h3><p class="subdued">来源：${esc(evidence.task_path || '任务卡未登记')}；文件存在不代表已验收。</p>${evidenceRows(evidence.required_outputs, '任务卡中未登记要求输出。')}</section>
     <section class="node-section"><h3>${icon('layers')} 审查包登记成果</h3><p class="subdued">来源：${esc(evidence.review_path || '未登记')}${evidence.review_error ? `（${esc(evidence.review_error)}）` : ''}</p>${evidenceRows(evidence.artifacts, '审查包中未登记成果。')}</section>
-    <section class="node-section"><h3>${icon('shield')} 审查与批准</h3><p class="subdued">审查摘要：${esc(evidence.review_summary || '未登记')}<br>审查包建议：${esc(evidence.requested_decision || '未登记')} · 建议后续节点：${esc(evidence.next_node || '未登记')}</p>${approvals.length ? approvals.map(approvalRow).join('') : empty('未找到该阶段的批准记录。')}<p class="hint">批准记录来自项目文件；哈希一致不能证明批准真实性或代替 Harness 门禁。</p>${node.review ? fileLink(node.review, '查看审查包') : ''}</section></div>
+    <section class="node-section"><h3>${icon('shield')} 审查与批准</h3><p class="subdued">审查摘要：${esc(evidence.review_summary || '未登记')}<br>审查包建议：${esc(evidence.requested_decision || '未登记')} · 建议后续节点：${esc(evidence.next_node || '未登记')}</p>${approvalRecords(approvals)}<p class="hint">批准记录来自项目文件；哈希一致不能证明批准真实性或代替 Harness 门禁。</p>${node.review ? fileLink(node.review, '查看审查包') : ''}</section></div>
     <section class="node-section node-related"><h3>${icon('file')} 其他关联文件</h3><p class="subdued">来源：控制记录；这里不推断输入或输出归属。</p>${evidenceRows(evidence.related, '控制记录未登记关联文件。')}</section>
     <p class="path">来源：${esc(state.source)}；输入与成果来源分别见上述任务卡和审查包。</p>`;
 }
@@ -292,7 +297,7 @@ function chapterRows() {
   if (!state.chapters.length) return empty('尚未登记章节。');
   return state.chapters.map(c => {
     const approval = [...state.approvals].reverse().find(a => a.gate === `H7_CHAPTER:${c.id}`);
-    const decision = approval ? `批准记录：${approval.decision || '未记录'}${approval.digests?.status === 'issues' ? '（文件变化或待核）' : ''}` : '未找到章节批准记录';
+    const decision = state.approval_error ? '批准记录不完整，待核' : approval ? `批准记录：${approval.decision || '未记录'}${approval.digests?.status === 'issues' ? '（文件变化或待核）' : ''}` : '未找到章节批准记录';
     const visual = c.visuals_required === false ? '记录为不需要图表' : c.visuals_required === true ? '记录为需要图表' : '图表需求未记录';
     const draftCovered = c.draft && approval?.digests?.files?.some(file => file.path === c.draft && file.status === 'matches');
     const transferReady = !state.approval_error && approval?.decision === 'approved' && approval?.digests?.status === 'matches' && draftCovered && c.draft_hash === 'matches';
@@ -318,11 +323,11 @@ function flow() {
   const inputs = card('输入材料', 'book', `来源：${esc(taskSource)}${evidence.task_error ? `（${esc(evidence.task_error)}）` : ''}`, evidenceRows(evidence.inputs, '任务卡中未登记输入。'));
   const outputs = card('任务要求与输出', 'checklist', `来源：${esc(taskSource)}；文件存在不代表已验收。`, evidenceRows(evidence.required_outputs, '任务卡中未登记要求输出。'));
   const artifacts = card('审查包登记成果', 'layers', `来源：${esc(evidence.review_path || '未登记')}${evidence.review_error ? `（${esc(evidence.review_error)}）` : ''}`, evidenceRows(evidence.artifacts, '审查包中未登记成果。'));
-  const review = card('审查与批准记录', 'shield', '', `<p class="flow-review-summary">审查摘要：${esc(evidence.review_summary || '未登记')}</p><p class="flow-source">审查包建议：${esc(evidence.requested_decision || '未登记')} · 建议后续节点：${esc(evidence.next_node || '未登记')}</p>${approvals.length ? approvals.map(approvalRow).join('') : empty('未找到该阶段的批准记录。')}<p class="flow-source">批准记录来自项目文件；哈希一致不能证明批准真实性或代替 Harness 门禁。</p>${selected.review ? fileLink(selected.review, '查看审查包') : ''}`);
+  const review = card('审查与批准记录', 'shield', '', `<p class="flow-review-summary">审查摘要：${esc(evidence.review_summary || '未登记')}</p><p class="flow-source">审查包建议：${esc(evidence.requested_decision || '未登记')} · 建议后续节点：${esc(evidence.next_node || '未登记')}</p>${approvalRecords(approvals)}<p class="flow-source">批准记录来自项目文件；哈希一致不能证明批准真实性或代替 Harness 门禁。</p>${selected.review ? fileLink(selected.review, '查看审查包') : ''}`);
   const related = card('相关角色', 'users', '来源：阶段控制记录', `<div class="flow-owner"><span class="row-icon">${icon('users')}</span><div><strong>阶段负责人</strong><p>${esc(display(selected.owner))}</p></div></div>`);
   const files = card('阶段关联文件', 'file', '来源：控制记录；不推断输入或输出归属。', evidenceRows(evidence.related, '控制记录未登记关联文件。'));
   const note = card('状态说明', 'alert', '', `<p class="flow-review-summary">${gateNeedsReview(selected) ? '批准记录或登记文件待核，请依据实际记录和 Harness 门禁处理。' : '阶段状态来自项目记录；不代表实时运行状态或最终交付通过。'}</p>`);
-  const allApprovals = `<details class="card flow-all-approvals"><summary>查看全部阶段批准记录</summary>${state.approval_error ? empty(`无法读取批准记录：${state.approval_error}`) : state.approvals.length ? state.approvals.map(approvalRow).join('') : empty('未找到批准条目。')}<div class="notice">${esc(state.approval_note)}</div></details>`;
+  const allApprovals = `<details class="card flow-all-approvals"><summary>查看全部阶段批准记录</summary>${approvalRecords(state.approvals)}<div class="notice">${esc(state.approval_note)}</div></details>`;
   return `<div class="stack flow-workspace"><div class="overview-project">${projectCard()}</div><div class="flow-columns"><section class="card flow-detail" tabindex="-1"><div class="flow-heading"><span class="flow-stage-code">${esc(selected.id)}</span><h2>阶段：${esc(selected.name)}</h2>${badge(selected.status)}${gateNeedsReview(selected) ? '<span class="pill amber">批准或文件待核</span>' : ''}</div><div class="flow-overview"><span class="flow-overview-icon">${icon('file')}</span><div><h3>阶段概况</h3><p>${esc(evidence.objective || '阶段目标未在任务卡中登记。')}</p></div><div class="flow-overview-owner"><span>阶段负责人</span><strong>${esc(display(selected.owner))}</strong></div></div><div class="flow-panel-grid">${inputs}${outputs}${artifacts}${review}</div><details class="flow-source-details"><summary>查看阶段数据来源</summary><p>${esc(state.source)}</p></details></section><aside class="flow-side">${related}${files}${note}</aside></div>${chapterView}${allApprovals}</div>`;
 }
 
