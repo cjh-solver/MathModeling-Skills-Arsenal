@@ -136,6 +136,17 @@ dispatch_records:
         self.assertFalse(next(file for file in files if file['path'] == 'large.txt')['previewable'])
         self.assertNotIn('one/two/three/four/five/hidden.md', [file['path'] for file in files])
 
+    def test_file_listing_limit_is_only_incomplete_when_exceeded(self):
+        for index in range(1500):
+            (self.project / f'{index:04}.txt').touch()
+        files, incomplete = app.list_files(self.project)
+        self.assertEqual(len(files), 1500)
+        self.assertFalse(incomplete)
+        (self.project / 'extra.txt').touch()
+        files, incomplete = app.list_files(self.project)
+        self.assertEqual(len(files), 1500)
+        self.assertTrue(incomplete)
+
     def test_project_discovery_finds_candidates_without_scanning_hidden_trees(self):
         self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
         hidden = self.base / '.hidden' / '.contest'

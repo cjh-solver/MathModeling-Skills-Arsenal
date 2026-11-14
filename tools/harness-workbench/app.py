@@ -171,12 +171,12 @@ def list_files(project):
                 continue
             try:
                 stat = item.stat()
+                if len(files) >= 1500:
+                    return files, True
                 files.append({"path": item.relative_to(project).as_posix(), "modified": stat.st_mtime, "previewable": item.suffix.lower() in PREVIEW_EXTENSIONS and stat.st_size <= 20 * 1024 * 1024})
             except OSError:
                 incomplete = True
                 continue
-            if len(files) >= 1500:
-                return files, True
     return files, incomplete
 
 
