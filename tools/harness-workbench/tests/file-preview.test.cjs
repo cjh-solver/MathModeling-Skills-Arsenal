@@ -72,6 +72,27 @@ test('failed image preview shows a readable error', () => {
   assert.match(replacement.textContent, /图片无法读取/);
 });
 
+test('PDF page errors are visible and another page can be tried', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('async function renderPdf(');
+  const end = source.indexOf('\nasync function renderDocument(', start);
+  assert.ok(start >= 0 && end > start);
+  const element = () => ({ addEventListener(type, callback) { this[type] = callback; } });
+  const image = element(), label = {}, previous = element(), next = element(), error = { hidden: true };
+  const elements = { img: image, '.pdf-toolbar span': label, '.pdf-previous': previous, '.pdf-next': next, '.pdf-page-error': error };
+  const container = { querySelector: selector => elements[selector] };
+  const context = { state: { project: 'project' }, fetch: async () => ({ ok: true, json: async () => ({ pages: 2 }) }) };
+  vm.runInNewContext(source.slice(start, end), context);
+  await context.renderPdf(container, 'paper.pdf');
+  image.error();
+  assert.equal(image.hidden, true);
+  assert.equal(error.hidden, false);
+  next.click();
+  assert.equal(error.hidden, true);
+  assert.equal(image.hidden, false);
+  assert.match(image.src, /page=2$/);
+});
+
 test('Word preview preserves the order of paragraphs and tables', async () => {
   const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
   const start = source.indexOf('async function renderDocument(');

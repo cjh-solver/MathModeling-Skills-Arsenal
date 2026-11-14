@@ -577,12 +577,14 @@ async function renderPdf(container, path) {
     if (!response.ok) throw new Error(data.error);
     if (!data.pages) throw new Error('PDF 没有可预览页面');
     let page = 1;
-    container.innerHTML = `<div class="pdf-toolbar"><button class="pdf-previous">上一页</button><span></span><button class="pdf-next">下一页</button></div><div class="pdf-canvas"><img alt="PDF 页面预览"></div>`;
+    container.innerHTML = `<div class="pdf-toolbar"><button class="pdf-previous">上一页</button><span></span><button class="pdf-next">下一页</button></div><div class="pdf-canvas"><img alt="PDF 页面预览"><p class="pdf-page-error" role="status" hidden>PDF 页面无法读取，文件可能已变动或损坏。</p></div>`;
     const image = container.querySelector('img');
     const label = container.querySelector('.pdf-toolbar span');
     const previous = container.querySelector('.pdf-previous');
     const next = container.querySelector('.pdf-next');
-    const update = () => { label.textContent = `${page} / ${data.pages}`; previous.disabled = page === 1; next.disabled = page === data.pages; image.src = `/api/pdf-page?${query}&page=${page}`; };
+    const pageError = container.querySelector('.pdf-page-error');
+    image.addEventListener('error', () => { image.hidden = true; pageError.hidden = false; });
+    const update = () => { pageError.hidden = true; image.hidden = false; label.textContent = `${page} / ${data.pages}`; previous.disabled = page === 1; next.disabled = page === data.pages; image.src = `/api/pdf-page?${query}&page=${page}`; };
     previous.addEventListener('click', () => { if (page > 1) { page--; update(); } });
     next.addEventListener('click', () => { if (page < data.pages) { page++; update(); } });
     update();
