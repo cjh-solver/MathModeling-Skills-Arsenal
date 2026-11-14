@@ -296,7 +296,7 @@ function approvalRow(approval) {
 function promptReady(snapshot, chapter, prompt) {
   const approval = [...snapshot.approvals].reverse().find(a => a.gate === `H7_CHAPTER:${chapter.id}`);
   const covered = chapter.draft && approval?.digests?.files?.some(file => file.path === chapter.draft && file.status === 'matches');
-  return !snapshot.approval_error && approval?.decision === 'approved' && approval?.digests?.status === 'matches' &&
+  return snapshot.visual_workflow === 'chapter_parallel' && !snapshot.approval_error && approval?.decision === 'approved' && approval?.digests?.status === 'matches' &&
     covered && chapter.draft_hash === 'matches' && chapter.prompts?.[chapter.prompts.length - 1] === prompt &&
     prompt?.hash === 'matches' && prompt.visual_plan_hash === 'matches' &&
     typeof prompt.sha256 === 'string' && /^[0-9a-f]{64}$/i.test(prompt.sha256);
@@ -709,6 +709,7 @@ async function copyChapterPrompt(button) {
     const response = await fetch(`/api/state?project=${encodeURIComponent(project)}`);
     const data = await response.json();
     if (!response.ok) throw new Error('无法重新核对项目记录');
+    if (data.project !== project) throw new Error('项目记录不匹配，请刷新后重新核对');
     const chapter = data.chapters?.find(item => item.id === chapterId);
     const prompt = chapter?.prompts?.[chapter.prompts.length - 1];
     if (!chapter || !prompt || prompt.path !== path || !promptReady(data, chapter, prompt)) throw new Error('批准或文件记录已变化，请刷新后重新核对');

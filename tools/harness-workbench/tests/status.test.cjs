@@ -45,7 +45,7 @@ test('frozen gates and chapter transfers remain conservative when approval recor
   const chapterStart = source.indexOf('function promptReady(');
   const chapterEnd = source.indexOf('\nfunction writingPlan(', chapterStart);
   assert.ok(gateStart >= 0 && gateEnd > gateStart && chapterStart >= 0 && chapterEnd > chapterStart);
-  const state = { approvals: [], approval_error: null, chapters: [] };
+  const state = { approvals: [], approval_error: null, chapters: [], visual_workflow: 'chapter_parallel' };
   const context = { state, fileIcon: () => '', fileLink: () => '', esc: String, empty: String };
   vm.runInNewContext(source.slice(gateStart, gateEnd) + source.slice(chapterStart, chapterEnd), context);
   const node = { id: 'H6', status: 'frozen' };
@@ -88,11 +88,11 @@ test('copying a chapter prompt rechecks current approval and the exact bytes', a
   assert.ok(readyStart >= 0 && readyEnd > readyStart && copyStart >= 0 && copyEnd > copyStart);
   const text = 'synthetic prompt';
   const hash = createHash('sha256').update(text).digest('hex');
-  for (const scenario of ['valid', 'changed-file', 'revoked-before', 'revoked-after', 'project-changed']) {
+  for (const scenario of ['valid', 'changed-file', 'revoked-before', 'revoked-after', 'project-changed', 'workflow-changed', 'wrong-project']) {
     const prompt = { path: 'prompt.md', revision: 'r1', sha256: hash, hash: 'matches', visual_plan_hash: 'matches' };
     const chapter = { id: 'Q1', draft: 'q1.tex', draft_hash: 'matches', prompts: [prompt] };
     const approval = { gate: 'H7_CHAPTER:Q1', decision: 'approved', digests: { status: 'matches', files: [{ path: 'q1.tex', status: 'matches' }] } };
-    const snapshot = { approval_error: null, approvals: [approval], chapters: [chapter] };
+    const snapshot = { project: 'project-a', visual_workflow: 'chapter_parallel', approval_error: null, approvals: [approval], chapters: [chapter] };
     const state = { project: 'project-a' };
     let snapshots = 0, copied = null;
     const context = {
@@ -101,7 +101,12 @@ test('copying a chapter prompt rechecks current approval and the exact bytes', a
       fetch: async url => {
         if (url.startsWith('/api/state?')) {
           snapshots++;
-          return { ok: true, json: async () => scenario === 'revoked-before' || (scenario === 'revoked-after' && snapshots === 2) ? { ...snapshot, approval_error: '记录待核' } : snapshot };
+          return { ok: true, json: async () => {
+            if (scenario === 'revoked-before' || (scenario === 'revoked-after' && snapshots === 2)) return { ...snapshot, approval_error: '记录待核' };
+            if (scenario === 'workflow-changed' && snapshots === 2) return { ...snapshot, visual_workflow: 'writer_first_draft' };
+            if (scenario === 'wrong-project' && snapshots === 2) return { ...snapshot, project: 'project-b' };
+            return snapshot;
+          } };
         }
         if (scenario === 'project-changed') state.project = 'project-b';
         const bytes = new TextEncoder().encode(scenario === 'changed-file' ? 'changed prompt' : text);
