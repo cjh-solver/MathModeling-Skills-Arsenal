@@ -293,15 +293,22 @@ function approvalRow(approval) {
   return `<div class="approval"><div class="row"><div class="row-main"><div class="row-title">${esc(approval.gate)}</div><div class="row-meta">记录决定：${esc(approval.decision || '未记录')} · ${summary}</div></div><span class="pill ${digest.status === 'matches' ? '' : 'amber'}">${digest.status === 'matches' ? '一致' : '待核'}</span></div>${digest.files?.length ? `<details class="history"><summary>查看文件对比</summary>${digest.files.map(file => `<div>${esc(file.path)} · ${esc(states[file.status] || file.status)}</div>`).join('')}</details>` : ''}</div>`;
 }
 
+function promptReady(snapshot, chapter, prompt) {
+  const approval = [...snapshot.approvals].reverse().find(a => a.gate === `H7_CHAPTER:${chapter.id}`);
+  const covered = chapter.draft && approval?.digests?.files?.some(file => file.path === chapter.draft && file.status === 'matches');
+  return !snapshot.approval_error && approval?.decision === 'approved' && approval?.digests?.status === 'matches' &&
+    covered && chapter.draft_hash === 'matches' && chapter.prompts?.[chapter.prompts.length - 1] === prompt &&
+    prompt?.hash === 'matches' && prompt.visual_plan_hash === 'matches' &&
+    typeof prompt.sha256 === 'string' && /^[0-9a-f]{64}$/i.test(prompt.sha256);
+}
+
 function chapterRows() {
   if (!state.chapters.length) return empty('尚未登记章节。');
   return state.chapters.map(c => {
     const approval = [...state.approvals].reverse().find(a => a.gate === `H7_CHAPTER:${c.id}`);
     const decision = state.approval_error ? '批准记录不完整，待核' : approval ? `批准记录：${approval.decision || '未记录'}${approval.digests?.status === 'issues' ? '（文件变化或待核）' : ''}` : '未找到章节批准记录';
     const visual = c.visuals_required === false ? '记录为不需要图表' : c.visuals_required === true ? '记录为需要图表' : '图表需求未记录';
-    const draftCovered = c.draft && approval?.digests?.files?.some(file => file.path === c.draft && file.status === 'matches');
-    const transferReady = !state.approval_error && approval?.decision === 'approved' && approval?.digests?.status === 'matches' && draftCovered && c.draft_hash === 'matches';
-    return `<div class="row">${fileIcon(c.draft)}<div class="row-main"><div class="row-title">${esc(c.id)}</div><div class="row-meta">正文：${esc(c.draft || '未登记')} · ${esc(decision)}<br>${visual} · 提示词版本：${c.prompt_revisions}</div>${c.prompts?.length ? `<details class="history"><summary>查看图表提示词版本</summary>${c.prompts.map((p, index) => { const ready = transferReady && index === c.prompts.length - 1 && p.hash === 'matches' && p.visual_plan_hash === 'matches'; return `<div>${esc(p.revision || '版本未登记')} · ${esc(p.path || '文件未登记')} ${p.path ? fileLink(p.path, '查看') : ''}${ready ? `<button class="row-action" data-copy-file="${esc(p.path)}">复制供手动转交</button>` : '<span> · 非最新版本或批准、提示词、视觉计划的哈希待核</span>'}</div>`; }).join('')}</details>` : ''}</div>${c.draft ? fileLink(c.draft) : ''}</div>`;
+    return `<div class="row">${fileIcon(c.draft)}<div class="row-main"><div class="row-title">${esc(c.id)}</div><div class="row-meta">正文：${esc(c.draft || '未登记')} · ${esc(decision)}<br>${visual} · 提示词版本：${c.prompt_revisions}</div>${c.prompts?.length ? `<details class="history"><summary>查看图表提示词版本</summary>${c.prompts.map(p => { const ready = promptReady(state, c, p); return `<div>${esc(p.revision || '版本未登记')} · ${esc(p.path || '文件未登记')} ${p.path ? fileLink(p.path, '查看') : ''}${ready ? `<button class="row-action" data-copy-file="${esc(p.path)}" data-chapter-id="${esc(c.id)}">复制供手动转交</button>` : '<span> · 非最新版本或批准、提示词、视觉计划的哈希待核</span>'}</div>`; }).join('')}</details>` : ''}</div>${c.draft ? fileLink(c.draft) : ''}</div>`;
   }).join('');
 }
 
@@ -694,6 +701,31 @@ async function openFile(path) {
   }
 }
 
+async function copyChapterPrompt(button) {
+  const project = state.project;
+  const chapterId = button.dataset.chapterId;
+  const path = button.dataset.copyFile;
+  const snapshot = async () => {
+    const response = await fetch(`/api/state?project=${encodeURIComponent(project)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error('无法重新核对项目记录');
+    const chapter = data.chapters?.find(item => item.id === chapterId);
+    const prompt = chapter?.prompts?.[chapter.prompts.length - 1];
+    if (!chapter || !prompt || prompt.path !== path || !promptReady(data, chapter, prompt)) throw new Error('批准或文件记录已变化，请刷新后重新核对');
+    return prompt;
+  };
+  if (!navigator.clipboard || typeof crypto === 'undefined' || !crypto.subtle) throw new Error('当前浏览器无法安全核对并复制提示词');
+  const first = await snapshot();
+  const response = await fetch(`/api/file?path=${encodeURIComponent(path)}&project=${encodeURIComponent(project)}`);
+  if (!response.ok) throw new Error('提示词文件不可读取');
+  const bytes = await response.arrayBuffer();
+  const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(value => value.toString(16).padStart(2, '0')).join('');
+  if (digest !== first.sha256.toLowerCase()) throw new Error('提示词文件已变化，请刷新后重新核对');
+  const latest = await snapshot();
+  if (state.project !== project || latest.sha256.toLowerCase() !== digest || latest.revision !== first.revision) throw new Error('项目或提示词版本已变化，请刷新后重新核对');
+  await navigator.clipboard.writeText(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+}
+
 document.addEventListener('click', (event) => {
   const page = event.target.closest('[data-page]');
   const role = event.target.closest('[data-role]');
@@ -740,8 +772,8 @@ document.addEventListener('click', (event) => {
     else navigator.clipboard.writeText(fullPath).then(() => { copyPath.textContent = '已复制'; }).catch(() => alert(`无法复制，请手动使用此路径：\n${fullPath}`));
   }
   if (copyFile) {
-    if (!navigator.clipboard) { alert('当前浏览器无法复制，请打开提示词后手动复制。'); return; }
-    fetch(fileUrl(copyFile.dataset.copyFile)).then(async response => { if (!response.ok) throw new Error('文件不可读取'); return response.text(); }).then(text => navigator.clipboard.writeText(text)).then(() => { copyFile.textContent = '已复制，请手动转交'; }).catch(error => alert(`复制失败：${error.message}`));
+    copyFile.disabled = true;
+    copyChapterPrompt(copyFile).then(() => { copyFile.textContent = '已复制，请手动转交'; }).catch(error => alert(`复制失败：${error.message}`)).finally(() => { copyFile.disabled = false; });
   }
 });
 document.addEventListener('change', event => { if (event.target.id === 'result-category') { resultCategory = event.target.value; resultExpanded = false; render(); } else if (event.target.id === 'artifact-stage') { artifactStage = event.target.value; render(); } });

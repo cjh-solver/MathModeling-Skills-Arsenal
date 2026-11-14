@@ -277,6 +277,7 @@ nodes:
         self.assertEqual(result['writing_plan']['writing_order'], ['Q1', 'abstract'])
         self.assertEqual(result['chapters'][0]['prompts'][0]['revision'], 'r1')
         self.assertEqual(result['chapters'][0]['prompts'][0]['hash'], 'matches')
+        self.assertEqual(result['chapters'][0]['prompts'][0]['sha256'], prompt_hash)
         self.assertEqual(result['chapters'][0]['prompts'][0]['visual_plan_hash'], 'matches')
         self.assertEqual(result['chapters'][0]['draft_hash'], 'matches')
         self.assertEqual(result['approvals'][0]['digests']['status'], 'matches')

@@ -481,7 +481,7 @@ def build_state(project, links_path=LINKS_PATH):
                 plan_path = plan.get("path")
                 plan_hash = digest_status(project, {plan_path: plan.get("sha256")}) if isinstance(plan_path, str) else {"status": "unrecorded"}
                 prompts.append({"revision": revision.get("revision_id"), "path": prompt_path,
-                                "hash": prompt_hash["status"], "visual_plan_path": plan_path,
+                                "hash": prompt_hash["status"], "sha256": ref.get("sha256"), "visual_plan_path": plan_path,
                                 "visual_plan_hash": plan_hash["status"], "supersedes": revision.get("supersedes")})
             draft_path = draft.get("path")
             draft_hash = digest_status(project, {draft_path: draft.get("sha256")}) if isinstance(draft_path, str) else {"status": "unrecorded"}

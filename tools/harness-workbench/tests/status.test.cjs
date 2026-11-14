@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { webcrypto, createHash } = require('node:crypto');
 const ranking = require('../static/ranking.js');
 
 test('overview and workflow surface stale and evidence-gap nodes', () => {
@@ -41,7 +42,7 @@ test('frozen gates and chapter transfers remain conservative when approval recor
   const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
   const gateStart = source.indexOf('function gateNeedsReview(');
   const gateEnd = source.indexOf('\nfunction projectCard(', gateStart);
-  const chapterStart = source.indexOf('function chapterRows(');
+  const chapterStart = source.indexOf('function promptReady(');
   const chapterEnd = source.indexOf('\nfunction writingPlan(', chapterStart);
   assert.ok(gateStart >= 0 && gateEnd > gateStart && chapterStart >= 0 && chapterEnd > chapterStart);
   const state = { approvals: [], approval_error: null, chapters: [] };
@@ -53,7 +54,7 @@ test('frozen gates and chapter transfers remain conservative when approval recor
   assert.equal(context.gateNeedsReview(node), false);
   state.approval_error = '批准记录包含格式错误的条目';
   assert.equal(context.gateNeedsReview(node), true);
-  state.chapters = [{ id: 'Q1', draft: 'q1.tex', draft_hash: 'matches', prompts: [{ path: 'prompt.md', hash: 'matches', visual_plan_hash: 'matches' }] }];
+  state.chapters = [{ id: 'Q1', draft: 'q1.tex', draft_hash: 'matches', prompts: [{ path: 'prompt.md', sha256: 'a'.repeat(64), hash: 'matches', visual_plan_hash: 'matches' }] }];
   state.approvals.push({ gate: 'H7_CHAPTER:Q1', decision: 'approved', digests: { status: 'matches', files: [{ path: 'q1.tex', status: 'matches' }] } });
   assert.doesNotMatch(context.chapterRows(), /data-copy-file/);
   assert.match(context.chapterRows(), /批准记录不完整，待核/);
@@ -76,4 +77,46 @@ test('readable approval entries remain visible alongside an incomplete-record wa
   assert.match(result, /批准记录不完整或不可读取/);
   assert.match(result, /记录：H6/);
   assert.doesNotMatch(context.approvalRecords([]), /未找到批准记录/);
+});
+
+test('copying a chapter prompt rechecks current approval and the exact bytes', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const readyStart = source.indexOf('function promptReady(');
+  const readyEnd = source.indexOf('\nfunction chapterRows(', readyStart);
+  const copyStart = source.indexOf('async function copyChapterPrompt(');
+  const copyEnd = source.indexOf("\ndocument.addEventListener('click'", copyStart);
+  assert.ok(readyStart >= 0 && readyEnd > readyStart && copyStart >= 0 && copyEnd > copyStart);
+  const text = 'synthetic prompt';
+  const hash = createHash('sha256').update(text).digest('hex');
+  for (const scenario of ['valid', 'changed-file', 'revoked-before', 'revoked-after', 'project-changed']) {
+    const prompt = { path: 'prompt.md', revision: 'r1', sha256: hash, hash: 'matches', visual_plan_hash: 'matches' };
+    const chapter = { id: 'Q1', draft: 'q1.tex', draft_hash: 'matches', prompts: [prompt] };
+    const approval = { gate: 'H7_CHAPTER:Q1', decision: 'approved', digests: { status: 'matches', files: [{ path: 'q1.tex', status: 'matches' }] } };
+    const snapshot = { approval_error: null, approvals: [approval], chapters: [chapter] };
+    const state = { project: 'project-a' };
+    let snapshots = 0, copied = null;
+    const context = {
+      state, crypto: webcrypto, Uint8Array, TextDecoder,
+      navigator: { clipboard: { writeText: async value => { copied = value; } } },
+      fetch: async url => {
+        if (url.startsWith('/api/state?')) {
+          snapshots++;
+          return { ok: true, json: async () => scenario === 'revoked-before' || (scenario === 'revoked-after' && snapshots === 2) ? { ...snapshot, approval_error: '记录待核' } : snapshot };
+        }
+        if (scenario === 'project-changed') state.project = 'project-b';
+        const bytes = new TextEncoder().encode(scenario === 'changed-file' ? 'changed prompt' : text);
+        return { ok: true, arrayBuffer: async () => bytes.buffer };
+      },
+    };
+    vm.runInNewContext(source.slice(readyStart, readyEnd) + source.slice(copyStart, copyEnd), context);
+    const button = { dataset: { chapterId: 'Q1', copyFile: 'prompt.md' } };
+    if (scenario === 'valid') {
+      await context.copyChapterPrompt(button);
+      assert.equal(copied, text);
+      assert.equal(snapshots, 2);
+    } else {
+      await assert.rejects(context.copyChapterPrompt(button));
+      assert.equal(copied, null, scenario);
+    }
+  }
 });
