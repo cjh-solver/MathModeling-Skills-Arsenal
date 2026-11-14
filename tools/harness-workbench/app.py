@@ -619,9 +619,18 @@ class Handler(BaseHTTPRequestHandler):
                         document = docx.Document(target)
                     except SyntaxError as error:
                         raise ValueError("文档内容格式错误，无法预览") from error
-                    paragraphs = [p.text[:5000] for p in document.paragraphs[:300]]
-                    tables = [[[cell.text[:5000] for cell in row.cells[:20]] for row in table.rows[:30]] for table in document.tables[:10]]
-                    return self.respond(200, {"type": "docx", "paragraphs": paragraphs, "tables": tables, "note": "段落与表格分开显示，不保留原文顺序；最多显示前 300 段及前 10 个表格，每表前 30 行、20 列，每段或单元格最多 5000 字符；图片、公式和原排版可能无法完整呈现。"})
+                    paragraphs, tables, blocks = [], [], []
+                    for element in document.element.body.iterchildren():
+                        if element.tag == docx.oxml.ns.qn("w:p") and len(paragraphs) < 300:
+                            text = docx.text.paragraph.Paragraph(element, document).text[:5000]
+                            paragraphs.append(text)
+                            blocks.append({"type": "paragraph", "text": text})
+                        elif element.tag == docx.oxml.ns.qn("w:tbl") and len(tables) < 10:
+                            table = docx.table.Table(element, document)
+                            rows = [[cell.text[:5000] for cell in row.cells[:20]] for row in table.rows[:30]]
+                            tables.append(rows)
+                            blocks.append({"type": "table", "rows": rows})
+                    return self.respond(200, {"type": "docx", "paragraphs": paragraphs, "tables": tables, "blocks": blocks, "note": "最多显示前 300 段及前 10 个表格，每表前 30 行、20 列，每段或单元格最多 5000 字符；图片、公式和原排版可能无法完整呈现。"})
                 if target.suffix.lower() == ".xlsx":
                     if openpyxl is None:
                         raise ValueError("缺少 openpyxl，无法预览 Excel 文件")

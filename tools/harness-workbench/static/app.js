@@ -608,7 +608,8 @@ async function renderDocument(container, path, sheet = '') {
     } else if (data.type === 'csv') {
       container.innerHTML = `<div class="document-toolbar"><span>${esc(data.note)}</span></div>${table(data.rows)}`;
     } else {
-      container.innerHTML = `<div class="notice">${esc(data.note)}</div><div class="document-text">${data.paragraphs.map(text => `<p>${esc(text)}</p>`).join('')}</div>${data.tables.map(table).join('')}`;
+      const blocks = Array.isArray(data.blocks) ? data.blocks : [...data.paragraphs.map(text => ({type: 'paragraph', text})), ...data.tables.map(rows => ({type: 'table', rows}))];
+      container.innerHTML = `<div class="notice">${esc(data.note)}</div><div class="document-text">${blocks.map(block => block.type === 'paragraph' ? `<p>${esc(block.text)}</p>` : table(block.rows)).join('')}</div>`;
     }
   } catch (error) { container.textContent = `文档预览不可用：${error.message}`; }
 }

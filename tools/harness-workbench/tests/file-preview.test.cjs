@@ -71,3 +71,27 @@ test('failed image preview shows a readable error', () => {
   image.fail();
   assert.match(replacement.textContent, /图片无法读取/);
 });
+
+test('Word preview preserves the order of paragraphs and tables', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('async function renderDocument(');
+  const end = source.indexOf('\nfunction previewImage(', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {
+    state: { project: 'project' },
+    esc: text => String(text),
+    fetch: async () => ({ ok: true, json: async () => ({
+      type: 'docx', note: 'preview',
+      blocks: [
+        { type: 'paragraph', text: 'first paragraph' },
+        { type: 'table', rows: [['table value']] },
+        { type: 'paragraph', text: 'last paragraph' },
+      ],
+    }) }),
+  };
+  vm.runInNewContext(source.slice(start, end), context);
+  const container = {};
+  await context.renderDocument(container, 'sample.docx');
+  assert.ok(container.innerHTML.indexOf('first paragraph') < container.innerHTML.indexOf('table value'));
+  assert.ok(container.innerHTML.indexOf('table value') < container.innerHTML.indexOf('last paragraph'));
+});

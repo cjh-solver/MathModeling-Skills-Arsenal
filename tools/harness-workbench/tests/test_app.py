@@ -381,11 +381,15 @@ nodes:
         if app.docx is not None:
             document = app.docx.Document()
             document.add_paragraph('sample paragraph')
+            document.add_table(rows=1, cols=1).cell(0, 0).text = 'table value'
+            document.add_paragraph('after table')
             document.save(self.project / 'sample.docx')
             with urllib.request.urlopen(base + '/api/document?path=sample.docx') as response:
                 preview = json.load(response)
                 self.assertEqual(preview['paragraphs'][0], 'sample paragraph')
-                self.assertIn('不保留原文顺序', preview['note'])
+                self.assertEqual([block['type'] for block in preview['blocks']], ['paragraph', 'table', 'paragraph'])
+                self.assertEqual(preview['blocks'][1]['rows'], [['table value']])
+                self.assertEqual(preview['blocks'][2]['text'], 'after table')
         (self.project / 'sample.csv').write_text('name,value\n"a,b",3\n', encoding='utf-8')
         with urllib.request.urlopen(base + '/api/document?path=sample.csv') as response:
             self.assertEqual(json.load(response)['rows'][1], ['a,b', '3'])
