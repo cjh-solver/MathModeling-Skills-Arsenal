@@ -365,6 +365,7 @@ nodes:
             self.assertEqual(error.exception.code, 400)
             workbook = app.openpyxl.Workbook()
             workbook.active['A1'] = '=1+1'
+            workbook.create_chartsheet('Chart').add_chart(app.openpyxl.chart.BarChart())
             workbook.save(self.project / 'sample.xlsx')
             workbook.close()
             with zipfile.ZipFile(self.project / 'sample.xlsx') as source, zipfile.ZipFile(self.project / 'broken-sheet.xlsx', 'w') as target:
@@ -377,7 +378,21 @@ nodes:
                 urllib.request.urlopen(base + '/api/document?path=broken-sheet.xlsx')
             self.assertEqual(error.exception.code, 400)
             with urllib.request.urlopen(base + '/api/document?path=sample.xlsx') as response:
-                self.assertEqual(json.load(response)['rows'][0][0], '=1+1')
+                preview = json.load(response)
+                self.assertEqual(preview['rows'][0][0], '=1+1')
+                self.assertEqual(preview['sheets'], ['Sheet'])
+                self.assertIn('图表工作表', preview['note'])
+            with self.assertRaises(urllib.error.HTTPError) as error:
+                urllib.request.urlopen(base + '/api/document?path=sample.xlsx&sheet=Chart')
+            self.assertEqual(error.exception.code, 400)
+            workbook = app.openpyxl.Workbook()
+            workbook.remove(workbook.active)
+            workbook.create_chartsheet('Chart').add_chart(app.openpyxl.chart.BarChart())
+            workbook.save(self.project / 'charts-only.xlsx')
+            workbook.close()
+            with self.assertRaises(urllib.error.HTTPError) as error:
+                urllib.request.urlopen(base + '/api/document?path=charts-only.xlsx')
+            self.assertEqual(error.exception.code, 400)
         if app.docx is not None:
             document = app.docx.Document()
             document.add_paragraph('sample paragraph')

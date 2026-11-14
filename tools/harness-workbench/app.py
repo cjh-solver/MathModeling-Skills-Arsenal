@@ -644,12 +644,20 @@ class Handler(BaseHTTPRequestHandler):
                     except SyntaxError as error:
                         raise ValueError("文档内容格式错误，无法预览") from error
                     try:
-                        sheet_name = params.get("sheet", [""])[0] or workbook.sheetnames[0]
-                        if sheet_name not in workbook.sheetnames:
+                        sheets = [sheet.title for sheet in workbook.worksheets]
+                        if not sheets:
+                            raise ValueError("Excel 文件没有可预览的数据工作表")
+                        sheet_name = params.get("sheet", [""])[0] or sheets[0]
+                        if sheet_name in workbook.sheetnames and sheet_name not in sheets:
+                            raise ValueError("图表工作表暂不支持预览")
+                        if sheet_name not in sheets:
                             raise ValueError("未找到指定工作表")
                         sheet = workbook[sheet_name]
                         rows = [[str(value)[:5000] if value is not None else "" for value in row] for row in sheet.iter_rows(max_row=30, max_col=min(sheet.max_column or 1, 20), values_only=True)]
-                        return self.respond(200, {"type": "xlsx", "sheets": workbook.sheetnames, "sheet": sheet_name, "rows": rows, "note": "最多显示前 30 行、20 列，每个单元格最多显示 5000 字符；公式以原文显示，不重新计算。"})
+                        note = "最多显示前 30 行、20 列，每个单元格最多显示 5000 字符；公式以原文显示，不重新计算。"
+                        if len(sheets) != len(workbook.sheetnames):
+                            note += "图表工作表不在预览列表中。"
+                        return self.respond(200, {"type": "xlsx", "sheets": sheets, "sheet": sheet_name, "rows": rows, "note": note})
                     except SyntaxError as error:
                         raise ValueError("文档内容格式错误，无法预览") from error
                     finally:
