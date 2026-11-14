@@ -639,6 +639,11 @@ async function openFile(path) {
   const body = $('#file-body'); body.replaceChildren();
   const url = fileUrl(path);
   dialog.showModal();
+  const prefs = resultPreferences();
+  prefs.views[path] = Date.now();
+  const recent = Object.entries(prefs.views).sort((a, b) => b[1] - a[1]).slice(0, 100);
+  prefs.views = Object.fromEntries(recent);
+  try { localStorage.setItem(preferenceKey(), JSON.stringify(prefs)); } catch { /* Opening files does not depend on browser storage. */ }
   if (/\.pdf$/i.test(path)) { const viewer = document.createElement('div'); body.append(viewer); renderPdf(viewer, path); }
   else if (/\.(docx|xlsx|csv)$/i.test(path)) { const viewer = document.createElement('div'); body.append(viewer); renderDocument(viewer, path); }
   else if (/\.(png|jpe?g)$/i.test(path)) { const image = document.createElement('img'); image.src = url; image.alt = path; body.append(image); }
@@ -654,11 +659,6 @@ async function openFile(path) {
       pre.textContent = `文件预览不可用：${error.message}`;
     }
   }
-  const prefs = resultPreferences();
-  prefs.views[path] = Date.now();
-  const recent = Object.entries(prefs.views).sort((a, b) => b[1] - a[1]).slice(0, 100);
-  prefs.views = Object.fromEntries(recent);
-  try { localStorage.setItem(preferenceKey(), JSON.stringify(prefs)); } catch { /* Opening files does not depend on browser storage. */ }
 }
 
 document.addEventListener('click', (event) => {

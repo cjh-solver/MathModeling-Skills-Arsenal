@@ -39,3 +39,19 @@ test('text preview shows successfully loaded content', async () => {
   await context.openFile('paper.md');
   assert.equal(body.children[0].textContent, '已有内容');
 });
+
+test('view history stays with the original project while a file is loading', async () => {
+  let finish;
+  const pending = new Promise(resolve => { finish = resolve; });
+  const { context } = createPreview(() => pending);
+  let project = 'project-a';
+  const saved = {};
+  context.preferenceKey = () => project;
+  context.localStorage = { setItem(key, value) { saved[key] = JSON.parse(value); } };
+  const preview = context.openFile('paper.md');
+  project = 'project-b';
+  finish({ ok: true, text: async () => 'content' });
+  await preview;
+  assert.ok(saved['project-a'].views['paper.md']);
+  assert.equal(saved['project-b'], undefined);
+});
