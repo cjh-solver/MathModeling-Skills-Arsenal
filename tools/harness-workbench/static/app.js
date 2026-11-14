@@ -638,11 +638,22 @@ async function openFile(path) {
   $('#file-title').textContent = path;
   const body = $('#file-body'); body.replaceChildren();
   const url = fileUrl(path);
+  dialog.showModal();
   if (/\.pdf$/i.test(path)) { const viewer = document.createElement('div'); body.append(viewer); renderPdf(viewer, path); }
   else if (/\.(docx|xlsx|csv)$/i.test(path)) { const viewer = document.createElement('div'); body.append(viewer); renderDocument(viewer, path); }
   else if (/\.(png|jpe?g)$/i.test(path)) { const image = document.createElement('img'); image.src = url; image.alt = path; body.append(image); }
-  else { const response = await fetch(url); const pre = document.createElement('pre'); pre.textContent = await response.text(); body.append(pre); }
-  dialog.showModal();
+  else {
+    const pre = document.createElement('pre');
+    pre.textContent = '正在读取文件…';
+    body.append(pre);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('文件不存在或无法读取');
+      pre.textContent = await response.text();
+    } catch (error) {
+      pre.textContent = `文件预览不可用：${error.message}`;
+    }
+  }
   const prefs = resultPreferences();
   prefs.views[path] = Date.now();
   const recent = Object.entries(prefs.views).sort((a, b) => b[1] - a[1]).slice(0, 100);
