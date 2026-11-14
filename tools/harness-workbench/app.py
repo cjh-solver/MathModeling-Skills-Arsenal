@@ -615,7 +615,10 @@ class Handler(BaseHTTPRequestHandler):
                     if docx is None:
                         raise ValueError("缺少 python-docx，无法预览 Word 文件")
                     validate_office_archive(target)
-                    document = docx.Document(target)
+                    try:
+                        document = docx.Document(target)
+                    except SyntaxError as error:
+                        raise ValueError("文档内容格式错误，无法预览") from error
                     paragraphs = [p.text[:5000] for p in document.paragraphs[:300]]
                     tables = [[[cell.text[:5000] for cell in row.cells[:20]] for row in table.rows[:30]] for table in document.tables[:10]]
                     return self.respond(200, {"type": "docx", "paragraphs": paragraphs, "tables": tables, "note": "只显示前 300 段及前 10 个表格，图片、公式和原排版可能无法完整呈现。"})
@@ -623,7 +626,10 @@ class Handler(BaseHTTPRequestHandler):
                     if openpyxl is None:
                         raise ValueError("缺少 openpyxl，无法预览 Excel 文件")
                     validate_office_archive(target)
-                    workbook = openpyxl.load_workbook(target, read_only=True, data_only=False, keep_links=False)
+                    try:
+                        workbook = openpyxl.load_workbook(target, read_only=True, data_only=False, keep_links=False)
+                    except SyntaxError as error:
+                        raise ValueError("文档内容格式错误，无法预览") from error
                     try:
                         sheet_name = params.get("sheet", [""])[0] or workbook.sheetnames[0]
                         if sheet_name not in workbook.sheetnames:

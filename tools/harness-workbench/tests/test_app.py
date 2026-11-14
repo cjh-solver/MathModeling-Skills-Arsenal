@@ -6,6 +6,7 @@ import unittest
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
@@ -357,6 +358,11 @@ nodes:
                 self.assertEqual(response.headers.get_content_type(), 'image/png')
                 self.assertEqual(response.read(8), b'\x89PNG\r\n\x1a\n')
         if app.openpyxl is not None:
+            with zipfile.ZipFile(self.project / 'broken.xlsx', 'w') as archive:
+                archive.writestr('[Content_Types].xml', '<broken')
+            with self.assertRaises(urllib.error.HTTPError) as error:
+                urllib.request.urlopen(base + '/api/document?path=broken.xlsx')
+            self.assertEqual(error.exception.code, 400)
             workbook = app.openpyxl.Workbook()
             workbook.active['A1'] = '=1+1'
             workbook.save(self.project / 'sample.xlsx')
