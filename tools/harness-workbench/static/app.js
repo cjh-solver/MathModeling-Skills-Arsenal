@@ -613,14 +613,24 @@ async function renderDocument(container, path, sheet = '') {
   } catch (error) { container.textContent = `文档预览不可用：${error.message}`; }
 }
 
+function previewImage(path, alt) {
+  const image = document.createElement('img');
+  image.alt = alt;
+  image.addEventListener('error', () => {
+    const message = document.createElement('p');
+    message.textContent = '图片无法读取，文件可能已移动或损坏。';
+    image.replaceWith(message);
+  }, { once: true });
+  image.src = fileUrl(path);
+  return image;
+}
+
 async function renderCatalogPreview(container, path) {
   if (!path) return;
   if (/\.pdf$/i.test(path)) return renderPdf(container, path);
   if (/\.(docx|xlsx|csv)$/i.test(path)) return renderDocument(container, path);
   if (/\.(png|jpe?g)$/i.test(path)) {
-    const image = document.createElement('img');
-    image.src = fileUrl(path); image.alt = fileDisplayName(path);
-    container.replaceChildren(image);
+    container.replaceChildren(previewImage(path, fileDisplayName(path)));
     return;
   }
   try {
@@ -646,7 +656,7 @@ async function openFile(path) {
   try { localStorage.setItem(preferenceKey(), JSON.stringify(prefs)); } catch { /* Opening files does not depend on browser storage. */ }
   if (/\.pdf$/i.test(path)) { const viewer = document.createElement('div'); body.append(viewer); renderPdf(viewer, path); }
   else if (/\.(docx|xlsx|csv)$/i.test(path)) { const viewer = document.createElement('div'); body.append(viewer); renderDocument(viewer, path); }
-  else if (/\.(png|jpe?g)$/i.test(path)) { const image = document.createElement('img'); image.src = url; image.alt = path; body.append(image); }
+  else if (/\.(png|jpe?g)$/i.test(path)) { body.append(previewImage(path, path)); }
   else {
     const pre = document.createElement('pre');
     pre.textContent = '正在读取文件…';

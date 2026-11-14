@@ -55,3 +55,19 @@ test('view history stays with the original project while a file is loading', asy
   assert.ok(saved['project-a'].views['paper.md']);
   assert.equal(saved['project-b'], undefined);
 });
+
+test('failed image preview shows a readable error', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('function previewImage(path, alt)');
+  const end = source.indexOf('\nasync function renderCatalogPreview', start);
+  assert.ok(start >= 0 && end > start);
+  let replacement;
+  const context = {
+    document: { createElement: () => ({ addEventListener(_event, callback) { this.fail = callback; }, replaceWith(element) { replacement = element; } }) },
+    fileUrl: value => value,
+  };
+  vm.runInNewContext(source.slice(start, end), context);
+  const image = context.previewImage('figure.png', '图表');
+  image.fail();
+  assert.match(replacement.textContent, /图片无法读取/);
+});
