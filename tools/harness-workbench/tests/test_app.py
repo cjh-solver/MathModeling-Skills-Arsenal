@@ -1,14 +1,17 @@
 import tempfile
 import json
 import hashlib
+import os
 import threading
 import unittest
+from unittest.mock import patch
 import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 
 import app
 
@@ -688,6 +691,42 @@ nodes:
         self.assertEqual(absolute['files'][0]['status'], 'unverified')
         (self.project / 'result.txt').write_text('changed', encoding='utf-8')
         self.assertEqual(app.digest_status(self.project, {'result.txt': expected})['files'][0]['status'], 'changed')
+
+    def test_shared_hash_cache_is_request_scoped_and_detects_file_changes(self):
+        artifact = self.project / 'result.txt'
+        artifact.write_text('actual', encoding='utf-8')
+        expected = hashlib.sha256(b'actual').hexdigest()
+        cache = {}
+        sha256 = hashlib.sha256
+        with patch.object(app.hashlib, 'sha256', wraps=sha256) as calculate:
+            self.assertEqual(app.digest_status(self.project, {'result.txt': expected}, cache)['status'], 'matches')
+            self.assertEqual(app.digest_status(self.project, {'result.txt': expected}, cache)['status'], 'matches')
+            self.assertEqual(calculate.call_count, 1)
+            artifact.write_text('changed content', encoding='utf-8')
+            self.assertEqual(app.digest_status(self.project, {'result.txt': expected}, cache)['files'][0]['status'], 'changed')
+            self.assertEqual(calculate.call_count, 2)
+            self.assertEqual(app.digest_status(self.project, {'result.txt': expected})['files'][0]['status'], 'changed')
+            self.assertEqual(calculate.call_count, 3)
+
+    def test_file_changed_during_hash_is_not_reported_as_matching(self):
+        artifact = self.project / 'result.txt'
+        artifact.write_text('actual', encoding='utf-8')
+        expected = hashlib.sha256(b'actual').hexdigest()
+        real_fstat = os.fstat
+        calls = 0
+
+        def changed_fstat(fd):
+            nonlocal calls
+            calls += 1
+            value = real_fstat(fd)
+            fields = {name: getattr(value, name) for name in ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_ctime_ns')}
+            if calls == 2:
+                fields['st_mtime_ns'] += 1
+            return SimpleNamespace(**fields)
+
+        with patch.object(app.os, 'fstat', side_effect=changed_fstat):
+            result = app.digest_status(self.project, {'result.txt': expected})
+        self.assertEqual(result['files'][0]['status'], 'unverified')
 
     def test_absolute_approval_reference_remains_visible_but_unverified(self):
         self.write_control('active_mode: full-contest-harness\nnodes: {H6: {status: approved}}\n')
