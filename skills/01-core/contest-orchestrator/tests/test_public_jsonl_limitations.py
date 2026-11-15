@@ -104,6 +104,37 @@ class PublicJsonlLimitationsTests(unittest.TestCase):
                     importer.main([str(source), '--apply'])
             self.assertFalse((root / 'inbox').exists())
 
+    def test_import_preserves_prior_manifests_and_existing_cases(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'cases.jsonl'
+            source.write_text('{"case_id":"new","model_chosen":"model"}\n', encoding='utf-8')
+            inbox = root / 'inbox'
+            inbox.mkdir()
+            prior_manifest = inbox / 'public_review_manifest.csv'
+            prior_manifest.write_text('case_id,review\nold,approved\n', encoding='utf-8')
+            old = importer.INBOX
+            importer.INBOX = str(inbox)
+            self.addCleanup(setattr, importer, 'INBOX', old)
+            with contextlib.redirect_stdout(io.StringIO()):
+                importer.main([str(source), '--apply'])
+            self.assertEqual(prior_manifest.read_text(encoding='utf-8'), 'case_id,review\nold,approved\n')
+            generated = list(inbox.glob('public_review_manifest_*.csv'))
+            self.assertEqual(len(generated), 1)
+            case = inbox / 'public_cases' / 'new' / 'case_card.yaml'
+            case.write_text('reviewed', encoding='utf-8')
+            source.write_text('{"case_id":"fresh"}\n{"case_id":"new"}\n', encoding='utf-8')
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                importer.main([str(source), '--apply'])
+            self.assertEqual(case.read_text(encoding='utf-8'), 'reviewed')
+            self.assertFalse((inbox / 'public_cases' / 'fresh').exists())
+            self.assertEqual(len(list(inbox.glob('public_review_manifest_*.csv'))), 1)
+            source.write_text('{"case_id":"new","model_chosen":"model"}\n', encoding='utf-8')
+            with contextlib.redirect_stdout(io.StringIO()):
+                importer.main([str(source), '--prefix', 'second-', '--apply'])
+            self.assertEqual(len(list(inbox.glob('public_review_manifest_*.csv'))), 2)
+            self.assertEqual(case.read_text(encoding='utf-8'), 'reviewed')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -2,7 +2,7 @@
 """公开经验 JSONL 导入器：豆包采集的案例 → memory/inbox 待审核条目。
 每案例拆成 FD(失败) / SD(成功模型) / ST(策略) / DM(决策)，带 source+confidence。
 """
-import os, sys, json, re, csv, argparse
+import os, sys, json, re, csv, argparse, tempfile
 from pathlib import Path
 
 # 用脚本相对路径定位 skill 根（不硬编码 ~/.claude——workbuddy 装在 ~/.workbuddy 会写错 inbox，同类坑见 retrieval.py）
@@ -50,7 +50,8 @@ def yaml_block(pid, d):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description='将公开经验 JSONL 导入待审核 inbox；默认只预览。')
+    parser = argparse.ArgumentParser(description='将公开经验 JSONL 导入待审核 inbox；默认只预览。',
+                                     epilog='每批生成独立审核清单；若案例目录已存在，请用 --prefix 指定新编号。')
     parser.add_argument('jsonl', nargs='?', default='dataset/public_replay/raw/cases_batch1.jsonl')
     parser.add_argument('--prefix', default='')
     parser.add_argument('--source', default='公开')
@@ -85,9 +86,11 @@ def main(argv=None):
             if not isinstance(entries, list) or any(not isinstance(item, dict) for item in entries):
                 parser.error(f'案例 {cid}: {field} 必须是对象列表')
     inbox_root = Path(INBOX).resolve()
-    targets = [Path('public_review_manifest.csv')]
+    targets = []
     for c in cases:
         directory = Path('public_cases') / c['case_id']
+        if (inbox_root / directory).exists():
+            parser.error(f'案例目录已存在：{c["case_id"]}；请使用其他 --prefix，原记录未修改')
         targets.extend([directory / 'case_card.yaml', directory / 'sd_model.yaml'])
         for field, prefix_name in (('failures', 'fd'), ('strategies', 'st'), ('decisions', 'dm')):
             targets.extend(directory / f'{prefix_name}_{index}.yaml' for index in range(1, len(c.get(field, [])) + 1))
@@ -113,7 +116,7 @@ def main(argv=None):
         ptype = c.get('problem_type', '')
         has_src = bool(src and src not in ('无', 'None'))
         d = os.path.join(INBOX, 'public_cases', cid)
-        os.makedirs(d, exist_ok=True)
+        os.mkdir(d)
 
         # 原始卡片
         card = {'case_id': cid, 'problem_type': ptype, 'domain': c.get('domain', ''),
@@ -169,8 +172,9 @@ def main(argv=None):
                          'n_fd': len(c.get('failures', [])), 'n_st': len(c.get('strategies', [])),
                          'n_dm': len(c.get('decisions', [])), 'confidence': conf, 'has_source': has_src})
 
-    csv_path = os.path.join(INBOX, 'public_review_manifest.csv')
-    with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+    with tempfile.NamedTemporaryFile('w', newline='', encoding='utf-8', dir=INBOX,
+                                     prefix='public_review_manifest_', suffix='.csv', delete=False) as f:
+        csv_path = f.name
         w = csv.DictWriter(f, fieldnames=list(manifest[0].keys()))
         w.writeheader(); w.writerows(manifest)
 
