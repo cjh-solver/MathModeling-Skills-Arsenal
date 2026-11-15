@@ -179,6 +179,16 @@ dispatch_records:
         files, incomplete = app.list_files(self.project)
         self.assertEqual(len(files), 1500)
         self.assertTrue(incomplete)
+        paper = self.project / 'paper'
+        paper.mkdir()
+        (paper / 'main.pdf').write_bytes(b'pdf')
+        (paper / 'compile_report.json').write_text('{"passed": false}', encoding='utf-8')
+        self.write_control('active_mode: full-contest-harness\nnodes: {H8: {paper_source: paper/main.tex}}\n')
+        state = app.build_state(self.project, self.links)
+        self.assertTrue(state['files_truncated'])
+        self.assertNotIn('paper/main.pdf', [item['path'] for item in state['files']])
+        self.assertEqual(state['paper_pdf'], 'paper/main.pdf')
+        self.assertFalse(state['reports'][0]['passed'])
 
     def test_project_discovery_finds_candidates_without_scanning_hidden_trees(self):
         self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
@@ -195,6 +205,9 @@ dispatch_records:
         result = app.build_state(self.project, self.links)
         self.assertEqual(result['paper_source'], 'draft/main.tex')
         self.assertEqual(result['paper_pdf'], 'draft/main.pdf')
+        (self.base / 'outside.pdf').write_bytes(b'pdf')
+        self.write_control('active_mode: full-contest-harness\nnodes: {H8: {paper_source: ../outside.tex}}\n')
+        self.assertIsNone(app.build_state(self.project, self.links)['paper_pdf'])
 
     def test_project_role_registry_uses_only_explicit_valid_thread_ids(self):
         self.write_control("""active_mode: full-contest-harness

@@ -260,6 +260,17 @@ def read_project_yaml(project, relative):
         return {}, str(error)
 
 
+def project_file_exists(project, relative):
+    try:
+        path = Path(relative)
+        if path.is_absolute():
+            return False
+        target = (project / path).resolve(strict=True)
+        return target.is_relative_to(project) and target.is_file()
+    except (OSError, TypeError, ValueError):
+        return False
+
+
 def node_evidence(project, raw, node_id):
     """Read only explicitly recorded task inputs, requested outputs and review evidence."""
     task_path = ref_path(raw.get("task_card"))
@@ -616,14 +627,13 @@ def build_state(project, links_path=LINKS_PATH):
     files, truncated = list_files(project)
     h8 = nodes.get("H8") if isinstance(nodes.get("H8"), dict) else {}
     paper_source = ref_path(h8.get("paper_source"))
-    all_paths = {item["path"] for item in files}
     paper_pdf = str(Path(paper_source).with_suffix(".pdf")).replace("\\", "/") if paper_source else None
-    if paper_pdf not in all_paths:
+    if not paper_pdf or not project_file_exists(project, paper_pdf):
         paper_pdf = None
     literature = [{"name": name, "path": ref_path(h3.get(field))} for field, name in [("literature_request", "文献需求"), ("literature_agent_prompt", "外部文献角色提示词"), ("literature_sources", "用户回传的结构化文献")]]
     reports = [read_report(project, path, title) for path, title in
                [("paper/compile_report.json", "论文编译报告"), ("paper/delivery_gate_report.json", "历史交付检查报告")]
-               if path in all_paths]
+               if project_file_exists(project, path)]
     return {
         "project": str(project), "name": project.name, "available_projects": discover_projects(),
         "run_id": control.get("harness_run_id"), "mode": control.get("active_mode"),
