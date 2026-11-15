@@ -3,6 +3,7 @@
 每案例拆成 FD(失败) / SD(成功模型) / ST(策略) / DM(决策)，带 source+confidence。
 """
 import os, sys, json, re, csv, argparse
+from pathlib import Path
 
 # 用脚本相对路径定位 skill 根（不硬编码 ~/.claude——workbuddy 装在 ~/.workbuddy 会写错 inbox，同类坑见 retrieval.py）
 SKILL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,6 +22,23 @@ def limitations_text(value):
     if isinstance(value, list) and all(isinstance(item, str) for item in value):
         return '；'.join(clean(item) for item in value)[:200]
     raise ValueError('model_limitations must be a string or a list of strings')
+
+
+def valid_case_id(value):
+    if not isinstance(value, str) or not value or value != value.strip() or value in ('.', '..') or value.endswith('.'):
+        return False
+    if re.search(r'[<>:"/\\|?*\x00-\x1f]', value):
+        return False
+    return not re.fullmatch(r'(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?', value, re.IGNORECASE)
+
+
+def safe_inbox_target(root, relative):
+    candidate = root
+    for part in relative.parts:
+        candidate = candidate / part
+        if candidate.is_symlink() or getattr(os.path, 'isjunction', lambda _path: False)(candidate):
+            return False
+    return candidate.resolve().is_relative_to(root)
 
 
 def yaml_block(pid, d):
@@ -47,14 +65,34 @@ def main(argv=None):
         parser.error(f'JSONL 文件不存在: {jl}')
     with open(jl, encoding='utf-8') as source_file:
         cases = [json.loads(line) for line in source_file if line.strip()]
+    if apply_changes and not cases:
+        parser.error('没有可导入的案例')
+    seen = set()
     for c in cases:
+        if not isinstance(c, dict) or not valid_case_id(c.get('case_id')):
+            parser.error('案例编号无效，必须使用单个安全目录名')
+        c['case_id'] = prefix + c['case_id']
+        cid = c['case_id']
+        if not valid_case_id(cid) or cid.casefold() in seen:
+            parser.error('案例编号无效或重复')
+        seen.add(cid.casefold())
         try:
             limitations_text(c.get('model_limitations'))
         except ValueError as error:
             parser.error(f'案例 {c.get("case_id", "未命名")}: {error}')
-    if prefix:
-        for c in cases:
-            c['case_id'] = prefix + c['case_id']
+        for field in ('failures', 'strategies', 'decisions'):
+            entries = c.get(field, [])
+            if not isinstance(entries, list) or any(not isinstance(item, dict) for item in entries):
+                parser.error(f'案例 {cid}: {field} 必须是对象列表')
+    inbox_root = Path(INBOX).resolve()
+    targets = [Path('public_review_manifest.csv')]
+    for c in cases:
+        directory = Path('public_cases') / c['case_id']
+        targets.extend([directory / 'case_card.yaml', directory / 'sd_model.yaml'])
+        for field, prefix_name in (('failures', 'fd'), ('strategies', 'st'), ('decisions', 'dm')):
+            targets.extend(directory / f'{prefix_name}_{index}.yaml' for index in range(1, len(c.get(field, [])) + 1))
+    if any(not safe_inbox_target(inbox_root, target) for target in targets):
+        parser.error('待审核目录包含链接或越界目标，已取消导入')
     if not apply_changes:
         total = {
             'FD': sum(len(c.get('failures', [])) for c in cases),

@@ -4,6 +4,7 @@ import io
 import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -44,6 +45,63 @@ class PublicJsonlLimitationsTests(unittest.TestCase):
             self.addCleanup(setattr, importer, 'INBOX', original_inbox)
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 importer.main([str(source), '--apply'])
+            self.assertFalse((root / 'inbox').exists())
+
+    def test_invalid_or_duplicate_ids_never_write_partial_import(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'cases.jsonl'
+            old = importer.INBOX
+            importer.INBOX = str(root / 'inbox')
+            self.addCleanup(setattr, importer, 'INBOX', old)
+            for bad_id in ('../outside', '/absolute', r'..\outside', 'CON', 'case.', '', 3):
+                cases = [{'case_id': 'good'}, {'case_id': bad_id}]
+                source.write_text(''.join(json.dumps(case) + '\n' for case in cases), encoding='utf-8')
+                with self.subTest(bad_id=bad_id), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                    importer.main([str(source), '--apply'])
+                self.assertFalse((root / 'inbox').exists())
+            source.write_text('{"case_id":"A"}\n{"case_id":"a"}\n', encoding='utf-8')
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                importer.main([str(source), '--apply'])
+            self.assertFalse((root / 'inbox').exists())
+            source.write_text('{"case_id":"good"}\n', encoding='utf-8')
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                importer.main([str(source), '--prefix', '../', '--apply'])
+            self.assertFalse((root / 'inbox').exists())
+
+    def test_linked_case_directory_cannot_escape_inbox(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'cases.jsonl'
+            source.write_text('{"case_id":"linked"}\n', encoding='utf-8')
+            inbox = root / 'inbox'
+            cases = inbox / 'public_cases'
+            cases.mkdir(parents=True)
+            outside = root / 'outside'
+            outside.mkdir()
+            try:
+                (cases / 'linked').symlink_to(outside, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest('directory symlinks are unavailable')
+            old = importer.INBOX
+            importer.INBOX = str(inbox)
+            self.addCleanup(setattr, importer, 'INBOX', old)
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                importer.main([str(source), '--apply'])
+            self.assertEqual(list(outside.iterdir()), [])
+            self.assertFalse((inbox / 'public_review_manifest.csv').exists())
+
+    def test_case_junction_is_rejected_before_writing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'cases.jsonl'
+            source.write_text('{"case_id":"linked"}\n', encoding='utf-8')
+            old = importer.INBOX
+            importer.INBOX = str(root / 'inbox')
+            self.addCleanup(setattr, importer, 'INBOX', old)
+            with mock.patch.object(importer.os.path, 'isjunction', lambda path: Path(path).name == 'linked', create=True):
+                with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                    importer.main([str(source), '--apply'])
             self.assertFalse((root / 'inbox').exists())
 
 
