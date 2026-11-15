@@ -13,6 +13,8 @@
 \ProvidesPackage{cumcm-extras}[2026/09/04 v1.0 CUMCM extras for contest-orchestrator]
 
 % ── 基础宏包 ──
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
 \RequirePackage{bm}
 \RequirePackage{amsthm}
 \RequirePackage{setspace}
@@ -21,6 +23,11 @@
 \RequirePackage{makecell}
 \RequirePackage{listings}
 \RequirePackage{placeins}
+\RequirePackage{svg}
+\RequirePackage{adjustbox}
+\RequirePackage{wrapfig}
+\RequirePackage{xparse}
+\RequirePackage{caption}
 \RequirePackage{algorithm}
 \RequirePackage{algorithmicx}
 \RequirePackage{algpseudocode}
@@ -38,6 +45,17 @@
 \setlength{\textfloatsep}{10pt plus 3pt minus 3pt}
 \setlength{\floatsep}{10pt plus 3pt minus 3pt}
 \setlength{\intextsep}{8pt plus 3pt minus 3pt}
+
+% ── 章节边界浮动隔离：进入新章节前清空上一章节的浮动体 ──
+% 这样章节文件无需手工重复插入 \FloatBarrier，且文末仍会清空未排出的浮动体。
+\newcommand{\PaperSectionBarrier}{\FloatBarrier}
+\ifdefined\AddToHook
+  \AddToHook{cmd/section/before}{\PaperSectionBarrier}
+\else
+  \RequirePackage{etoolbox}
+  \pretocmd{\section}{\PaperSectionBarrier}{}{}
+\fi
+\AtEndDocument{\PaperSectionBarrier}
 
 % ── 列表紧凑设置（节省版面）──
 \setlist{
@@ -163,24 +181,75 @@
 \providecommand{\phone}[1]{[已脱敏]}
 
 % ============================================================
-%  8. 改造版 \figplot（符合 figure_policy 反浮动规范）
+%  8. SVG 图表与页面布局宏
 %
-%  与 ModelingPaperKit 原版的区别：
-%  - 用 [!htbp] 而非 [H]（figure_policy 禁止 [H] 锁浮动）
-%  - 图宽 0.76\textwidth（figure_policy 推荐 0.6-0.85）
-%  - 浮动参数与 figure_policy.md 一致
-%
-%  用法：\figplot{题注}{label}{文件名}{制图说明(可空)}
+%  页面布局只改变图在论文中的占位方式，不改变图表生成路由。
+%  所有正式图片均以不带扩展名的 SVG 路径传给 \includesvg；PNG 只作预览。
 % ============================================================
+\newcommand{\PaperFigureMaxHeight}{0.40\textheight}
+\newcommand{\PaperPanelMaxHeight}{0.36\textheight}
+
+\NewDocumentCommand{\PaperSvg}{O{\linewidth} m}{%
+  \adjustbox{max width=#1,max height=\PaperFigureMaxHeight,center}{%
+    \includesvg{#2}%
+  }%
+}
+
+% 标准单图：适用于常规结果图、流程图和示意图。
+\NewDocumentCommand{\PaperFigure}{O{0.76\textwidth} m m m}{%
+  \begin{figure}[!htbp]
+    \centering
+    \PaperSvg[#1]{#4}%
+    \caption{#2}\label{#3}%
+  \end{figure}%
+}
+
+% 左右并排：可用于“表格+解释”“文字+小图”“算法框+流程图”。
+% 两个内容参数中可使用 \captionof{table} 或 \captionof{figure}。
+\NewDocumentCommand{\PaperTwoColumn}{O{0.47\textwidth} O{0.47\textwidth} m m}{%
+  \begin{figure}[!htbp]
+    \centering
+    \begin{minipage}[t]{#1}\vspace{0pt}#3\end{minipage}%
+    \hfill
+    \begin{minipage}[t]{#2}\vspace{0pt}#4\end{minipage}%
+  \end{figure}%
+}
+
+% 在并排块中插入带独立图注的 SVG 面板。
+\NewDocumentCommand{\PaperSvgPanel}{O{\linewidth} m m m}{%
+  \centering
+  \adjustbox{max width=#1,max height=\PaperPanelMaxHeight,center}{\includesvg{#2}}%
+  \captionof{figure}{#3}\label{#4}%
+}
+
+% 短正文环绕小图：仅用于短段落，不能包围列表、公式或长篇连续论证。
+\NewDocumentCommand{\PaperWrapFigure}{O{r} O{0.34\textwidth} m m m}{%
+  \begin{wrapfigure}{#1}{#2}
+    \centering
+    \adjustbox{max width=\linewidth,max height=\PaperPanelMaxHeight,center}{\includesvg{#3}}%
+    \caption{#4}\label{#5}%
+  \end{wrapfigure}%
+}
+
+% 竖向长图：显式给出最大高度，保持宽高比；超过可读性时应拆图。
+\NewDocumentCommand{\PaperTallFigure}{O{0.36\textheight} m m m}{%
+  \begin{figure}[!htbp]
+    \centering
+    \adjustbox{max width=0.85\textwidth,max height=#1,center}{\includesvg{#4}}%
+    \caption{#2}\label{#3}%
+  \end{figure}%
+}
+
+% 兼容旧调用接口；第三个参数使用不带扩展名的 SVG 基础路径。
 \NewDocumentCommand{\figplot}{mmmm}{%
   \begin{figure}[!htbp]
     \centering
     \def\pkbFigPath{}%
-    \IfFileExists{#3}{\edef\pkbFigPath{#3}}{}%
-    \IfFileExists{./figures/#3}{%
+    \IfFileExists{#3.svg}{\edef\pkbFigPath{#3}}{}%
+    \IfFileExists{./figures/#3.svg}{%
       \ifx\pkbFigPath\empty\edef\pkbFigPath{./figures/#3}\fi
     }{}%
-    \IfFileExists{../02_figures/#3}{%
+    \IfFileExists{../02_figures/#3.svg}{%
       \ifx\pkbFigPath\empty\edef\pkbFigPath{../02_figures/#3}\fi
     }{}%
     \ifx\pkbFigPath\empty
@@ -192,7 +261,7 @@
         }%
       }%
     \else
-      \includegraphics[width=0.76\textwidth]{\pkbFigPath}%
+      \PaperSvg{\pkbFigPath}%
     \fi
     \caption{#1}%
     \ifblank{#4}{}{%

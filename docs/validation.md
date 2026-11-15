@@ -8,6 +8,8 @@
 
 ## 2026-11-15 维护检查
 
+公开版 CUMCM 排版适配器已在本机用 XeLaTeX 编译三个模板及布局冒烟样例，并用合成 SVG 验证 Inkscape 转换链路。CI 检查模板与布局命令的契约；这些检查不代表真实论文或特定比赛规则已通过交付审核。
+
 在 Windows、Python 3.13 环境下，公开仓库的 Harness 106 项、MathorCup 140 项测试通过；工作台 Python 28 项和 Node.js 33 项测试通过。仓库检查和合成数据示例通过。GitHub Actions 的实时结果以[工作流页面](https://github.com/cjh-solver/MathModeling-Skills-Arsenal/actions/workflows/validate.yml)为准。
 
 完整严格检查仍未通过：版本登记不一致、15 个脚本尚未分类，且部分未发布的私有引用缺失。健康检查现已识别仓库的分类目录，不再把仓库中存在的技能包误报为缺失；这只证明包在仓库中，不证明宿主已安装或能调用它们。需要逐项处理剩余问题后才能评价完整发布状态。

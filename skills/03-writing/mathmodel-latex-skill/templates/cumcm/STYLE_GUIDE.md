@@ -142,7 +142,7 @@
 ### 改造版 \figplot
 
 ```tex
-\figplot{模型框架图}{fig:framework}{framework.svg}{数据来源：题目附件1}
+\figplot{模型框架图}{fig:framework}{figures/framework}{数据来源：题目附件1}
 ```
 
 - 自动搜索 `./`、`./figures/`、`../02_figures/` 路径
@@ -150,6 +150,9 @@
 - 用 `[!htbp]` 浮动（符合 figure_policy，禁止 `[H]`）
 - 图宽 0.76\textwidth（figure_policy 推荐 0.6-0.85）
 - 第 4 个参数为制图说明，可留空 `{}`
+- 第 3 个参数为不带扩展名的 SVG 路径；缺图占位框只用于草稿，终稿前必须补齐真实图件。
+
+按已登记的 `layout_mode` 选择 `\PaperFigure`、`\PaperTwoColumn`、`\PaperWrapFigure` 或 `\PaperTallFigure`；不要为占满页面新增图表。
 
 ### 脱敏占位
 

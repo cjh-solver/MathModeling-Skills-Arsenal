@@ -1,10 +1,23 @@
 # 数学建模论文 LaTeX 精细排版速查表
 
-本文件是数学建模论文常用LaTeX排版包的速查表，覆盖图文混排、复杂表格、彩色框、页面布局、公式调整、子图、算法伪代码等场景。每个包给出用途、核心命令、最小示例和注意事项。
+本文件是数学建模论文常用 LaTeX 排版包的速查表，覆盖图文混排、复杂表格、彩色框、页面布局、公式调整、子图、算法伪代码等场景。CUMCM 正式论文优先使用本技能提供的布局宏；其他包仅在模板已加载、项目确有需要且不违反主流程门禁时使用。
 
 ---
 
 ## 一、图文混排
+
+### 统一路由：先选页面布局，再写插图代码
+
+图表生成技能只决定图内信息、视觉编码和画布比例；论文排版层根据图表登记中的 `layout_mode` 选择页面布局。国赛模板提供四个稳定入口：
+
+| `layout_mode` | 推荐入口 | 页面用途 |
+|---|---|---|
+| `single` | `\PaperFigure` | 常规单图，宽度约为版心的 0.76，最大高度为页面高度的 0.40 |
+| `side_by_side` | `\PaperTwoColumn` | 表格与解释、文字与小图、算法框与流程图的顶部对齐并排 |
+| `wrap_short` | `\PaperWrapFigure` | 仅用于短正文环绕小图 |
+| `tall_constrained` | `\PaperTallFigure` | 竖向长图，显式设置最大高度并保持宽高比 |
+
+正式论文图片统一用 `\includesvg{figures/<figure_id>}`，路径不写扩展名。PNG 只用于预览；图片 PDF 不作为输出。正文浮动体使用 `[!htbp]`，禁止 `[H]`。优先使用模板宏和 `minipage`，不要在每张图处重新发明尺寸参数。
 
 ### 1. wrapfig — 文字环绕图片
 
@@ -12,14 +25,9 @@
 
 **核心命令**：
 ```latex
-\usepackage{wrapfig}
-\begin{wrapfigure}{l}{0.4\textwidth}  % l=左, r=右, i=内侧, o=外侧
-  \centering
-  \includegraphics[width=\linewidth]{fig.png}
-  \caption{图题}
-  \label{fig:1}
-\end{wrapfigure}
-这里是环绕的文字...
+% layout_mode=wrap_short
+\PaperWrapFigure[l][0.34\textwidth]{figures/fig}{图题}{fig:1}
+这里是环绕的小段文字...
 ```
 
 **注意事项**：
@@ -28,20 +36,11 @@
 - 图片宽度建议设为 `0.3-0.5\textwidth`
 - 数学建模论文中慎用，标准排版是图片单独占一行
 
-### 2. floatrow — 浮动体高级控制
+### 2. floatrow — 兼容性参考，不作为国赛主路线
 
 **用途**：多图并排、图题位置控制、浮动体对齐。
 
-**核心命令**：
-```latex
-\usepackage{floatrow}
-\begin{figure}[htbp]
-  \begin{floatrow}
-    \ffigbox[\FBwidth]{\caption{图1}}{\includegraphics[width=0.45\textwidth]{fig1.png}}
-    \ffigbox[\FBwidth]{\caption{图2}}{\includegraphics[width=0.45\textwidth]{fig2.png}}
-  \end{floatrow}
-\end{figure}
-```
+国赛正式论文不使用此包作为主布局入口；并排内容统一使用 `layout_mode=side_by_side` 与 `\PaperTwoColumn`，避免形成第二套图表路由。
 
 ---
 
@@ -53,18 +52,12 @@
 
 **核心命令**：
 ```latex
-\begin{figure}[htbp]
-  \begin{minipage}{0.58\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{fig.png}
-  \end{minipage}
-  \hfill  % 或 \hspace{0.02\textwidth}
-  \begin{minipage}{0.38\textwidth}
-    分析文字...
-  \end{minipage}
-  \caption{图题}
-  \label{fig:1}
-\end{figure}
+% layout_mode=side_by_side
+\PaperTwoColumn{
+  \PaperSvgPanel[\linewidth]{figures/fig}{图题}{fig:1}
+}{
+  分析文字...
+}
 ```
 
 **注意事项**：
@@ -75,15 +68,12 @@
 ### 2. tabular — 表格方式并排
 
 ```latex
-\begin{figure}[htbp]
-  \centering
-  \begin{tabular}{cc}
-    \includegraphics[width=0.45\textwidth]{fig1.png} &
-    \includegraphics[width=0.45\textwidth]{fig2.png} \\
-    (a) 子图1 & (b) 子图2
-  \end{tabular}
-  \caption{图题}
-\end{figure}
+% layout_mode=side_by_side
+\PaperTwoColumn{
+  \PaperSvgPanel[\linewidth]{figures/fig1}{子图1}{fig:1a}
+}{
+  \PaperSvgPanel[\linewidth]{figures/fig2}{子图2}{fig:1b}
+}
 ```
 
 ---
@@ -171,7 +161,7 @@
 
 ## 四、彩色框 / 提示框
 
-### 1. tcolorbox — 高级彩色框（推荐）
+### 1. tcolorbox — 可选兼容参考（不作为默认依赖）
 
 **用途**：虚线框、彩色框、提示框、定理框。
 
@@ -195,7 +185,7 @@
 **注意事项**：
 - `breakable` 允许跨页
 - 数学建模论文中慎用彩色框，正式论文用虚线框或无框
-- 你上一张图问的虚线框就是用 tcolorbox 或 mdframed 做的
+- 当前国赛模板不默认加载 `tcolorbox`；需要结构化文本框时优先使用 `\fbox` 与 `minipage`，避免无必要依赖
 
 ### 2. mdframed — 简单框架
 
@@ -315,22 +305,24 @@ f(x) = \begin{cases}
 
 ## 七、子图 / 多图
 
-### 1. subcaption — 子图（推荐）
+### 1. subcaption — 子图兼容参考
+
+只有在确实需要为子图分别编号时使用；CUMCM 常规并排图优先使用 `layout_mode=side_by_side` 与 `\PaperTwoColumn`。
 
 ```latex
 \usepackage{subcaption}
-\begin{figure}[htbp]
+\begin{figure}[!htbp]
   \centering
   \begin{subfigure}{0.45\textwidth}
     \centering
-    \includegraphics[width=\linewidth]{fig1.png}
+    \PaperSvg{figures/fig1}
     \caption{子图1}
     \label{subfig:1}
   \end{subfigure}
   \hfill
   \begin{subfigure}{0.45\textwidth}
     \centering
-    \includegraphics[width=\linewidth]{fig2.png}
+    \PaperSvg{figures/fig2}
     \caption{子图2}
     \label{subfig:2}
   \end{subfigure}
@@ -493,9 +485,9 @@ red!50!blue  % 50%红+50%蓝
 ```
 
 **注意事项**：
-- 数据图建议用 Python (matplotlib) 生成 SVG，再用 `\includesvg` 插入
+- 数据图遵循 `SciPilot → ModelViz → SciPilot` 路由生成 SVG，再由排版宏插入；不在 LaTeX 层重新决定图型或改写图表语义
 - 机理/几何/流程图用 tikz 或 tikz-scientific-figures skill
-- 问题分析/技术路线图用 tech-route-maker skill
+- 所有非数据图（含问题分析/技术路线图）用 tikz-scientific-figures skill；数据结果图走 SciPilot → ModelViz → SciPilot
 
 ---
 
@@ -553,14 +545,14 @@ red!50!blue  % 50%红+50%蓝
 
 | 问题 | 解决方案 |
 |------|---------|
-| 图片浮动到下一页 | 用 `[htbp]` 代替 `[H]`；缩小图片；调整图片位置；加文字填充 |
+| 图片浮动到下一页 | 使用 `[!htbp]` 和对应布局宏；缩小图片或设置最大高度；补充真实的图前引出与图后解释 |
 | 两张图连在一起 | 在两图之间加过渡文字；用 `\clearpage` 强制分页（慎用） |
 | 表格太宽超出页面 | 用 `tabularx` 的 X 列；缩小字号 `\small`；旋转表格 `sidewaystable` |
 | 公式编号断裂 | 检查 `\label` 是否在 `\caption` 之后；检查是否用了 `\nonumber` |
 | 参考文献不显示 | 运行 BibTeX；检查 `\cite` 键是否正确；检查 `ref.bib` 编码 |
 | 中文乱码 | 用 XeLaTeX 编译；检查 `ctex` 包；检查文件编码为 UTF-8 |
-| 图片不显示 | 检查路径；用 `\graphicspath` 设置图片目录；SVG 用 `--shell-escape` |
-| 页面空白太多 | 检查是否有 `\clearpage`；检查浮动体参数；用 `\vspace{-10pt}` 微调（慎用） |
+| 图片不显示 | 检查 SVG 路径和 PNG 配对；使用 `--shell-escape` 并确认本机 SVG 转换工具可用 |
+| 页面空白太多 | 检查是否有 `\clearpage` 或 `[H]`；改用登记的布局宏、受控最大高度、并排结构或拆分长图；禁止负间距凑版面 |
 
 ---
 

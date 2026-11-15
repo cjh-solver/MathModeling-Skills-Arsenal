@@ -1,0 +1,31 @@
+\documentclass{ctexart}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{cumcm-extras}
+\RenewDocumentCommand{\includesvg}{O{} m}{\rule{0.8\linewidth}{1.2cm}}
+
+\begin{document}
+\section{Layout smoke test}
+如图\ref{fig:single}所示，标准图应保持在受控尺寸内。
+\PaperFigure{标准图}{fig:single}{figures/single}
+图后给出结果解释，保证图文论证连续。
+
+如图\ref{fig:panel}所示，并排块用于压缩高度并保持上下对齐。
+\PaperTwoColumn{
+  \captionof{table}{方案摘要}
+  \begin{tabular}{ll}\hline 方案 & 说明 \\\hline A & 示例 \\\hline\end{tabular}
+}{
+  \PaperSvgPanel[\linewidth]{figures/panel}{右侧小图}{fig:panel}
+}
+图后解释并排块中的关键结论。
+
+\PaperTallFigure{竖向图}{fig:tall}{figures/tall}
+图后解释竖向图的结论。
+
+\PaperWrapFigure[r][0.28\textwidth]{figures/wrap}{环绕小图}{fig:wrap}
+这是一段足够短的普通正文，用于验证小图环绕入口。文字在图旁继续排列，并在段落结束后回到正常版心。
+
+\end{document}
