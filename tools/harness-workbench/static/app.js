@@ -302,7 +302,7 @@ function promptReady(snapshot, chapter, prompt) {
   const approvedAt = timeValue(time), draftAt = timeValue(chapter.draft_completed_at), preparedAt = timeValue(prompt?.prepared_at);
   return snapshot.visual_workflow === 'chapter_parallel' && chapter.visuals_required !== false && !snapshot.approval_error && approval?.decision === 'approved' && approval?.digests?.status === 'matches' &&
     covered && Number.isFinite(approvedAt) && approvedAt > draftAt && preparedAt > approvedAt &&
-    chapter.draft_hash === 'matches' && chapter.quality_hash === 'matches' && chapter.prompts?.[chapter.prompts.length - 1] === prompt &&
+    chapter.draft_hash === 'matches' && chapter.quality_hash === 'matches' && chapter.quality_ready === true && chapter.prompts?.[chapter.prompts.length - 1] === prompt &&
     prompt?.hash === 'matches' && prompt.visual_plan_hash === 'matches' && prompt.plan_binding === true &&
     typeof prompt.sha256 === 'string' && /^[0-9a-f]{64}$/i.test(prompt.sha256);
 }
@@ -313,7 +313,7 @@ function chapterRows() {
     const approval = [...state.approvals].reverse().find(a => a.gate === `H7_CHAPTER:${c.id}`);
     const decision = state.approval_error ? '批准记录不完整，待核' : approval ? `批准记录：${approval.decision || '未记录'}${approval.digests?.status === 'issues' ? '（文件变化或待核）' : ''}` : '未找到章节批准记录';
     const visual = c.visuals_required === false ? '记录为不需要图表' : c.visuals_required === true ? '记录为需要图表' : '图表需求未记录';
-    return `<div class="row">${fileIcon(c.draft)}<div class="row-main"><div class="row-title">${esc(c.id)}</div><div class="row-meta">正文：${esc(c.draft || '未登记')} · ${esc(decision)}<br>${visual} · 提示词版本：${c.prompt_revisions}</div>${c.prompts?.length ? `<details class="history"><summary>查看图表提示词版本</summary>${c.prompts.map(p => { const ready = promptReady(state, c, p); return `<div>${esc(p.revision || '版本未登记')} · ${esc(p.path || '文件未登记')} ${p.path ? fileLink(p.path, '查看') : ''}${ready ? `<button class="row-action" data-copy-file="${esc(p.path)}" data-chapter-id="${esc(c.id)}">复制供手动转交</button>` : (c.visuals_required === false ? '<span> · 记录为无需图表，请核对提示词</span>' : '<span> · 非最新版本或章节批准、时间与图表资料待核</span>')}</div>`; }).join('')}</details>` : ''}</div>${c.draft ? fileLink(c.draft) : ''}</div>`;
+    return `<div class="row">${fileIcon(c.draft)}<div class="row-main"><div class="row-title">${esc(c.id)}</div><div class="row-meta">正文：${esc(c.draft || '未登记')} · ${esc(decision)}<br>${visual} · 提示词版本：${c.prompt_revisions}</div>${c.prompts?.length ? `<details class="history"><summary>查看图表提示词版本</summary>${c.prompts.map(p => { const ready = promptReady(state, c, p); return `<div>${esc(p.revision || '版本未登记')} · ${esc(p.path || '文件未登记')} ${p.path ? fileLink(p.path, '查看') : ''}${ready ? `<button class="row-action" data-copy-file="${esc(p.path)}" data-chapter-id="${esc(c.id)}">复制供手动转交</button>` : (c.visuals_required === false ? '<span> · 记录为无需图表，请核对提示词</span>' : '<span> · 非最新版本或章节批准、质量审查、时间与图表资料待核</span>')}</div>`; }).join('')}</details>` : ''}</div>${c.draft ? fileLink(c.draft) : ''}</div>`;
   }).join('');
 }
 

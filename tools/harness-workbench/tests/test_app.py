@@ -255,13 +255,14 @@ dispatch_records:
         visual_plan = self.project / 'visual.yaml'
         quality = self.project / 'quality.yaml'
         packet = self.project / 'review.yaml'
-        plan.write_text('writing_order: [Q1, abstract]\nchapter_order: [abstract, Q1]\ncentral_thesis: Example', encoding='utf-8')
+        plan.write_text('writing_order: [Q1, abstract]\nchapter_order: [abstract, Q1]\ncentral_thesis: Example\nchapters: [{chapter_id: Q1, kind: modeling}]', encoding='utf-8')
         draft.write_text('Example chapter', encoding='utf-8')
         prompt.write_text('Example figure prompt', encoding='utf-8')
-        quality.write_text('status: ready', encoding='utf-8')
         packet.write_text('node_id: H7_CHAPTER:Q1', encoding='utf-8')
         plan_hash = hashlib.sha256(plan.read_bytes()).hexdigest()
         draft_hash = hashlib.sha256(draft.read_bytes()).hexdigest()
+        quality_data = {'status': 'ready', 'draft_sha256': draft_hash, 'checks': {key: 'PASS' for key in app.CHAPTER_QUALITY_CHECKS}}
+        quality.write_text(app.yaml.safe_dump(quality_data), encoding='utf-8')
         visual_plan.write_text(f'chapter_id: Q1\nrevision_id: r1\ndraft: {{path: q1.tex, sha256: {draft_hash}}}\nslots: [{{slot_id: figure1}}]\n', encoding='utf-8')
         prompt_hash = hashlib.sha256(prompt.read_bytes()).hexdigest()
         visual_hash = hashlib.sha256(visual_plan.read_bytes()).hexdigest()
@@ -301,6 +302,7 @@ nodes:
         self.assertEqual(result['chapters'][0]['draft_completed_at'], '2026-11-14T11:00:00+08:00')
         self.assertEqual(result['chapters'][0]['quality_review'], 'quality.yaml')
         self.assertEqual(result['chapters'][0]['quality_hash'], 'matches')
+        self.assertTrue(result['chapters'][0]['quality_ready'])
         self.assertEqual(result['chapters'][0]['review_packet'], 'review.yaml')
         self.assertEqual(result['approvals'][0]['timestamp'], '2026-11-14T12:00:00+08:00')
         self.assertEqual(result['approvals'][0]['digests']['status'], 'matches')
@@ -310,6 +312,13 @@ nodes:
         mismatched = app.build_state(self.project, self.links)
         self.assertEqual(mismatched['chapters'][0]['prompts'][0]['visual_plan_hash'], 'matches')
         self.assertFalse(mismatched['chapters'][0]['prompts'][0]['plan_binding'])
+        quality_data['checks']['model_and_derivation'] = {'status': 'not_applicable', 'reason': 'example'}
+        quality.write_text(app.yaml.safe_dump(quality_data), encoding='utf-8')
+        updated_quality_hash = hashlib.sha256(quality.read_bytes()).hexdigest()
+        self.control.write_text(self.control.read_text(encoding='utf-8').replace(quality_hash, updated_quality_hash), encoding='utf-8')
+        unready = app.build_state(self.project, self.links)
+        self.assertEqual(unready['chapters'][0]['quality_hash'], 'matches')
+        self.assertFalse(unready['chapters'][0]['quality_ready'])
         draft.write_text('Changed chapter', encoding='utf-8')
         changed = app.build_state(self.project, self.links)
         self.assertEqual(changed['approvals'][0]['digests']['status'], 'issues')

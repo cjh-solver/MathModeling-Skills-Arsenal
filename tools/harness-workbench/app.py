@@ -43,6 +43,8 @@ LINKS_PATH = HERE / "data" / "role_links.json"
 ID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 NODE_NAMES = {"H0": "启动", "H1": "题意理解", "H2": "规格冻结", "H3": "文献需求", "H4": "历史节点", "H5": "建模与求解", "H6": "独立验证", "H7": "图表", "H8": "论文", "H9": "交付审查"}
 ROLE_NAMES = {"H1": "题意理解", "H5": "解题", "H6": "独立验证", "H7": "图表", "H8": "论文"}
+CHAPTER_QUALITY_CHECKS = ("problem_answer", "model_and_derivation", "result_comparison", "interpretation", "continuity", "evidence_provenance")
+CHAPTER_KINDS = {"modeling", "validation", "evaluation", "conclusion", "analysis", "front_matter", "appendix", "abstract"}
 HARNESS_SKILLS = [
     ("contest-orchestrator", "全流程主控"), ("math-model-selector", "模型选择"),
     ("data-science-stack", "数据与验证"), ("scipilot-figure-skill", "科研数据图"),
@@ -487,10 +489,10 @@ def build_state(project, links_path=LINKS_PATH):
                 ref = revision.get("prompt") if isinstance(revision.get("prompt"), dict) else {}
                 prompt_path = ref.get("path")
                 prompt_hash = digest_status(project, {prompt_path: ref.get("sha256")}) if isinstance(prompt_path, str) else {"status": "unrecorded"}
-                plan = revision.get("visual_plan") if isinstance(revision.get("visual_plan"), dict) else {}
-                plan_path = plan.get("path")
-                plan_hash = digest_status(project, {plan_path: plan.get("sha256")}) if isinstance(plan_path, str) else {"status": "unrecorded"}
-                visual_plan, visual_error = read_project_yaml(project, plan_path)
+                visual_ref = revision.get("visual_plan") if isinstance(revision.get("visual_plan"), dict) else {}
+                visual_path = visual_ref.get("path")
+                visual_hash = digest_status(project, {visual_path: visual_ref.get("sha256")}) if isinstance(visual_path, str) else {"status": "unrecorded"}
+                visual_plan, visual_error = read_project_yaml(project, visual_path)
                 revision_id = revision.get("revision_id")
                 slots = visual_plan.get("slots")
                 chapter_id = item.get("chapter_id")
@@ -500,17 +502,33 @@ def build_state(project, links_path=LINKS_PATH):
                     visual_plan.get("draft") == draft and isinstance(slots, list) and bool(slots)
                 )
                 prompts.append({"revision": revision.get("revision_id"), "path": prompt_path,
-                                "hash": prompt_hash["status"], "sha256": ref.get("sha256"), "visual_plan_path": plan_path,
-                                "visual_plan_hash": plan_hash["status"], "plan_binding": plan_binding,
+                                "hash": prompt_hash["status"], "sha256": ref.get("sha256"), "visual_plan_path": visual_path,
+                                "visual_plan_hash": visual_hash["status"], "plan_binding": plan_binding,
                                 "prepared_at": recorded_timestamp(revision.get("prepared_at")), "supersedes": revision.get("supersedes")})
             draft_path = draft.get("path")
             draft_hash = digest_status(project, {draft_path: draft.get("sha256")}) if isinstance(draft_path, str) else {"status": "unrecorded"}
             quality = item.get("quality_review") if isinstance(item.get("quality_review"), dict) else {}
             quality_path = quality.get("path")
             quality_hash = digest_status(project, {quality_path: quality.get("sha256")}) if isinstance(quality_path, str) else {"status": "unrecorded"}
+            quality_data, quality_error = read_project_yaml(project, quality_path)
+            definitions = plan.get("chapters") if isinstance(plan.get("chapters"), list) else []
+            matching_definitions = [entry for entry in definitions if isinstance(entry, dict) and entry.get("chapter_id") == item.get("chapter_id")]
+            kind = matching_definitions[0].get("kind") if len(matching_definitions) == 1 else None
+            checks = quality_data.get("checks")
+            draft_sha = draft.get("sha256")
+            quality_ready = (
+                not quality_error and plan_hash["status"] == "matches" and isinstance(kind, str) and kind in CHAPTER_KINDS and
+                draft_hash["status"] == "matches" and isinstance(draft_sha, str) and
+                quality_data.get("status") == "ready" and quality_data.get("draft_sha256") == draft_sha.lower() and
+                isinstance(checks, dict) and all(
+                    checks.get(key) == "PASS" or (isinstance(checks.get(key), dict) and
+                    checks[key].get("status") == "not_applicable" and bool(checks[key].get("reason")))
+                    for key in CHAPTER_QUALITY_CHECKS
+                ) and (kind != "modeling" or checks.get("model_and_derivation") == "PASS")
+            )
             chapters.append({"id": str(item.get("chapter_id") or "未命名章节"), "draft": draft_path, "draft_hash": draft_hash["status"],
                              "draft_completed_at": recorded_timestamp(item.get("draft_completed_at")),
-                             "quality_review": quality_path, "quality_hash": quality_hash["status"],
+                             "quality_review": quality_path, "quality_hash": quality_hash["status"], "quality_ready": quality_ready,
                              "review_packet": ref_path(item.get("review_packet")), "visuals_required": item.get("visuals_required"),
                              "prompt_revisions": len(prompts), "prompts": prompts})
     h1 = nodes.get("H1") if isinstance(nodes.get("H1"), dict) else {}
