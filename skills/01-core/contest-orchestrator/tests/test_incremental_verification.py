@@ -141,6 +141,30 @@ class IncrementalValidationTests(unittest.TestCase):
             self.assertTrue(any("stale" in error and "change_impact_card" in error for error in errors))
             self.assertIsNone(plan)
 
+    def test_competition_plan_cannot_skip_an_earlier_stale_node(self):
+        router = load_module("scripts/validation_router.py", "validation_router_stale_scope")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            card = self.make_card(root, "L0", "paper_prose")
+            card_path = root / "change.yaml"
+            card_path.write_text(yaml.safe_dump(card), encoding="utf-8")
+            control = {"validation": {"profile": "competition_fast", "change_impact_card": "change.yaml"},
+                       "nodes": {"H5": {"status": "stale"}, "H8": {"status": "stale"}}}
+            errors, plan = router.validate_control_validation(root, control)
+            self.assertTrue(any("H5" in error and "复核范围" in error for error in errors), errors)
+            self.assertIsNone(plan)
+            control["nodes"]["H5"]["status"] = "approved"
+            control["nodes"]["H4"] = {"status": "stale"}
+            errors, plan = router.validate_control_validation(root, control)
+            self.assertTrue(any("H4" in error for error in errors), errors)
+            self.assertIsNone(plan)
+            control["nodes"]["H4"]["status"] = "merged"
+            control["nodes"]["H9"] = {"status": "stale"}
+            errors, plan = router.validate_control_validation(root, control)
+            self.assertEqual(errors, [])
+            self.assertEqual(plan["recheck_nodes"], ["H8"])
+            self.assertTrue(plan["h9_full_delivery_required"])
+
     def test_h9_remains_mandatory_in_every_profile_plan(self):
         router = load_module("scripts/validation_router.py", "validation_router_h9")
         with tempfile.TemporaryDirectory() as raw:

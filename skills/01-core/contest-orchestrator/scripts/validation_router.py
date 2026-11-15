@@ -254,7 +254,17 @@ def validate_control_validation(root: Path, control: dict[str, Any]) -> tuple[li
     errors.extend(validate_change_impact(root, card))
     if card.get("profile") != profile:
         errors.append("change_impact_card.profile 必须与 validation.profile 一致")
-    return errors, build_validation_plan(card) if not errors else None
+    if errors:
+        return errors, None
+    plan = build_validation_plan(card)
+    if profile == "competition_fast" and plan["recheck_nodes"]:
+        first_index = NODES.index(plan["recheck_nodes"][0])
+        earlier_stale = [node for node in stale_nodes
+                         if node in NODES[1:9] and NODES.index("H5" if node == "H4" else node) < first_index]
+        if earlier_stale:
+            errors.append(f"change_impact_card 复核范围晚于已失效节点: {', '.join(earlier_stale)}")
+            return errors, None
+    return errors, plan
 
 
 def main() -> int:
