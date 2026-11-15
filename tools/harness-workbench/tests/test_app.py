@@ -256,6 +256,8 @@ dispatch_records:
         cycle.append(cycle)
         with self.assertRaisesRegex(ValueError, '循环引用'):
             app.json_safe(cycle)
+        with self.assertRaisesRegex(ValueError, '日期键'):
+            app.json_safe({app.date(2026, 11, 15): 1, '2026-11-15': 2})
 
     def test_visual_slots_follow_harness_representation_rules(self):
         valid = [
@@ -397,13 +399,14 @@ nodes:
             self.assertEqual(json.load(response)['project'], str(self.project))
         self.write_control('active_mode: full-contest-harness\nproblem_scope: {subproblems: [Q1]}\nnodes:\n  H5: {model_summary_cards: models.yaml}\n')
         model_file = self.project / 'models.yaml'
-        model_file.write_text('cards:\n  - subproblem_id: Q1\n    result: {values: [.nan, .inf, -.inf, 1.25]}\n', encoding='utf-8')
+        model_file.write_text('cards:\n  - subproblem_id: Q1\n    result: {values: [.nan, .inf, -.inf, 1.25], daily: {2026-11-15: 4.2}}\n', encoding='utf-8')
         original = model_file.read_bytes()
         def reject_nonstandard_constant(value):
             raise AssertionError(f'Nonstandard JSON constant: {value}')
         with urllib.request.urlopen(base + '/api/state') as response:
             state = json.load(response, parse_constant=reject_nonstandard_constant)
         self.assertEqual(state['question_views'][0]['models'][0]['result']['values'], ['NaN', 'Infinity', '-Infinity', 1.25])
+        self.assertEqual(state['question_views'][0]['models'][0]['result']['daily'], {'2026-11-15': 4.2})
         self.assertEqual(model_file.read_bytes(), original)
         self.write_control('invalid: [')
         with self.assertRaises(urllib.error.HTTPError):

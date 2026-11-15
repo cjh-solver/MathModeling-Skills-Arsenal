@@ -13,7 +13,7 @@ import tempfile
 import threading
 import webbrowser
 import zipfile
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -70,7 +70,7 @@ LINKS_LOCK = threading.Lock()
 
 
 def json_safe(value, active=None):
-    """Keep non-finite measurements visible while emitting valid JSON."""
+    """Keep modeling values visible while emitting valid JSON."""
     if isinstance(value, float) and not math.isfinite(value):
         return "NaN" if math.isnan(value) else ("Infinity" if value > 0 else "-Infinity")
     if not isinstance(value, (dict, list, tuple)):
@@ -81,7 +81,13 @@ def json_safe(value, active=None):
     active.add(id(value))
     try:
         if isinstance(value, dict):
-            return {key: json_safe(item, active) for key, item in value.items()}
+            result = {}
+            for key, item in value.items():
+                output_key = key.isoformat() if isinstance(key, date) else key
+                if output_key in result:
+                    raise ValueError("记录包含无法区分的日期键，无法显示")
+                result[output_key] = json_safe(item, active)
+            return result
         return [json_safe(item, active) for item in value]
     finally:
         active.remove(id(value))
