@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Reorganize the homepage around the workbench preview, task-based entry points and a shorter installation path, using the existing workbench mark.
 - Record the selected ModelViz template source and SHA-256 in the adaptation handoff, and make test fixture imports independent of installed packages named `tests`.
 - Add a synthetic workbench project and actual overview screenshot, with a quick route from the homepage to trying the demo.
 - Mark historical JSON reports with conflicting duplicate fields as unreadable instead of silently showing a potentially misleading pass result.
