@@ -145,7 +145,9 @@ def safe_file(project, name):
 def load_links(path=LINKS_PATH):
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
+        if not isinstance(data, dict):
+            raise ValueError("角色登记文件格式错误，原记录未修改")
+        return data
     except FileNotFoundError:
         return {}
     except (OSError, UnicodeError, json.JSONDecodeError) as error:

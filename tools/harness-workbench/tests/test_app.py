@@ -107,6 +107,19 @@ dispatch_records:
         self.assertEqual(current['解题'], second)
         self.assertEqual([item['thread_id'] for item in histories['解题']], [first, second])
 
+    def test_invalid_role_link_root_never_overwrites_existing_records(self):
+        self.links.parent.mkdir()
+        self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
+        for content in ('[]', 'null', '"unexpected"', '42', '{invalid'):
+            with self.subTest(content=content):
+                self.links.write_text(content, encoding='utf-8')
+                before = self.links.read_bytes()
+                with self.assertRaisesRegex(ValueError, '角色登记文件'):
+                    app.save_link(self.project, '解题', '01a18b46-b9e2-7e40-a766-3cb725796ebc', self.links)
+                self.assertEqual(self.links.read_bytes(), before)
+                with self.assertRaisesRegex(ValueError, '角色登记文件'):
+                    app.build_state(self.project, self.links)
+
     def test_verified_lookup_provenance_is_retained(self):
         self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
         thread_id = '01a18b46-b9e2-7e40-a766-3cb725796ebc'
