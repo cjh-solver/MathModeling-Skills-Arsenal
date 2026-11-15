@@ -8,9 +8,17 @@
 
 适合已有题目、数据和人工判断，希望让 AI 分工、证据和交付更清楚的建模团队。覆盖国赛、美赛、MathorCup 等竞赛；具体格式与 AI 使用要求以本届官方规则为准。
 
-**先看效果：** [逐章写作示例](examples/chapter-parallel/README.md) · [本地数模工作台](tools/harness-workbench/README.md) · [可复制提示词](docs/quickstart.md) · [技能目录](docs/skill-catalog.md)
+**快速入口：** [体验工作台](examples/workbench-demo/README.md) · [查看写作示例](examples/chapter-parallel/README.md) · [复制启动提示词](docs/quickstart.md) · [浏览技能目录](docs/skill-catalog.md)
 
 **项目状态：** 主控为开发快照，完整发布检查尚未通过。近期维护、已知限制和复现方法见[更新记录](CHANGELOG.md)与[验证说明](docs/validation.md)；使用问题和改进建议可通过 [Issues](https://github.com/cjh-solver/MathModeling-Skills-Arsenal/issues/new/choose) 反馈。
+
+## 看一眼工作台
+
+本机读取已有 Harness 项目，集中查看比赛阶段、小问、角色会话和成果。页面定时从项目文件同步，不需要额外调用模型。比赛数据和审批记录保持只读，角色会话需自行登记并核实。
+
+![数模工作台比赛总览，使用合成演示项目](docs/assets/workbench-overview.png)
+
+截图来自仓库内的合成演示项目，不代表真实比赛进度或批准结果。[打开演示项目](examples/workbench-demo/README.md) · [了解工作台](tools/harness-workbench/README.md)
 
 ## 能得到什么
 
@@ -87,9 +95,7 @@ MathorCup 全流程可指定 `full-contest-mathorcup`；只解一问、只画图
 - **可视化工作台：** [查看安装和比赛使用方法](tools/harness-workbench/README.md)，本机读取 Harness 项目，查看流程、小问、文件、图表和论文，不调用模型维护页面。
 - **流程验证：** 正反例测试检查提前派发、输入哈希漂移、旧图版本等是否被拒绝。
 - **输出示例：** [合成章节与图表交接](examples/chapter-parallel/README.md) 展示输入、正文、批准边界与提示词，附可运行的数据计算。
-- **视觉样例：** 下图是 `fireworks-tech-graph` 的上游风格资源，不代表科研结果图。数据图使用 SciPilot / ModelViz；流程图及示意图按具体模式和批准记录选择路由。
-
-![技术图示风格样例](skills/04-figures/fireworks-tech-graph/assets/samples/showcase-12-styles.png)
+- **可编辑示意图：** [查看技术路线 SVG](skills/04-figures/tech-route-maker/examples/out/tech-route.svg)及其[示例材料](skills/04-figures/tech-route-maker/examples/README.md)。这是示例图，实际项目需要依据题目与证据重新制作和核验。
 
 测试数量、已知版本问题、复现命令和覆盖范围见 [验证说明](docs/validation.md)。主控包含开发快照更新，尚未作为通过全部发布门的稳定新版发布。
 

@@ -1,0 +1,14 @@
+active_mode: full-contest-harness
+visual_workflow: chapter_parallel
+problem_scope:
+  subproblems: [Q1, Q2, Q3]
+nodes:
+  H0: {status: not_started}
+  H1: {status: in_progress, unified_problem_package: 问题概览.yaml, task_card: 读题任务.yaml}
+  H2: {status: not_started}
+  H3: {status: not_started}
+  H5: {status: not_started}
+  H6: {status: not_started}
+  H7: {status: not_started}
+  H8: {status: not_started}
+  H9: {status: not_started}

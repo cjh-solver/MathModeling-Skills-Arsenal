@@ -1,0 +1,14 @@
+objectives:
+  Q1: 分析需求与可用资源
+  Q2: 建立满足约束的配置方案
+  Q3: 比较不同方案的结果
+questions:
+  Q1:
+    inputs: [示例需求, 示例资源]
+    outputs: [需求与资源概览]
+  Q2:
+    inputs: [需求与资源概览, 示例约束]
+    outputs: [配置方案]
+  Q3:
+    inputs: [配置方案]
+    outputs: [方案比较]

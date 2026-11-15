@@ -1,0 +1,7 @@
+node_id: H1
+task_id: demo-h1
+owner_role: 题意理解
+objective: 梳理演示题目的输入、约束与待回答问题。
+covered_subproblems: [Q1, Q2, Q3]
+inputs: [演示题目.md]
+required_outputs: [问题概览.yaml]

@@ -14,6 +14,8 @@ py -3.13 app.py --open
 
 Windows 也可以双击 `start_workbench.bat`。使用期间保持终端窗口打开；关闭窗口后服务停止。若浏览器没有自动打开，访问 http://127.0.0.1:8765/。
 
+没有现成项目时，可以先使用[合成演示项目](../../examples/workbench-demo/README.md)体验页面。
+
 ## 比赛中使用
 
 1. 先用已安装的 `contest-orchestrator` 创建或选择一个 Harness 比赛项目，确认项目根目录有 `.contest/harness_control.yaml` 且模式为 `full-contest-harness`。工作台本身不创建比赛项目。

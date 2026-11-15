@@ -28,6 +28,15 @@ class WorkbenchTests(unittest.TestCase):
     def write_control(self, text):
         self.control.write_text(text, encoding="utf-8")
 
+    def test_public_demo_project_is_readable_without_role_links(self):
+        demo = Path(__file__).resolve().parents[3] / 'examples' / 'workbench-demo' / '演示项目'
+        project = app.project_path(str(demo))
+        state = app.build_state(project, self.links)
+        self.assertEqual(state['mode'], 'full-contest-harness')
+        self.assertEqual([item['id'] for item in state['question_views']], ['Q1', 'Q2', 'Q3'])
+        self.assertTrue(any(item['path'] == '演示题目.md' for item in state['files']))
+        self.assertTrue(all(not role['thread_id'] for role in state['roles']))
+
     def test_node_evidence_distinguishes_inputs_requested_outputs_and_review_artifacts(self):
         self.write_control('active_mode: full-contest-harness\nnodes:\n  H6: {status: review_pending, task_card: task.yaml, review_packet: review.yaml}\n')
         (self.project / 'task.yaml').write_text('node_id: H6\ninputs: [{path: input.txt}]\nrequired_outputs: [missing.txt, result.txt]\n', encoding='utf-8')
