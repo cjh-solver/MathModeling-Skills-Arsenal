@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Repair tech-route-maker links and example commands for clean checkouts; validate documentation targets against the Git index rather than ignored local files.
 - Restore Darwin Skill's MIT license and bilingual diagrams; validate links in all skill README variants.
 - Report duplicate YAML fields in project records rather than silently replacing their values; retain standard YAML merge overrides.
 - Detect YAML mapping keys that would collide in JSON, reporting the issue instead of silently dropping a modeling result.

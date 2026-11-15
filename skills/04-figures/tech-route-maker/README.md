@@ -118,8 +118,8 @@ git clone https://github.com/Stephen-studying/tech-route-maker.git
 cd tech-route-maker
 python -m pip install -e .
 trm doctor
-trm validate examples/academic-paper-demo/outputs/tech-route.json --strict
-trm render examples/academic-paper-demo/outputs/tech-route.json examples/academic-paper-demo/outputs --formats pptx,svg,drawio,drawio-code,excalidraw,mermaid,html,markdown,json
+trm validate examples/out/tech-route.json --strict
+trm render examples/out/tech-route.json work/example-output --formats pptx,svg,drawio,drawio-code,excalidraw,mermaid,html,markdown,json
 ```
 
 新项目先建立来源清单和证据包：
@@ -134,20 +134,20 @@ trm init --preset academic-method --output work/tech-route.json --quality-report
 生成后可以打开：
 
 ```text
-examples/academic-paper-demo/outputs/tech-route.pptx
-examples/academic-paper-demo/outputs/tech-route.svg
-examples/academic-paper-demo/outputs/tech-route.drawio
-examples/academic-paper-demo/outputs/tech-route.drawio-code.xml
-examples/academic-paper-demo/outputs/tech-route.html
-examples/academic-paper-demo/outputs/QUALITY_REPORT.md
+work/example-output/tech-route.pptx
+work/example-output/tech-route.svg
+work/example-output/tech-route.drawio
+work/example-output/tech-route.drawio-code.xml
+work/example-output/tech-route.html
+work/example-output/QUALITY_REPORT.md
 ```
 
 如果已经本地安装 CLI，也可以使用：
 
 ```bash
 pip install -e .
-trm validate examples/academic-paper-demo/outputs/tech-route.json
-trm render examples/academic-paper-demo/outputs/tech-route.json examples/academic-paper-demo/outputs --formats pptx,svg,drawio,html,markdown,json
+trm validate examples/out/tech-route.json
+trm render examples/out/tech-route.json work/example-output --formats pptx,svg,drawio,html,markdown,json
 ```
 
 ## Draw.io 复制代码用法
@@ -155,14 +155,14 @@ trm render examples/academic-paper-demo/outputs/tech-route.json examples/academi
 当用户希望获得“可以复制到 draw.io 里直接生成图的代码”时，选择 `drawio-code` 输出：
 
 ```bash
-python scripts/render_all.py examples/drawio-copy-code-demo/outputs/tech-route.json examples/drawio-copy-code-demo/outputs --formats drawio,drawio-code,svg,json
+python scripts/render_all.py examples/out/tech-route.json work/example-output --formats drawio,drawio-code,svg,json
 ```
 
 使用步骤：
 
 1. 打开 [diagrams.net / draw.io](https://app.diagrams.net/)。
 2. 新建一个空白图。
-3. 打开 `examples/drawio-copy-code-demo/outputs/tech-route.drawio-code.xml`，复制全部 XML 文本。
+3. 打开 `work/example-output/tech-route.drawio-code.xml`，复制全部 XML 文本。
 4. 在 diagrams.net 中选择 **Extras > Edit Diagram**。
 5. 粘贴 XML 并确认。
 6. 生成后可以继续修改文字、颜色、箭头和模块。

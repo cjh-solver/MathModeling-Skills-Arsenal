@@ -13,6 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     failures = []
+    indexed_names = subprocess.check_output(["git", "ls-files", "--cached", "-z"], cwd=ROOT).decode("utf-8").split("\0")
+    indexed = {(ROOT / name).resolve() for name in indexed_names if name}
+    indexed_dirs = {parent for path in indexed for parent in path.parents}
     names = subprocess.check_output(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"], cwd=ROOT
     ).decode("utf-8").split("\0")
@@ -49,7 +52,9 @@ def main():
             if target.startswith(("http:", "https:", "mailto:", "#")):
                 continue
             local = unquote(target.split("#", 1)[0])
-            if not (path.parent / local).exists():
+            destination = (path.parent / local).resolve()
+            if not ((destination.is_file() and destination in indexed) or
+                    (destination.is_dir() and destination in indexed_dirs)):
                 failures.append(f"Broken link: {path.relative_to(ROOT)} -> {local}")
     for path in skill_readmes:
         text = path.read_text(encoding="utf-8-sig")
@@ -57,7 +62,8 @@ def main():
             if target.startswith(("http:", "https:", "data:", "#")):
                 continue
             local = unquote(target.split("#", 1)[0].split("?", 1)[0])
-            if not (path.parent / local).is_file():
+            destination = (path.parent / local).resolve()
+            if not destination.is_file() or destination not in indexed:
                 failures.append(f"Broken image: {path.relative_to(ROOT)} -> {local}")
     print(f"Checked {len(entrypoints)} skill entrypoints, {len(documents)} public documents and tracked source files.")
     for failure in failures:

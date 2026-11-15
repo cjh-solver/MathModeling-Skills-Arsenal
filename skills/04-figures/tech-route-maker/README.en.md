@@ -72,15 +72,17 @@ The skill offers preset defaults, then confirms final formats, target medium, la
 
 ## Gallery
 
+The public copy includes the briefs and one [editable academic example](examples/out/). The other generated demo outputs are not included.
+
 | Demo | Audience | Route type | Preview |
 |---|---|---|---|
-| [Academic paper method route](examples/academic-paper-demo/) | Research paper or defense | Method framework | [SVG](examples/academic-paper-demo/outputs/tech-route.svg) |
-| [Thesis proposal technical route](examples/thesis-proposal-demo/) | Thesis, proposal, research plan | Proposal route | [SVG](examples/thesis-proposal-demo/outputs/tech-route.svg) |
-| [Chinese grant application route](examples/chinese-grant-application-demo/) | Grant or project application | Application route | [SVG](examples/chinese-grant-application-demo/outputs/tech-route.svg) |
-| [Engineering energy system route](examples/engineering-energy-system-demo/) | Engineering report or course design | Source-grid-load-storage route | [SVG](examples/engineering-energy-system-demo/outputs/tech-route.svg) |
-| [Biomedical mechanism route](examples/biomedical-mechanism-demo/) | Biomedical proposal or paper | Mechanism validation route | [SVG](examples/biomedical-mechanism-demo/outputs/tech-route.svg) |
-| [Draw.io copy-code HGDY route](examples/drawio-copy-code-demo/) | Project application or route handoff | Copyable Draw.io XML | [XML](examples/drawio-copy-code-demo/outputs/tech-route.drawio-code.xml) |
-| [Agent workflow route](examples/agent-workflow-demo/) | Skill/tool documentation | Workflow pipeline | [SVG](examples/agent-workflow-demo/outputs/tech-route.svg) |
+| [Academic paper method route](examples/academic-paper-demo/) | Research paper or defense | Method framework | [SVG](examples/out/tech-route.svg) |
+| [Thesis proposal technical route](examples/thesis-proposal-demo/) | Thesis, proposal, research plan | Proposal route | Brief only |
+| [Chinese grant application route](examples/chinese-grant-application-demo/) | Grant or project application | Application route | Brief only |
+| [Engineering energy system route](examples/engineering-energy-system-demo/) | Engineering report or course design | Source-grid-load-storage route | Brief only |
+| [Biomedical mechanism route](examples/biomedical-mechanism-demo/) | Biomedical proposal or paper | Mechanism validation route | Brief only |
+| [Draw.io copy-code HGDY route](examples/drawio-copy-code-demo/) | Project application or route handoff | Copyable Draw.io XML | Brief only |
+| [Agent workflow route](examples/agent-workflow-demo/) | Skill/tool documentation | Workflow pipeline | Brief only |
 
 ## Install As An Agent Skill
 
@@ -103,8 +105,8 @@ git clone https://github.com/Stephen-studying/tech-route-maker.git
 cd tech-route-maker
 python -m pip install -e .
 trm doctor
-trm validate examples/academic-paper-demo/outputs/tech-route.json --strict
-trm render examples/academic-paper-demo/outputs/tech-route.json examples/academic-paper-demo/outputs --formats pptx,svg,drawio,drawio-code,excalidraw,mermaid,html,markdown,json
+trm validate examples/out/tech-route.json --strict
+trm render examples/out/tech-route.json work/example-output --formats pptx,svg,drawio,drawio-code,excalidraw,mermaid,html,markdown,json
 ```
 
 For a new project, inventory source files before extracting route nodes:
@@ -119,12 +121,12 @@ Fill the generated `source.md` and `tech-route.json`, then run `trm validate --s
 After rendering, open:
 
 ```text
-examples/academic-paper-demo/outputs/tech-route.pptx
-examples/academic-paper-demo/outputs/tech-route.svg
-examples/academic-paper-demo/outputs/tech-route.drawio
-examples/academic-paper-demo/outputs/tech-route.drawio-code.xml
-examples/academic-paper-demo/outputs/tech-route.html
-examples/academic-paper-demo/outputs/QUALITY_REPORT.md
+work/example-output/tech-route.pptx
+work/example-output/tech-route.svg
+work/example-output/tech-route.drawio
+work/example-output/tech-route.drawio-code.xml
+work/example-output/tech-route.html
+work/example-output/QUALITY_REPORT.md
 ```
 
 ## Draw.io Copy-Code Workflow
@@ -132,14 +134,14 @@ examples/academic-paper-demo/outputs/QUALITY_REPORT.md
 Use this when a user wants code that can be copied into Draw.io instead of downloading a file.
 
 ```bash
-python scripts/render_all.py examples/drawio-copy-code-demo/outputs/tech-route.json examples/drawio-copy-code-demo/outputs --formats drawio,drawio-code,svg,json
+python scripts/render_all.py examples/out/tech-route.json work/example-output --formats drawio,drawio-code,svg,json
 ```
 
 Then:
 
 1. Open [diagrams.net / draw.io](https://app.diagrams.net/).
 2. Create a blank diagram.
-3. Open `examples/drawio-copy-code-demo/outputs/tech-route.drawio-code.xml`.
+3. Open `work/example-output/tech-route.drawio-code.xml`.
 4. Copy all XML text.
 5. In diagrams.net, use **Extras > Edit Diagram**, paste the XML, and confirm.
 

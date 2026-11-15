@@ -19,8 +19,11 @@ class RepositoryCheckTests(unittest.TestCase):
             skill = root / "skills" / "figures" / "example"
             skill.mkdir(parents=True)
             (skill / "README.md").write_text('<img src="preview.png">', encoding="utf-8")
+            indexed = {"README.md", "CONTRIBUTING.md", "skills/figures/example/README.md"}
+            def list_files(*args, **kwargs):
+                return ("\0".join(sorted(indexed)) + "\0").encode()
             with patch.object(check_repository, "ROOT", root), patch.object(
-                check_repository.subprocess, "check_output", return_value=b""
+                check_repository.subprocess, "check_output", side_effect=list_files
             ):
                 output = io.StringIO()
                 with contextlib.redirect_stdout(output):
@@ -28,13 +31,18 @@ class RepositoryCheckTests(unittest.TestCase):
                 self.assertIn("Broken image:", output.getvalue())
                 (skill / "preview.png").write_bytes(b"fixture")
                 with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(check_repository.main(), 1)
+                indexed.add("skills/figures/example/preview.png")
+                with contextlib.redirect_stdout(io.StringIO()):
                     self.assertEqual(check_repository.main(), 0)
                 (skill / "README_EN.md").write_text('[license](LICENSE)', encoding="utf-8")
+                indexed.add("skills/figures/example/README_EN.md")
                 output = io.StringIO()
                 with contextlib.redirect_stdout(output):
                     self.assertEqual(check_repository.main(), 1)
                 self.assertIn("Broken link:", output.getvalue())
                 (skill / "LICENSE").write_text("fixture", encoding="utf-8")
+                indexed.add("skills/figures/example/LICENSE")
                 with contextlib.redirect_stdout(io.StringIO()):
                     self.assertEqual(check_repository.main(), 0)
 
