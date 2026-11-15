@@ -139,6 +139,20 @@ dispatch_records:
             app.save_link(self.project, '主控', '01a18b46-b9e2-7e40-a766-3cb725796ebc', self.links)
         self.assertEqual(self.links.read_bytes(), before)
 
+    def test_malformed_project_registry_is_reported_and_valid_entries_remain(self):
+        self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
+        registry = self.project / '.contest' / 'agent_registry.yaml'
+        for content in ('instances: invalid\n', 'other: value\n'):
+            registry.write_text(content, encoding='utf-8')
+            state = app.build_state(self.project, self.links)
+            self.assertIn('格式错误', state['registry_error'])
+        registry.write_text('instances:\n  - {role: 已登记角色}\n  - invalid\n', encoding='utf-8')
+        state = app.build_state(self.project, self.links)
+        self.assertIn('格式错误', state['registry_error'])
+        self.assertIn('已登记角色', [role['name'] for role in state['roles']])
+        registry.write_text('instances: []\n', encoding='utf-8')
+        self.assertIsNone(app.build_state(self.project, self.links)['registry_error'])
+
     def test_verified_lookup_provenance_is_retained(self):
         self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
         thread_id = '01a18b46-b9e2-7e40-a766-3cb725796ebc'

@@ -510,6 +510,10 @@ def build_state(project, links_path=LINKS_PATH):
     registry_path = project / ".contest" / "agent_registry.yaml"
     registry, registry_error = read_project_yaml(project, ".contest/agent_registry.yaml") if registry_path.exists() else ({}, "记录缺失")
     instances_in_registry = registry.get("instances") if isinstance(registry.get("instances"), list) else []
+    if not registry_error and not isinstance(registry.get("instances"), list):
+        registry_error = "角色实例列表未登记或格式错误"
+    elif not registry_error and any(not isinstance(entry, dict) for entry in instances_in_registry):
+        registry_error = "角色实例列表包含格式错误的条目"
     for entry in instances_in_registry:
         if not isinstance(entry, dict):
             continue

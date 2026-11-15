@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Surface unreadable or malformed project role registries without hiding valid manual session links.
 - Repair tech-route-maker links and example commands for clean checkouts; validate documentation targets against the Git index rather than ignored local files.
 - Restore Darwin Skill's MIT license and bilingual diagrams; validate links in all skill README variants.
 - Report duplicate YAML fields in project records rather than silently replacing their values; retain standard YAML merge overrides.

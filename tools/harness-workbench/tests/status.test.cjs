@@ -23,6 +23,29 @@ test('unreadable role links show a warning without offering session actions', ()
   }
 });
 
+test('incomplete project registry is visible while manual links remain available', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('function roleLinksWarning()');
+  const end = source.indexOf('\nfunction tracker()', start);
+  const context = {
+    state: { registry_error: '<broken>', roles: [
+      { name: '解题', thread_id: 'manual-id', link_source: 'manual' },
+      { name: '论文', thread_id: null },
+    ], nodes: [] },
+    selectedRole: null, icon: () => '', empty: value => value,
+    esc: value => String(value).replaceAll('<', '&lt;').replaceAll('>', '&gt;'),
+  };
+  vm.runInNewContext(source.slice(start, end), context);
+  assert.match(context.roles(), /项目登记待核/);
+  const html = context.rolePage();
+  assert.match(html, /项目角色登记读取不完整/);
+  assert.match(html, /&lt;broken&gt;/);
+  assert.match(html, /codex:\/\/threads\/manual-id/);
+  assert.match(html, /项目登记待核/);
+  context.state.registry_error = '记录缺失';
+  assert.doesNotMatch(context.rolePage(), /项目角色登记读取不完整/);
+});
+
 test('overview and workflow surface stale and evidence-gap nodes', () => {
   const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
   const lines = source.split('\n');
