@@ -139,6 +139,31 @@ dispatch_records:
             app.save_link(self.project, '主控', '01a18b46-b9e2-7e40-a766-3cb725796ebc', self.links)
         self.assertEqual(self.links.read_bytes(), before)
 
+    def test_duplicate_link_fields_are_reported_without_overwriting_history(self):
+        self.links.parent.mkdir()
+        self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
+        project = json.dumps(str(self.project), ensure_ascii=False)
+        thread = '01a18b46-b9e2-7e40-a766-3cb725796ebc'
+        cases = [
+            f'{{{project}: {{}}, {project}: {{}}}}',
+            f'{{{project}: {{"解题": "{thread}", "解题": "{thread}"}}}}',
+            f'{{{project}: {{"解题": [{{"thread_id": "{thread}", "thread_id": "{thread}"}}]}}}}',
+        ]
+        for content in cases:
+            with self.subTest(content=content):
+                self.links.write_text(content, encoding='utf-8')
+                before = self.links.read_bytes()
+                with self.assertRaisesRegex(ValueError, '重复字段'):
+                    app.save_link(self.project, '主控', thread, self.links)
+                state = app.build_state(self.project, self.links)
+                self.assertIn('重复字段', state['role_links_error'])
+                self.assertEqual(self.links.read_bytes(), before)
+        self.links.write_text(json.dumps({str(self.project): {'解题': thread}}), encoding='utf-8')
+        app.save_link(self.project, '主控', thread, self.links)
+        state = app.build_state(self.project, self.links)
+        self.assertIsNone(state['role_links_error'])
+        self.assertEqual(next(role for role in state['roles'] if role['name'] == '解题')['thread_id'], thread)
+
     def test_malformed_project_registry_is_reported_and_valid_entries_remain(self):
         self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
         registry = self.project / '.contest' / 'agent_registry.yaml'

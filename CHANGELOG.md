@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Reject duplicate fields in role-session JSON records before saving, preserving existing session history for manual recovery.
 - Surface unreadable or malformed project role registries without hiding valid manual session links.
 - Repair tech-route-maker links and example commands for clean checkouts; validate documentation targets against the Git index rather than ignored local files.
 - Restore Darwin Skill's MIT license and bilingual diagrams; validate links in all skill README variants.

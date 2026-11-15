@@ -169,9 +169,18 @@ def safe_file(project, name):
     return target
 
 
+def unique_link_fields(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("角色登记文件存在重复字段，原记录未修改")
+        result[key] = value
+    return result
+
+
 def load_links(path=LINKS_PATH):
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_link_fields)
         if not isinstance(data, dict):
             raise ValueError("角色登记文件格式错误，原记录未修改")
         return data
