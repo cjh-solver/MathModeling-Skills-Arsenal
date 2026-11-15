@@ -526,6 +526,14 @@ nodes:
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         base = f'http://127.0.0.1:{server.server_port}'
+        for path in ('/', '/api/bootstrap', '/api/state'):
+            request = urllib.request.Request(base + path, headers={'Host': f'example.test:{server.server_port}'})
+            with self.assertRaises(urllib.error.HTTPError) as error:
+                urllib.request.urlopen(request)
+            self.assertEqual(error.exception.code, 403)
+        request = urllib.request.Request(base + '/api/bootstrap', headers={'Host': f'localhost:{server.server_port}'})
+        with urllib.request.urlopen(request) as response:
+            self.assertEqual(json.load(response)['token'], 'test-token')
         with urllib.request.urlopen(base + '/api/state?project=' + urllib.parse.quote(str(other))) as response:
             self.assertEqual(json.load(response)['project'], str(other))
         with urllib.request.urlopen(base + '/api/state') as response:
@@ -566,6 +574,11 @@ nodes:
         TestHandler.project = self.project
         self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
         body = json.dumps({'project': str(other), 'role': '解题', 'thread_id': '01a18b46-b9e2-7e40-a766-3cb725796ebc'}).encode()
+        request = urllib.request.Request(base + '/api/role-link', data=body, headers={'Host': f'example.test:{server.server_port}', 'Origin': base, 'X-Workbench-Token': 'test-token', 'Content-Type': 'application/json'})
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(request)
+        self.assertEqual(error.exception.code, 403)
+        self.assertFalse(self.links.exists())
         request = urllib.request.Request(base + '/api/role-link', data=body, headers={'Origin': 'https://example.com', 'X-Workbench-Token': 'test-token', 'Content-Type': 'application/json'})
         with self.assertRaises(urllib.error.HTTPError) as error:
             urllib.request.urlopen(request)

@@ -715,7 +715,17 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def local_host(self):
+        hosts = self.headers.get_all("Host", [])
+        port = self.server.server_port
+        allowed = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        if port == 80:
+            allowed.update({"127.0.0.1", "localhost"})
+        return len(hosts) == 1 and hosts[0].lower() in allowed
+
     def do_GET(self):
+        if not self.local_host():
+            return self.respond(403, {"error": "仅允许通过本机地址访问工作台"})
         url = urlsplit(self.path)
         try:
             params = parse_qs(url.query)
@@ -835,6 +845,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.respond(400, {"error": str(error)})
 
     def do_POST(self):
+        if not self.local_host():
+            return self.respond(403, {"error": "仅允许通过本机地址访问工作台"})
         try:
             origin = self.headers.get("Origin", "")
             expected = f"http://127.0.0.1:{self.server.server_port}"

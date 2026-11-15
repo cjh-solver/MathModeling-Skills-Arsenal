@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Restrict workbench HTTP host headers to loopback addresses to protect local project data from requests using unrelated hostnames.
 - Bring the public CUMCM template layout adapter in line with its documented SVG commands and non-forced table placement.
 - Preserve visible Excel columns when a workbook declares an incorrect sheet dimension, while keeping preview limits.
 - Keep Excel preview on the latest selected sheet when earlier requests finish out of order.
