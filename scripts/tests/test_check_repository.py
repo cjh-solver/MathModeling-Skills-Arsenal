@@ -11,7 +11,7 @@ import check_repository
 
 
 class RepositoryCheckTests(unittest.TestCase):
-    def test_skill_readme_image_must_exist(self):
+    def test_public_images_and_links_must_be_tracked(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for name in ("README.md", "CONTRIBUTING.md"):
@@ -43,6 +43,16 @@ class RepositoryCheckTests(unittest.TestCase):
                 self.assertIn("Broken link:", output.getvalue())
                 (skill / "LICENSE").write_text("fixture", encoding="utf-8")
                 indexed.add("skills/figures/example/LICENSE")
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(check_repository.main(), 0)
+                (root / "README.md").write_text('<img src="assets/mark.svg">', encoding="utf-8")
+                (root / "assets").mkdir()
+                (root / "assets" / "mark.svg").write_text("fixture", encoding="utf-8")
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    self.assertEqual(check_repository.main(), 1)
+                self.assertIn("Broken image: README.md", output.getvalue())
+                indexed.add("assets/mark.svg")
                 with contextlib.redirect_stdout(io.StringIO()):
                     self.assertEqual(check_repository.main(), 0)
 

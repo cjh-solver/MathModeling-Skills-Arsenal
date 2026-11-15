@@ -56,7 +56,7 @@ def main():
             if not ((destination.is_file() and destination in indexed) or
                     (destination.is_dir() and destination in indexed_dirs)):
                 failures.append(f"Broken link: {path.relative_to(ROOT)} -> {local}")
-    for path in skill_readmes:
+    for path in documents:
         text = path.read_text(encoding="utf-8-sig")
         for target in re.findall(r'<img\b[^>]*\bsrc=["\']([^"\']+)', text, re.IGNORECASE):
             if target.startswith(("http:", "https:", "data:", "#")):
