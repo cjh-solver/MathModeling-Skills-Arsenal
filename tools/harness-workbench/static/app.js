@@ -134,7 +134,12 @@ function rows(files, limit = 8) {
   return files.slice(0, limit).map((file) => `<div class="row">${fileIcon(file.path)}<div class="row-main"><div class="row-title">${esc(fileDisplayName(file.path))}</div><div class="row-meta">${esc(file.path)}</div></div>${file.previewable !== false ? fileLink(file.path) : '<span class="row-meta">暂不支持预览</span>'}</div>`).join('');
 }
 
+function roleLinksWarning() {
+  return `<div class="notice" role="alert">会话登记文件无法读取，已暂停会话操作；其他比赛记录仍可查看。请备份并检查工作台的 data/role_links.json。<details><summary>查看原因</summary>${esc(state.role_links_error)}</details></div>`;
+}
+
 function roles(list = state.roles, compact = false) {
+  if (state.role_links_error) return roleLinksWarning();
   return list.map((role) => {
     const source = role.link_source === 'project_registry' ? '项目登记' : role.link_source === 'verified_codex_thread_lookup' ? 'Codex 查询确认' : '手动登记';
     const conflict = role.registry_thread_id && role.thread_id && role.registry_thread_id !== role.thread_id;
@@ -147,6 +152,7 @@ function roles(list = state.roles, compact = false) {
 }
 
 function rolePage() {
+  if (state.role_links_error) return `<section class="card">${roleLinksWarning()}</section>`;
   const list = state.roles || [];
   const chosen = list.find(role => role.name === selectedRole) || list[0];
   if (chosen) selectedRole = chosen.name;

@@ -117,8 +117,27 @@ dispatch_records:
                 with self.assertRaisesRegex(ValueError, '角色登记文件'):
                     app.save_link(self.project, '解题', '01a18b46-b9e2-7e40-a766-3cb725796ebc', self.links)
                 self.assertEqual(self.links.read_bytes(), before)
-                with self.assertRaisesRegex(ValueError, '角色登记文件'):
-                    app.build_state(self.project, self.links)
+                state = app.build_state(self.project, self.links)
+                self.assertIn('角色登记文件', state['role_links_error'])
+                self.assertTrue(state['roles'])
+                self.assertEqual(self.links.read_bytes(), before)
+
+    def test_bad_role_history_does_not_hide_project_or_replace_registry_link(self):
+        self.write_control('active_mode: full-contest-harness\nagent_instances: {H5: {agent_instance_id: solver}}\nnodes: {H5: {status: draft}}\n')
+        registry = self.project / '.contest' / 'agent_registry.yaml'
+        registry.write_text('instances:\n  - {agent_instance_id: solver, thread_id: 01a18b46-b9e2-7e40-a766-3cb725796ebc}\n', encoding='utf-8')
+        self.links.parent.mkdir()
+        self.links.write_text(json.dumps({str(self.project): {'解题': [None]}}), encoding='utf-8')
+        before = self.links.read_bytes()
+        state = app.build_state(self.project, self.links)
+        self.assertTrue(state['role_links_error'])
+        self.assertEqual(state['nodes'][0]['id'], 'H5')
+        role = next(role for role in state['roles'] if role['name'] == '解题')
+        self.assertIsNone(role['thread_id'])
+        self.assertIsNotNone(role['registry_thread_id'])
+        with self.assertRaises(ValueError):
+            app.save_link(self.project, '主控', '01a18b46-b9e2-7e40-a766-3cb725796ebc', self.links)
+        self.assertEqual(self.links.read_bytes(), before)
 
     def test_verified_lookup_provenance_is_retained(self):
         self.write_control('active_mode: full-contest-harness\nnodes: {}\n')

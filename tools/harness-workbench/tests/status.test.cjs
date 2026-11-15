@@ -6,6 +6,23 @@ const vm = require('node:vm');
 const { webcrypto, createHash } = require('node:crypto');
 const ranking = require('../static/ranking.js');
 
+test('unreadable role links show a warning without offering session actions', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('function roleLinksWarning()');
+  const end = source.indexOf('\nfunction tracker()', start);
+  assert.ok(start >= 0 && end > start);
+  const context = {
+    state: { role_links_error: '<broken>', roles: [{ name: '解题', thread_id: 'existing' }] },
+    esc: value => String(value).replaceAll('<', '&lt;').replaceAll('>', '&gt;'),
+  };
+  vm.runInNewContext(source.slice(start, end), context);
+  for (const html of [context.roles(), context.rolePage()]) {
+    assert.match(html, /其他比赛记录仍可查看/);
+    assert.match(html, /&lt;broken&gt;/);
+    assert.doesNotMatch(html, /data-role=|codex:\/\//);
+  }
+});
+
 test('overview and workflow surface stale and evidence-gap nodes', () => {
   const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
   const lines = source.split('\n');

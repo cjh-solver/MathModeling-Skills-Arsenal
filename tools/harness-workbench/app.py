@@ -167,6 +167,7 @@ def save_link(project, role, thread_id, path=LINKS_PATH, source="manual", title=
         project_links = data.setdefault(key, {})
         if not isinstance(project_links, dict):
             raise ValueError("角色登记格式错误；为保护记录未进行写入")
+        current_links(project_links)
         old = project_links.get(role, [])
         if isinstance(old, str):
             old = [{"thread_id": old, "registered_at": None}]
@@ -440,7 +441,11 @@ def build_state(project, links_path=LINKS_PATH):
         invocations = raw.get("skill_invocations") if isinstance(raw.get("skill_invocations"), list) else []
         result_nodes.append({"id": key, "name": NODE_NAMES[key], "status": str(raw.get("status") or "unknown"), "review": ref_path(raw.get("review_packet")), "owner": raw.get("owner_role"), "evidence": node_evidence(project, raw, key), "skills": [{"name": entry.get("skill"), "completed": entry.get("completed"), "not_applicable": entry.get("not_applicable"), "reason": entry.get("reason"), "evidence": ref_path(entry.get("evidence_ref"))} for entry in invocations if isinstance(entry, dict)]})
     instances = control.get("agent_instances") if isinstance(control.get("agent_instances"), dict) else {}
-    links, histories = current_links(load_links(links_path).get(str(project), {}))
+    links_error = None
+    try:
+        links, histories = current_links(load_links(links_path).get(str(project), {}))
+    except ValueError as error:
+        links, histories, links_error = {}, {}, str(error)
     roles = [{"name": "主控", "node": "H0", "instance_id": None, "thread_id": links.get("主控")}]
     for key, name in ROLE_NAMES.items():
         instance = instances.get(key, {})
@@ -482,7 +487,7 @@ def build_state(project, links_path=LINKS_PATH):
         role["registry_accessible"] = entry.get("user_accessible")
         role["registry_thread_id"] = entry.get("thread_id") if isinstance(entry.get("thread_id"), str) and ID_PATTERN.fullmatch(entry["thread_id"]) else None
         role["registry_source"] = ".contest/agent_registry.yaml"
-        if not role["thread_id"] and role["registry_thread_id"]:
+        if not links_error and not role["thread_id"] and role["registry_thread_id"]:
             role["thread_id"] = role["registry_thread_id"]
             role["link_source"] = "project_registry"
     for role in roles:
@@ -625,7 +630,7 @@ def build_state(project, links_path=LINKS_PATH):
         "authorization_mode": approvals.get("authorization_mode"),
         "visual_workflow": control.get("visual_workflow") or "未记录（历史流程）",
         "chapters": chapters, "writing_plan": writing_plan, "paper_source": paper_source, "paper_pdf": paper_pdf, "reports": reports,
-        "nodes": result_nodes, "roles": roles, "registry_error": registry_error,
+        "nodes": result_nodes, "roles": roles, "registry_error": registry_error, "role_links_error": links_error,
         "literature": literature, "subproblems": subproblems if isinstance(subproblems, list) else [],
         "question_views": question_views,
         "question_sources": {"profile": profile_path, "profile_error": profile_error,
