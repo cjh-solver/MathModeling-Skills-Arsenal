@@ -4,7 +4,7 @@
 
 - Refresh the project homepage, installation guidance, contribution entry points and maintenance documentation.
 - Document the current focused checks and the separate full-release blockers; keep historical validation results dated.
-- Add the public-experience importer regression tests to CI and specify the Node.js version used by workbench tests.
+- Add the public-experience importer regression tests to CI, specify the Node.js version used by workbench tests and update the official GitHub Actions used by the workflow.
 
 ## 2026-11-13 to 2026-11-15 — workbench and experience import
 
