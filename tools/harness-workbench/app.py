@@ -389,6 +389,8 @@ def digest_status(project, entries):
         item = {"path": str(name), "status": "unverified"}
         if number >= 100:
             item["status"] = "limit"
+        elif not isinstance(name, str) or Path(name).is_absolute():
+            item["status"] = "unverified"
         elif not isinstance(expected, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", expected):
             item["status"] = "invalid_digest"
         else:

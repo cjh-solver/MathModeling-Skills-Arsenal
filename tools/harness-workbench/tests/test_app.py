@@ -507,8 +507,26 @@ nodes:
         outside.write_text('actual', encoding='utf-8')
         result = app.digest_status(self.project, {'result.txt': expected, 'missing.txt': expected, '../outside.txt': expected})
         self.assertEqual([item['status'] for item in result['files']], ['matches', 'missing', 'unverified'])
+        absolute = app.digest_status(self.project, {str(self.project / 'result.txt'): expected})
+        self.assertEqual(absolute['status'], 'issues')
+        self.assertEqual(absolute['files'][0]['status'], 'unverified')
         (self.project / 'result.txt').write_text('changed', encoding='utf-8')
         self.assertEqual(app.digest_status(self.project, {'result.txt': expected})['files'][0]['status'], 'changed')
+
+    def test_absolute_approval_reference_remains_visible_but_unverified(self):
+        self.write_control('active_mode: full-contest-harness\nnodes: {H6: {status: approved}}\n')
+        artifact = self.project / 'result.txt'
+        artifact.write_text('evidence', encoding='utf-8')
+        digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        log = self.project / '.contest' / 'approval_log.yaml'
+        log.write_text(app.yaml.safe_dump({'approvals': [{
+            'gate': 'H6', 'decision': 'approved',
+            'artifact_digests': {str(artifact): digest},
+        }]}), encoding='utf-8')
+        approval = app.build_state(self.project, self.links)['approvals'][0]
+        self.assertEqual(approval['decision'], 'approved')
+        self.assertEqual(approval['digests']['status'], 'issues')
+        self.assertEqual(approval['digests']['files'][0]['status'], 'unverified')
 
     def test_invalid_approval_entries_are_reported_without_discarding_valid_ones(self):
         self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
