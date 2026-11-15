@@ -124,7 +124,7 @@ python scripts/check_pdf.py main.pdf --ignore-keyword University --ignore-keywor
 - `templates/cumcm/`：CUMCM 模板，包含轻量 `cumcmthesis.cls` 兼容类、`cumcmthesis` 入口和 `ctexart` fallback。
 - `scripts/check_latex_env.py`：按比赛类型检查本机 LaTeX 类文件、fallback 和 BibTeX 环境。
 - `scripts/check_pdf.py`：检查 PDF 页数、文件大小和身份关键词风险，支持 `warn` / `strict` 模式。
-- `scripts/check_latex_refs.py`：检查 `\ref` / `\eqref` / `\cite` 是否存在未定义标签或未定义文献键。
+- `scripts/check_latex_refs.py`：检查 `\ref` / `\eqref` / `\cite` 是否存在未定义标签或文献键；缺少引用的 TeX 子文件或指定的 `.bib` 文件时也会失败。
 - `scripts/check_latex_keywords.py`：检查摘要关键词是否属于数学建模方法、模型、算法、评价或检验术语。
 - `latexmkrc`：默认使用 XeLaTeX 的构建配置。
 

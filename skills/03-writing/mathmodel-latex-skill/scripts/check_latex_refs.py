@@ -48,14 +48,14 @@ def strip_comments(text: str) -> str:
     return "\n".join(out)
 
 
-def read_tex_recursive(path: Path, seen: set[Path] | None = None) -> str:
+def read_tex_recursive(path: Path, seen: set[Path] | None = None, missing: list[Path] | None = None) -> str:
     if seen is None:
         seen = set()
     path = path.resolve()
     if path in seen:
         return ""
     seen.add(path)
-    text = path.read_text(encoding="utf-8")
+    text = strip_comments(path.read_text(encoding="utf-8"))
     base = path.parent
 
     def replace_input(match: re.Match[str]) -> str:
@@ -63,8 +63,10 @@ def read_tex_recursive(path: Path, seen: set[Path] | None = None) -> str:
         child = base / name
         if child.suffix == "":
             child = child.with_suffix(".tex")
-        if child.exists():
-            return "\n" + read_tex_recursive(child, seen) + "\n"
+        if child.is_file():
+            return "\n" + read_tex_recursive(child, seen, missing) + "\n"
+        if missing is not None:
+            missing.append(child)
         return match.group(0)
 
     return re.sub(r"\\(input|include)\{([^{}]+)\}", replace_input, text)
@@ -74,7 +76,7 @@ def split_keys(raw: str) -> list[str]:
     return [k.strip() for k in raw.split(',') if k.strip()]
 
 
-def parse_bib_files(tex_path: Path, text: str, explicit_bibs: list[str]) -> set[str]:
+def parse_bib_files(tex_path: Path, text: str, explicit_bibs: list[str]) -> tuple[set[str], list[Path]]:
     bib_files: list[Path] = []
     for bib in explicit_bibs:
         p = Path(bib)
@@ -97,11 +99,7 @@ def parse_bib_files(tex_path: Path, text: str, explicit_bibs: list[str]) -> set[
             missing_files.append(bib)
             continue
         keys.update(BIB_ENTRY_RE.findall(bib.read_text(encoding="utf-8")))
-    if missing_files:
-        print("MISSING BIB FILES:")
-        for bib in missing_files:
-            print(f"- {bib}")
-    return keys
+    return keys, list(dict.fromkeys(missing_files))
 
 
 def main() -> int:
@@ -115,7 +113,8 @@ def main() -> int:
         print(f"ERROR: tex file not found: {tex_path}")
         return 2
 
-    raw_text = read_tex_recursive(tex_path)
+    missing_inputs: list[Path] = []
+    raw_text = read_tex_recursive(tex_path, missing=missing_inputs)
     text = strip_comments(raw_text)
 
     labels = LABEL_RE.findall(text)
@@ -129,10 +128,20 @@ def main() -> int:
     missing_labels = [k for k in ref_keys if k not in label_set]
 
     cite_keys = sorted({k for raw in CITE_RE.findall(text) for k in split_keys(raw)})
-    bib_keys = parse_bib_files(tex_path, text, args.bib)
+    bib_keys, missing_bibs = parse_bib_files(tex_path, text, args.bib)
     missing_cites = [k for k in cite_keys if k not in bib_keys]
 
     ok = True
+    if missing_inputs:
+        ok = False
+        print("MISSING TEX FILES:")
+        for path in dict.fromkeys(missing_inputs):
+            print(f"- {path}")
+    if missing_bibs:
+        ok = False
+        print("MISSING BIB FILES:")
+        for path in missing_bibs:
+            print(f"- {path}")
     if duplicate_labels:
         ok = False
         print("DUPLICATE LABELS:")
