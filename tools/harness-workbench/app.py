@@ -436,6 +436,9 @@ def validate_office_archive(path):
             raise ValueError("文档解压后的内容过大，无法预览")
 
 
+MAX_DIGEST_BYTES = 100 * 1024 * 1024
+
+
 def digest_status(project, entries):
     """Compare recorded file hashes only; this does not validate approvals or gates."""
     if not isinstance(entries, dict):
@@ -455,7 +458,7 @@ def digest_status(project, entries):
                 if not target.is_relative_to(project) or not target.is_file():
                     raise ValueError("outside")
                 stat = target.stat()
-                if stat.st_size > 100 * 1024 * 1024:
+                if stat.st_size > MAX_DIGEST_BYTES:
                     item["status"] = "limit"
                 else:
                     def signature(value):
@@ -464,14 +467,25 @@ def digest_status(project, entries):
                     digest = hashlib.sha256()
                     with target.open("rb") as file:
                         before = os.fstat(file.fileno())
-                        for chunk in iter(lambda: file.read(1024 * 1024), b""):
-                            digest.update(chunk)
+                        total = 0
+                        if before.st_size <= MAX_DIGEST_BYTES:
+                            while True:
+                                chunk = file.read(min(1024 * 1024, MAX_DIGEST_BYTES - total + 1))
+                                if not chunk:
+                                    break
+                                total += len(chunk)
+                                if total > MAX_DIGEST_BYTES:
+                                    break
+                                digest.update(chunk)
                         after = os.fstat(file.fileno())
+                    if before.st_size > MAX_DIGEST_BYTES or total > MAX_DIGEST_BYTES:
+                        item["status"] = "limit"
                     # Windows path stat and fstat can use different ctime meanings.
-                    if signature(before)[:4] != signature_before[:4] or signature(after)[:4] != signature_before[:4] or signature(target.stat()) != signature_before:
+                    elif signature(before)[:4] != signature_before[:4] or signature(after)[:4] != signature_before[:4] or signature(target.stat()) != signature_before:
                         raise ValueError("file changed while hashing")
-                    actual = digest.hexdigest()
-                    item["status"] = "matches" if actual.lower() == expected.lower() else "changed"
+                    else:
+                        actual = digest.hexdigest()
+                        item["status"] = "matches" if actual.lower() == expected.lower() else "changed"
             except FileNotFoundError:
                 item["status"] = "missing"
             except (OSError, ValueError, TypeError):

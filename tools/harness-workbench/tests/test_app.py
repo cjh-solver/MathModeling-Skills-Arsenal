@@ -722,6 +722,31 @@ nodes:
             result = app.digest_status(self.project, {'result.txt': expected})
         self.assertEqual(result['files'][0]['status'], 'unverified')
 
+    def test_hash_read_limit_applies_when_file_grows_during_read(self):
+        artifact = self.project / 'result.txt'
+        artifact.write_bytes(b'abcd')
+        expected = hashlib.sha256(b'abcd').hexdigest()
+        real_sha256 = hashlib.sha256
+
+        class GrowingDigest:
+            def __init__(self):
+                self.digest = real_sha256()
+                self.grown = False
+
+            def update(self, data):
+                self.digest.update(data)
+                if not self.grown:
+                    with artifact.open('ab') as output:
+                        output.write(b'efgh')
+                    self.grown = True
+
+            def hexdigest(self):
+                return self.digest.hexdigest()
+
+        with patch.object(app, 'MAX_DIGEST_BYTES', 6), patch.object(app.hashlib, 'sha256', GrowingDigest):
+            result = app.digest_status(self.project, {'result.txt': expected})
+        self.assertEqual(result['files'][0]['status'], 'limit')
+
     def test_absolute_approval_reference_remains_visible_but_unverified(self):
         self.write_control('active_mode: full-contest-harness\nnodes: {H6: {status: approved}}\n')
         artifact = self.project / 'result.txt'
