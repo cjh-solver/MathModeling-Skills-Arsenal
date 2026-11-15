@@ -336,8 +336,13 @@ dispatch_records:
         cycle.append(cycle)
         with self.assertRaisesRegex(ValueError, '循环引用'):
             app.json_safe(cycle)
-        with self.assertRaisesRegex(ValueError, '日期键'):
+        with self.assertRaisesRegex(ValueError, '无法区分的键'):
             app.json_safe({app.date(2026, 11, 15): 1, '2026-11-15': 2})
+        self.assertEqual(app.json_safe({1: 'number', False: 'boolean', None: 'empty', 2.5: 'decimal'}),
+                         {'1': 'number', 'false': 'boolean', 'null': 'empty', '2.5': 'decimal'})
+        for data in ({1: 'number', '1': 'text'}, {None: 1, 'null': 2}, {False: 1, 'false': 2}):
+            with self.subTest(data=data), self.assertRaisesRegex(ValueError, '无法区分的键'):
+                app.json_safe({'nested': data})
 
     def test_visual_slots_follow_harness_representation_rules(self):
         valid = [
@@ -487,6 +492,13 @@ nodes:
             state = json.load(response, parse_constant=reject_nonstandard_constant)
         self.assertEqual(state['question_views'][0]['models'][0]['result']['values'], ['NaN', 'Infinity', '-Infinity', 1.25])
         self.assertEqual(state['question_views'][0]['models'][0]['result']['daily'], {'2026-11-15': 4.2})
+        self.assertEqual(model_file.read_bytes(), original)
+        model_file.write_text('cards:\n  - subproblem_id: Q1\n    result: {1: numeric, "1": text}\n', encoding='utf-8')
+        original = model_file.read_bytes()
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(base + '/api/state')
+        self.assertEqual(error.exception.code, 400)
+        self.assertIn('无法区分的键', json.load(error.exception)['error'])
         self.assertEqual(model_file.read_bytes(), original)
         self.write_control('invalid: [')
         with self.assertRaises(urllib.error.HTTPError):

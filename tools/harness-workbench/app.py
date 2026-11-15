@@ -83,9 +83,16 @@ def json_safe(value, active=None):
         if isinstance(value, dict):
             result = {}
             for key, item in value.items():
-                output_key = key.isoformat() if isinstance(key, date) else key
+                if isinstance(key, date):
+                    output_key = key.isoformat()
+                elif isinstance(key, str):
+                    output_key = key
+                elif key is None or isinstance(key, (bool, int, float)):
+                    output_key = json.dumps(key, allow_nan=False)
+                else:
+                    raise ValueError("记录包含不支持的键类型，无法显示")
                 if output_key in result:
-                    raise ValueError("记录包含无法区分的日期键，无法显示")
+                    raise ValueError("记录包含无法区分的键，无法显示")
                 result[output_key] = json_safe(item, active)
             return result
         return [json_safe(item, active) for item in value]
