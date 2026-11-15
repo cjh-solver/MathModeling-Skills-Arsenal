@@ -100,10 +100,28 @@ def json_safe(value, active=None):
         active.remove(id(value))
 
 
+class UniqueKeyLoader(yaml.SafeLoader):
+    def construct_mapping(self, node, deep=False):
+        # Explicit fields must be unique; an explicit value may still override a
+        # YAML merge, as supported by SafeLoader.
+        keys = set()
+        for key_node, _ in node.value:
+            if key_node.tag == "tag:yaml.org,2002:merge":
+                continue
+            key = self.construct_object(key_node, deep=deep)
+            try:
+                if key in keys:
+                    raise ValueError(f"YAML 包含重复字段（第 {key_node.start_mark.line + 1} 行）")
+                keys.add(key)
+            except TypeError as error:
+                raise ValueError("YAML 包含不支持的字段类型") from error
+        return super().construct_mapping(node, deep=deep)
+
+
 def read_yaml(path):
     try:
         with path.open(encoding="utf-8-sig") as file:
-            value = yaml.safe_load(file)
+            value = yaml.load(file, Loader=UniqueKeyLoader)
         if not isinstance(value, dict):
             raise ValueError("内容不是有效的 YAML 对象")
         return value, None

@@ -644,6 +644,26 @@ nodes:
             result = app.build_state(self.project, self.links)
             self.assertEqual(result['approval_error'], '批准记录包含格式错误的条目')
 
+    def test_duplicate_yaml_fields_never_silently_override_records(self):
+        self.write_control('active_mode: full-contest-harness\nactive_mode: another-mode\nnodes: {}\n')
+        with self.assertRaisesRegex(ValueError, '重复字段'):
+            app.build_state(self.project, self.links)
+
+        self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
+        log = self.project / '.contest' / 'approval_log.yaml'
+        log.write_text('approvals:\n  - gate: H6\n    decision: rejected\n    decision: approved\n', encoding='utf-8')
+        before = log.read_bytes()
+        state = app.build_state(self.project, self.links)
+        self.assertIn('重复字段', state['approval_error'])
+        self.assertEqual(state['approvals'], [])
+        self.assertEqual(log.read_bytes(), before)
+
+        log.write_text('defaults: &defaults {gate: H6, decision: rejected}\n'
+                       'approvals:\n  - <<: *defaults\n    decision: approved\n', encoding='utf-8')
+        state = app.build_state(self.project, self.links)
+        self.assertIsNone(state['approval_error'])
+        self.assertEqual(state['approvals'][0]['decision'], 'approved')
+
     def test_existing_report_is_displayed_as_recorded_not_recomputed(self):
         report = self.project / 'report.json'
         report.write_text(json.dumps({'passed': False, 'issues': ['build failed']}), encoding='utf-8')

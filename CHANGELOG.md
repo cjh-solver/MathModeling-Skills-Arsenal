@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Report duplicate YAML fields in project records rather than silently replacing their values; retain standard YAML merge overrides.
 - Detect YAML mapping keys that would collide in JSON, reporting the issue instead of silently dropping a modeling result.
 - Keep Harness control, role and approval records within the selected project boundary, including when symbolic links are present.
 - Remove unavailable ModelViz showcase image references and point readers to a clearly labeled reproducible example; check skill README image paths in repository validation.
