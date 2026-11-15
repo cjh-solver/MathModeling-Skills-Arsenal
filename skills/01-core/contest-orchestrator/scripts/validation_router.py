@@ -233,8 +233,12 @@ def validate_control_validation(root: Path, control: dict[str, Any]) -> tuple[li
     if profile not in PROFILE_NAMES:
         errors.append(f"validation.profile 无效: {profile}")
     card_raw = validation.get("change_impact_card")
+    nodes = control.get("nodes", {})
+    if not isinstance(nodes, dict):
+        errors.append("nodes 必须为对象")
+        return errors, None
     stale_nodes = [
-        node_id for node_id, node in (control.get("nodes", {}) or {}).items()
+        node_id for node_id, node in nodes.items()
         if isinstance(node, dict) and node.get("status") == "stale"
     ]
     if stale_nodes and profile == "competition_fast" and not isinstance(card_raw, str):
@@ -252,6 +256,8 @@ def validate_control_validation(root: Path, control: dict[str, Any]) -> tuple[li
         errors.append(f"change_impact_card 不可读: {exc}")
         return errors, None
     errors.extend(validate_change_impact(root, card))
+    if not isinstance(card, dict):
+        return errors, None
     if card.get("profile") != profile:
         errors.append("change_impact_card.profile 必须与 validation.profile 一致")
     if errors:
