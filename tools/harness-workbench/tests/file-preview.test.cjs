@@ -175,6 +175,32 @@ test('Word preview preserves the order of paragraphs and tables', async () => {
   assert.ok(container.innerHTML.indexOf('table value') < container.innerHTML.indexOf('last paragraph'));
 });
 
+test('a delayed spreadsheet response cannot replace the selected sheet', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('async function renderDocument(');
+  const end = source.indexOf('\nfunction previewImage(', start);
+  for (const oldFails of [false, true]) {
+    let resolveOld;
+    const oldResponse = new Promise(resolve => { resolveOld = resolve; });
+    const context = {
+      state: { project: 'project' }, esc: value => String(value),
+      fetch: async url => url.includes('sheet=old') ? oldResponse : ({
+        ok: true, json: async () => ({type: 'xlsx', sheets: ['old', 'new'], sheet: 'new', rows: [['new value']], note: ''}),
+      }),
+    };
+    const container = { querySelector: () => ({ addEventListener() {} }) };
+    vm.runInNewContext(source.slice(start, end), context);
+    const old = context.renderDocument(container, 'sample.xlsx', 'old');
+    await context.renderDocument(container, 'sample.xlsx', 'new');
+    resolveOld(oldFails ? {ok: false, json: async () => ({error: 'old error'})} : {
+      ok: true, json: async () => ({type: 'xlsx', sheets: ['old', 'new'], sheet: 'old', rows: [['old value']], note: ''}),
+    });
+    await old;
+    assert.match(container.innerHTML, /new value/);
+    assert.doesNotMatch(container.textContent, /old error/);
+  }
+});
+
 test('file search explains when there are no matches and clears the message', () => {
   const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
   assert.match(source, /class="file-no-match" hidden/);

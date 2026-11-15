@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Keep Excel preview on the latest selected sheet when earlier requests finish out of order.
 - Reorganize the homepage around the workbench preview, task-based entry points and a shorter installation path, using the existing workbench mark.
 - Record the selected ModelViz template source and SHA-256 in the adaptation handoff, and make test fixture imports independent of installed packages named `tests`.
 - Add a synthetic workbench project and actual overview screenshot, with a quick route from the homepage to trying the demo.

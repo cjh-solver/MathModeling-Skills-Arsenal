@@ -647,11 +647,14 @@ async function renderPdf(container, path) {
 }
 
 async function renderDocument(container, path, sheet = '') {
+  const request = {};
+  container.documentPreviewRequest = request;
   container.textContent = '正在读取文档预览…';
   const query = `path=${encodeURIComponent(path)}&project=${encodeURIComponent(state.project)}&sheet=${encodeURIComponent(sheet)}`;
   try {
     const response = await fetch(`/api/document?${query}`);
     const data = await response.json();
+    if (container.documentPreviewRequest !== request) return;
     if (!response.ok) throw new Error(data.error);
     const table = (rows) => `<div class="table-scroll"><table>${rows.map(row => `<tr>${row.map(cell => `<td>${esc(cell)}</td>`).join('')}</tr>`).join('')}</table></div>`;
     if (data.type === 'xlsx') {
@@ -663,7 +666,9 @@ async function renderDocument(container, path, sheet = '') {
       const blocks = Array.isArray(data.blocks) ? data.blocks : [...data.paragraphs.map(text => ({type: 'paragraph', text})), ...data.tables.map(rows => ({type: 'table', rows}))];
       container.innerHTML = `<div class="notice">${esc(data.note)}</div><div class="document-text">${blocks.map(block => block.type === 'paragraph' ? `<p>${esc(block.text)}</p>` : table(block.rows)).join('')}</div>`;
     }
-  } catch (error) { container.textContent = `文档预览不可用：${error.message}`; }
+  } catch (error) {
+    if (container.documentPreviewRequest === request) container.textContent = `文档预览不可用：${error.message}`;
+  }
 }
 
 function previewImage(path, alt) {
