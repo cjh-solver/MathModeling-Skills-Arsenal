@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -70,6 +71,8 @@ def load_selected_template(
                 "选定模板源码不存在。",
                 details={"code_path": str(code_path)},
             )
+        source_bytes = code_path.read_bytes()
+        source_code = source_bytes.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
         return {
             "success": True,
             "selected_template": {
@@ -77,7 +80,8 @@ def load_selected_template(
                 "template_name": metadata.name,
                 "metadata": metadata.model_dump(),
                 "template_code_path": str(code_path),
-                "template_source_code": code_path.read_text(encoding="utf-8"),
+                "template_source_code": source_code,
+                "template_source_sha256": hashlib.sha256(source_bytes).hexdigest(),
                 "preview": metadata.preview,
             },
         }

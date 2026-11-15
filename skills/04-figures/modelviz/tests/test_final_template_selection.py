@@ -1,4 +1,5 @@
 import json
+import hashlib
 
 import pandas as pd
 from langchain_core.runnables import RunnableLambda
@@ -6,6 +7,7 @@ from langchain_core.runnables import RunnableLambda
 from schemas import PlotRequirement
 from src.schemas import CandidateTemplateOutput, FinalTemplateSelection
 from src.services.final_template_selection_pipeline import run_final_template_selection_pipeline
+from src.tools.load_selected_template import load_selected_template
 
 
 def _write_requirement(path):
@@ -67,6 +69,25 @@ def _write_data(path, rows=5, chinese=True):
 
 def _model(payload):
     return RunnableLambda(lambda _: payload)
+
+
+def test_template_source_hash_matches_bytes_used_for_adaptation(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    source = b"import matplotlib.pyplot as plt\r\n# example\r\n"
+    source_path = tmp_path / "trend.py"
+    source_path.write_bytes(source)
+    catalog = tmp_path / "catalog.yaml"
+    catalog.write_text(
+        "templates:\n  - id: trend_line\n    name: Trend\n"
+        "    category: trend_time_series\n    chart_type: line\n    code_path: trend.py\n",
+        encoding="utf-8",
+    )
+    selection_path = tmp_path / "selection.json"
+    selection_path.write_text(json.dumps(_selection(selected_template_id="trend_line", selected_template_name="Trend")), encoding="utf-8")
+    result = load_selected_template.invoke({"final_selection_path": str(selection_path), "catalog_path": str(catalog)})
+    assert result["success"] is True
+    assert result["selected_template"]["template_source_code"] == source.decode().replace("\r\n", "\n")
+    assert result["selected_template"]["template_source_sha256"] == hashlib.sha256(source).hexdigest()
 
 
 def _selection(**overrides):

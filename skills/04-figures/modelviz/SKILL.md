@@ -174,6 +174,10 @@ Files:
 - Package mapping: `docs/package_name_mapping.yaml`
 - Reports: `workspace/dependency_report.json`, `workspace/dependency_install_result.json`, `workspace/requirements.generated.txt`
 
+The successful template-adaptation result includes `template_provenance`: the selected
+`template_id`, source path, and SHA-256 of the source bytes used for adaptation. Pass these
+fields to the contest figure registry; the hash identifies the template, not the generated figure.
+
 Dependency rules:
 
 - Inspect imports with Python AST and merge catalog `dependencies`.

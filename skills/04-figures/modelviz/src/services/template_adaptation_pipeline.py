@@ -402,6 +402,11 @@ def run_template_adaptation_pipeline(
 
     return {
         "success": True,
+        "template_provenance": {
+            "template_id": final_selection.selected_template_id,
+            "template_source": selected["template_code_path"],
+            "template_sha256": selected["template_source_sha256"],
+        },
         "adaptation_plan": plan.model_dump(),
         "adaptation_result": adaptation.model_dump(),
         "execution_result": execution["execution_result"],

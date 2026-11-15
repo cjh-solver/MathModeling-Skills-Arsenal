@@ -1,3 +1,4 @@
+import hashlib
 import json
 
 import yaml
@@ -148,6 +149,11 @@ def test_template_adaptation_pipeline_success_and_template_unchanged(tmp_path):
     )
 
     assert result["success"] is True
+    assert result["template_provenance"] == {
+        "template_id": "tpl",
+        "template_source": str(template_path),
+        "template_sha256": hashlib.sha256(template_path.read_bytes()).hexdigest(),
+    }
     assert (workspace / "adapted_plot.py").exists()
     assert template_path.read_text(encoding="utf-8") == original
     assert result["execution_result"]["generated_files"]
