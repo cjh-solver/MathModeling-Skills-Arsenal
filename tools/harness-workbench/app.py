@@ -803,7 +803,10 @@ class Handler(BaseHTTPRequestHandler):
                         if sheet_name not in sheets:
                             raise ValueError("未找到指定工作表")
                         sheet = workbook[sheet_name]
-                        rows = [[str(value)[:5000] if value is not None else "" for value in row] for row in sheet.iter_rows(max_row=30, max_col=min(sheet.max_column or 1, 20), values_only=True)]
+                        raw_rows = list(sheet.iter_rows(max_row=30, max_col=20, values_only=True))
+                        actual_width = max((index for row in raw_rows for index, value in enumerate(row, 1) if value is not None), default=1)
+                        width = max(min(sheet.max_column or 1, 20), actual_width)
+                        rows = [[str(value)[:5000] if value is not None else "" for value in row[:width]] for row in raw_rows]
                         note = "最多显示前 30 行、20 列，每个单元格最多显示 5000 字符；公式以原文显示，不重新计算。"
                         if len(sheets) != len(workbook.sheetnames):
                             note += "图表工作表不在预览列表中。"

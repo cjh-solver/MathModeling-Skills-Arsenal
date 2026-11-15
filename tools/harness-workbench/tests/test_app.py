@@ -594,9 +594,20 @@ nodes:
             self.assertEqual(error.exception.code, 400)
             workbook = app.openpyxl.Workbook()
             workbook.active['A1'] = '=1+1'
+            workbook.active['C1'] = 'later column'
             workbook.create_chartsheet('Chart').add_chart(app.openpyxl.chart.BarChart())
             workbook.save(self.project / 'sample.xlsx')
             workbook.close()
+            with zipfile.ZipFile(self.project / 'sample.xlsx') as source, zipfile.ZipFile(self.project / 'wrong-dimension.xlsx', 'w') as target:
+                for entry in source.infolist():
+                    content = source.read(entry.filename)
+                    if entry.filename == 'xl/worksheets/sheet1.xml':
+                        self.assertIn(b'dimension ref="A1:C1"', content)
+                        content = content.replace(b'dimension ref="A1:C1"', b'dimension ref="A1:A1"')
+                    target.writestr(entry, content)
+            with urllib.request.urlopen(base + '/api/document?path=wrong-dimension.xlsx') as response:
+                preview = json.load(response)
+                self.assertEqual(preview['rows'][0], ['=1+1', '', 'later column'])
             with zipfile.ZipFile(self.project / 'sample.xlsx') as source, zipfile.ZipFile(self.project / 'broken-sheet.xlsx', 'w') as target:
                 for entry in source.infolist():
                     content = source.read(entry.filename)
