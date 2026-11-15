@@ -13,6 +13,16 @@ def clean(s):
     return str(s or '').replace('\n', ' ').strip()
 
 
+def limitations_text(value):
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        return clean(value)[:200]
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return '；'.join(clean(item) for item in value)[:200]
+    raise ValueError('model_limitations must be a string or a list of strings')
+
+
 def yaml_block(pid, d):
     lines = [f'## {pid}（公开经验库，待审核）', '', '```yaml']
     for k, v in d.items():
@@ -35,7 +45,13 @@ def main(argv=None):
     source_name = args.source
     if not os.path.isfile(jl):
         parser.error(f'JSONL 文件不存在: {jl}')
-    cases = [json.loads(l) for l in open(jl, encoding='utf-8') if l.strip()]
+    with open(jl, encoding='utf-8') as source_file:
+        cases = [json.loads(line) for line in source_file if line.strip()]
+    for c in cases:
+        try:
+            limitations_text(c.get('model_limitations'))
+        except ValueError as error:
+            parser.error(f'案例 {c.get("case_id", "未命名")}: {error}')
     if prefix:
         for c in cases:
             c['case_id'] = prefix + c['case_id']
@@ -85,7 +101,7 @@ def main(argv=None):
             pid = f'SD-PUB-{cid}'
             entry = {'success_id': pid, 'problem_type': ptype, 'method': c.get('model_chosen', ''),
                      'why_success': c.get('model_reason', ''), 'result': c.get('objective', ''),
-                     'limitations': '；'.join(c.get('model_limitations', []))[:200],
+                     'limitations': limitations_text(c.get('model_limitations')),
                      'source': src, 'confidence': conf}
             with open(os.path.join(d, 'sd_model.yaml'), 'w', encoding='utf-8') as f:
                 f.write(yaml_block(pid, entry))

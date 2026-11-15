@@ -470,7 +470,7 @@ problem_type: 预测
 method: LSTM长短期记忆神经网络
 why_success: 车流量具备周期性，LSTM擅长捕获时序周期性特征
 result: 预测工作日各个时段城市道路车流量
-limitations: 极；端；暴；雨；、；交；通；事；故；会；造；成；预；测；偏；差
+limitations: 极端暴雨、交通事故会造成预测偏差
 source: 2024高教社杯国赛E题交通流量管控优秀论文|https://dxs.moe.gov.cn/zx/a/hd_sxjm_sxjmstjp_2024sxjmstjp/241127/1980970.shtml|2024
 confidence: 高
 source_quality: 高
@@ -487,7 +487,7 @@ problem_type: 预测
 method: PCA-多元线性回归预测模型
 why_success: 需要筛选冗余宏观指标，主成分分析可以降维去相关
 result: 基于宏观指标预测光伏行业板块指数走向
-limitations: 难；以；预；判；突；发；行；业；政；策；带；来；的；行；情；震；荡
+limitations: 难以预判突发行业政策带来的行情震荡
 source: 光伏建筑一体化板块指数分析优秀论文|https://blog.csdn.net/qq_40379132/article/details/161259137|2021
 confidence: 高
 ```
@@ -502,7 +502,7 @@ problem_type: 优化决策
 method: 非线性网格搜索优化模型
 why_success: 停车场空间离散分区，网格搜索适配空间约束
 result: 最大化停车位数量同时保障车辆进出通道宽度余量
-limitations: 计；算；耗；时；随；网；格；精；度；提；升；急；剧；上；涨
+limitations: 计算耗时随网格精度提升急剧上涨
 source: 2026电工杯A题停车场规划优秀论文|https://blog.csdn.net/qq_40379132/article/details/161259137|2026
 confidence: 高
 ```
@@ -517,7 +517,7 @@ problem_type: 优化决策
 method: 0-1整数规划机组组合模型
 why_success: 启停状态属于二元变量，整数规划适合求解该类约束
 result: 24小时周期内控制发电机组最低运行成本
-limitations: 机；组；数；量；上；涨；后；求；解；速；度；变；慢
+limitations: 机组数量上涨后求解速度变慢
 source: 2025亚太杯D题电力系统机组组合论文|https://mbd.pub/o/bread/mbd-YZWZlplrZA==|2025
 confidence: 高
 ```
@@ -532,7 +532,7 @@ problem_type: 评价分类
 method: 模糊综合评价模型
 why_success: 岗位适配属于模糊定性指标，模糊评价适配模糊属性
 result: 评判求职者和各个兼职岗位之间匹配等级
-limitations: 权；重；设；置；主；观；成；分；较；强
+limitations: 权重设置主观成分较强
 source: 2020 HiMCM暑期岗位推荐O奖论文|https://github.com/ZPZhou-lab/MathematicalModeling/blob/main/README.md|2020
 confidence: 中
 ```
@@ -547,7 +547,7 @@ problem_type: 物理建模
 method: 一维有限差分热传导模型
 why_success: 离散差分便于迭代求解分层温度分布
 result: 求解单根纤维热导率和整块织物导热关系
-limitations: 简；化；掉；空；气；对；流；会；带；来；微；小；计；算；误；差
+limitations: 简化掉空气对流会带来微小计算误差
 source: 第四届华数杯A题织物导热优秀论文|https://blog.csdn.net/m0_52343631/article/details/140867886|2023
 confidence: 高
 ```
@@ -562,7 +562,7 @@ problem_type: 图模型
 method: 无向连通图-遗传算法优化模型
 why_success: 将终端-AP视作网络图，图结构适合描述连通关系
 result: 规划AP点位，最大化网络整体吞吐量
-limitations: 用；户；点；位；数；量；上；涨；之；后；运；算；速；度；下；降
+limitations: 用户点位数量上涨之后运算速度下降
 source: 2024研究生华为杯B题WLAN组网优秀论文|https://github.com/1931239281/MathModel/blob/master/README.md|2024
 confidence: 中
 ```
@@ -577,7 +577,7 @@ problem_type: 预测
 method: 龙格-库塔RK4微分方程数值求解模型
 why_success: 压强随时间由常微分方程管控，RK4求解精度更高
 result: 计算阀门开闭全过程油管内部压力变化曲线
-limitations: 忽；略；油；料；温；度；变；化；带；来；的；参；数；改；变
+limitations: 忽略油料温度变化带来的参数改变
 source: 2019国赛高压油管压力控制一等奖论文|https://github.com/ZPZhou-lab/MathematicalModeling/blob/main/README.md|2019
 confidence: 高
 ```
@@ -592,7 +592,7 @@ problem_type: 评价分类
 method: PCA主成分分析+情感得分评价模型
 why_success: 文本情绪属于核心指标，PCA整合其余数值指标
 result: 依托用户评论数据对电商商品口碑等级划分
-limitations: 存；在；刷；单；虚；假；评；论；干；扰；评；价；结；果
+limitations: 存在刷单虚假评论干扰评价结果
 source: 2020 MCM-ICM网购平台O奖论文|https://github.com/ZPZhou-lab/MathematicalModeling/blob/main/README.md|2020
 confidence: 中
 ```
@@ -622,7 +622,7 @@ problem_type: 预测
 method: 随机森林回归预测模型
 why_success: 能够处理水质指标的非线性关联，可以输出特征重要度
 result: 依据河道监测参数预测各个监测点位溶解氧浓度
-limitations: 样；本；量；过；少；时；容；易；出；现；过；拟；合
+limitations: 样本量过少时容易出现过拟合
 source: 2025电工杯B题河道水质预警一等奖论文|https://blog.csdn.net/mathmodelshare/article/details/153692147|2025
 confidence: 高
 ```
@@ -652,7 +652,7 @@ problem_type: 优化决策
 method: 0-1整数规划模型
 why_success: 座位占用只有占用、空闲两种状态，适配零一变量
 result: 合理分配自习座位，最大化座位利用率，降低冲突概率
-limitations: 学；生；临；时；爽；约；会；降；低；实；际；资；源；利；用；率
+limitations: 学生临时爽约会降低实际资源利用率
 source: 第五届华数杯B题自习室调度优秀论文|https://blog.csdn.net/weixin_46189918/article/details/142268904|2024
 confidence: 高
 ```
@@ -669,7 +669,7 @@ problem_type: 评价分类
 method: 熵权-TOPSIS综合评价模型
 why_success: 熵权依靠原始数据确权，规避人为主观权重偏差
 result: 对各个行政村的振兴建设水平划分评价等级
-limitations: 无；法；衡；量；难；以；量；化；的；乡；土；文；化；软；实；力
+limitations: 无法衡量难以量化的乡土文化软实力
 source: 2023高教社杯国赛E题乡村振兴评估一等奖论文|https://www.cumcm.edu.cn/works/excellent/2023/|2023
 confidence: 高
 source_quality: 高
@@ -686,7 +686,7 @@ problem_type: 物理建模
 method: 牛顿动力学常微分方程模型
 why_success: 需要获取全程运动过程，微分方程适合描述动态过程
 result: 求解粗糙斜面上滑块速度、位移随时间的变化规律
-limitations: 不；考；虑；摩；擦；系；数；随；速；度；发；生；细；微；改；变
+limitations: 不考虑摩擦系数随速度发生细微改变
 source: 2021 MCM物理方向O奖论文|https://github.com/liuyouyuan/mcm-icm-2021|2021
 confidence: 中
 ```
@@ -701,7 +701,7 @@ problem_type: 图模型
 method: Dijkstra单源最短路算法
 why_success: 起点固定，Dijkstra算法求解单起点最短路径效率很高
 result: 搭建地铁-公交换乘网络，寻求耗时最短的出行路径
-limitations: 无；法；同；时；兼；顾；车；费；、；换；乘；次；数；多；目；标；需；求
+limitations: 无法同时兼顾车费、换乘次数多目标需求
 source: 2025研究生数学建模F题公共交通线路优化论文|https://github.com/MathematicalModelingClub/HuaweiCup2025|2025
 confidence: 中
 ```
@@ -716,7 +716,7 @@ problem_type: 预测
 method: BP-LSTM混合神经网络模型
 why_success: LSTM捕捉循环时序老化特征，BP神经网络处理静态内阻参数
 result: 依据充放电监测数据预估电池剩余循环使用寿命
-limitations: 电；池；遭；遇；过；充；之；后；原；有；预；测；模；型；失；效
+limitations: 电池遭遇过充之后原有预测模型失效
 source: 2020 ICM电池寿命方向O奖论文|https://github.com/akashsara/mcm-icm2020|2020
 confidence: 中
 ```
@@ -731,7 +731,7 @@ problem_type: 优化决策
 method: 多目标线性规划模型
 why_success: 成本、送达时间两项目标，适合构建多目标规划
 result: 灾害之后调配应急物资，使得整体运输成本最低、送达时长最短
-limitations: 没；有；考；虑；道；路；突；发；堵；塞；带；来；的；风；险
+limitations: 没有考虑道路突发堵塞带来的风险
 source: 2022亚太杯D题救灾物资调度优秀论文|https://mbd.pub/o/bread/ZJOWZ56tZw==|2022
 confidence: 高
 ```
@@ -746,7 +746,7 @@ problem_type: 评价分类
 method: 层次分析法AHP-模糊综合评价模型
 why_success: 各项准则的重要程度可以由教师学生打分对比，适配AHP确权
 result: 依据学业成绩、志愿时长、竞赛、文体得分对学生进行分级
-limitations: 指；标；权；重；会；受；到；评；审；人；员；主；观；偏；好；干；扰
+limitations: 指标权重会受到评审人员主观偏好干扰
 source: 2026电工杯C题学生综合素质测评一等奖论文|https://blog.csdn.net/codeforfun666/article/details/154713205|2026
 confidence: 高
 ```
