@@ -2,6 +2,8 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Remove unavailable ModelViz showcase image references and point readers to a clearly labeled reproducible example; check skill README image paths in repository validation.
+
 - Teach the orchestrator health check to distinguish categorized repository packages from a flat skill installation; repository presence does not certify installation.
 - Refresh the project homepage, installation guidance, contribution entry points and maintenance documentation.
 - Document the current focused checks and the separate full-release blockers; keep historical validation results dated.

@@ -50,6 +50,14 @@ def main():
             local = unquote(target.split("#", 1)[0])
             if not (path.parent / local).exists():
                 failures.append(f"Broken link: {path.relative_to(ROOT)} -> {local}")
+    for path in ROOT.glob("skills/*/*/README.md"):
+        text = path.read_text(encoding="utf-8-sig")
+        for target in re.findall(r'<img\b[^>]*\bsrc=["\']([^"\']+)', text, re.IGNORECASE):
+            if target.startswith(("http:", "https:", "data:", "#")):
+                continue
+            local = unquote(target.split("#", 1)[0].split("?", 1)[0])
+            if not (path.parent / local).is_file():
+                failures.append(f"Broken image: {path.relative_to(ROOT)} -> {local}")
     print(f"Checked {len(entrypoints)} skill entrypoints, {len(documents)} public documents and tracked source files.")
     for failure in failures:
         print(failure)

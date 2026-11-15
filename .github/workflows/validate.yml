@@ -17,6 +17,7 @@ jobs:
           node-version: '22'
       - run: python -m pip install pyyaml pymupdf python-docx openpyxl
       - run: python scripts/check_repository.py
+      - run: python -m unittest discover -s scripts/tests
       - run: python examples/chapter-parallel/calculate.py
       - name: Workbench tests
         working-directory: tools/harness-workbench
