@@ -186,8 +186,11 @@ def build_validation_plan(card: dict[str, Any]) -> dict[str, Any]:
     level = card.get("impact_level")
     if level == "L3":
         earliest = card.get("earliest_invalid_node")
+        # Historical H4 change cards now start at H5, which owns that work.
+        if earliest == "H4":
+            earliest = "H5"
         start = NODES.index(earliest) if earliest in NODES else NODES.index("H1")
-        recheck_nodes = list(NODES[start:NODES.index("H9")])
+        recheck_nodes = [node for node in NODES[start:NODES.index("H9")] if node != "H4"]
         checks = [
             "recompute_from_earliest_invalid_node",
             "global_interface_check",

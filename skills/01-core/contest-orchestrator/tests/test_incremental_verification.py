@@ -97,6 +97,28 @@ class IncrementalValidationTests(unittest.TestCase):
             self.assertEqual(plan["recheck_nodes"], ["H5", "H6", "H7", "H8"])  # H4已并入H5
             self.assertEqual(plan["full_delivery_gate"], "H9")
 
+    def test_l3_early_changes_skip_merged_h4(self):
+        router = load_module("scripts/validation_router.py", "validation_router_l3_early")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            for earliest in ("H1", "H2", "H3"):
+                with self.subTest(earliest=earliest):
+                    card = self.make_card(root, "L3", "global_interface", affected=[], earliest=earliest)
+                    self.assertEqual(router.validate_change_impact(root, card), [])
+                    plan = router.build_validation_plan(card)
+                    self.assertEqual(plan["recheck_nodes"][0], earliest)
+                    self.assertNotIn("H4", plan["recheck_nodes"])
+                    self.assertEqual(plan["recheck_nodes"][-4:], ["H5", "H6", "H7", "H8"])
+                    self.assertTrue(plan["h9_full_delivery_required"])
+
+    def test_l3_historical_h4_card_routes_to_h5(self):
+        router = load_module("scripts/validation_router.py", "validation_router_l3_legacy")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            card = self.make_card(root, "L3", "global_interface", affected=[], earliest="H4")
+            self.assertEqual(router.validate_change_impact(root, card), [])
+            self.assertEqual(router.build_validation_plan(card)["recheck_nodes"], ["H5", "H6", "H7", "H8"])
+
     def test_l2_rejects_multiple_subproblems(self):
         router = load_module("scripts/validation_router.py", "validation_router_negative")
         with tempfile.TemporaryDirectory() as raw:
