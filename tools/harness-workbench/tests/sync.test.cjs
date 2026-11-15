@@ -66,3 +66,41 @@ test('bootstrap still supplies project choices when the initial refresh fails', 
   assert.equal(context.state.available_projects[0].name, '示例');
   assert.equal(elements['#error'].hidden, false);
 });
+
+test('automatic sync recovers a failed refresh without hiding a different project failure', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const refreshStart = source.indexOf('async function refresh()');
+  const refreshEnd = source.indexOf('\nfunction syncStatus(', refreshStart);
+  const syncStart = source.indexOf('async function checkSync()');
+  const syncEnd = source.indexOf('\nasync function post(', syncStart);
+  assert.ok(refreshStart >= 0 && refreshEnd > refreshStart && syncStart >= 0 && syncEnd > syncStart);
+
+  for (const selection of ['project-a', 'project-b']) {
+    const state = { project: 'project-a', available_projects: [] };
+    const elements = {
+      '#error': { hidden: true, textContent: '' },
+      '#content': { innerHTML: '' },
+      '#project-search-panel': { hidden: true },
+    };
+    let requests = 0;
+    const context = {
+      syncGeneration: 0, syncSnapshot: JSON.stringify(state), syncCandidate: '',
+      syncBusy: false, loadedSelection: 'project-a', refreshFailed: false, state,
+      selectedProjectPath: () => selection, document: { hidden: false },
+      $: selector => elements[selector], syncStatus() {}, render() {},
+      fetch: async () => {
+        requests += 1;
+        return requests === 1
+          ? { ok: false, json: async () => ({ error: '暂时无法读取' }) }
+          : { ok: true, json: async () => state };
+      },
+    };
+    vm.runInNewContext(source.slice(refreshStart, refreshEnd) + source.slice(syncStart, syncEnd), context);
+    await context.refresh();
+    assert.equal(elements['#error'].hidden, false);
+    await context.checkSync();
+    assert.equal(elements['#error'].hidden, selection === 'project-a');
+    assert.equal(requests, selection === 'project-a' ? 2 : 1);
+    assert.equal(context.state.project, 'project-a');
+  }
+});

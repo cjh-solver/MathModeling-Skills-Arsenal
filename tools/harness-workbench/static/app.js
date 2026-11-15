@@ -52,6 +52,8 @@ let syncSnapshot = '';
 let syncCandidate = '';
 let syncGeneration = 0;
 let syncBusy = false;
+let loadedSelection = null;
+let refreshFailed = false;
 let switchGeneration = 0;
 let selectedProjectInMemory = null;
 function selectedProjectPath() {
@@ -514,18 +516,20 @@ function render() {
 
 async function refresh() {
   const generation = ++syncGeneration;
+  const selected = selectedProjectPath();
   try {
-    const selected = selectedProjectPath();
     const response = await fetch(`/api/state${selected ? `?project=${encodeURIComponent(selected)}` : ''}`);
     const result = await response.json();
     if (!response.ok) throw new Error(result.error);
     if (generation !== syncGeneration) return;
     if (state?.project && state.project !== result.project) { contextNode = null; resultExpanded = false; resultCategory = '全部'; artifactStage = '全部'; selectedQuestion = null; selectedRole = null; selectedSkill = null; selectedDeliveryFile = null; selectedLibraryFile = null; selectedArtifact = null; libraryDirectory = '全部'; catalogQuery = ''; questionQuery = ''; }
-    state = result; syncSnapshot = JSON.stringify(result); syncCandidate = ''; $('#error').hidden = true; render();
+    state = result; loadedSelection = selected; refreshFailed = false;
+    syncSnapshot = JSON.stringify(result); syncCandidate = ''; $('#error').hidden = true; render();
     syncStatus('已同步');
     if (!$('#project-search-panel').hidden) showProjects();
   } catch (error) {
     if (generation !== syncGeneration) return;
+    refreshFailed = true;
     syncStatus('同步失败');
     $('#error').textContent = `${error.message}。请通过“搜索项目”选择可用项目。`;
     $('#error').hidden = false;
@@ -561,7 +565,7 @@ function syncInteractionInProgress() {
 }
 
 async function checkSync() {
-  if (syncBusy || document.hidden || !state?.project) return;
+  if (syncBusy || document.hidden || !state?.project || (refreshFailed && selectedProjectPath() !== loadedSelection)) return;
   syncBusy = true;
   const generation = syncGeneration;
   const project = state.project;
@@ -570,6 +574,7 @@ async function checkSync() {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || '无法读取项目');
     if (generation !== syncGeneration || state?.project !== project) return;
+    if (refreshFailed) { refreshFailed = false; $('#error').hidden = true; }
     const snapshot = JSON.stringify(result);
     if (snapshot === syncSnapshot) { syncCandidate = ''; syncStatus('已同步'); return; }
     if (snapshot !== syncCandidate) { syncCandidate = snapshot; syncStatus('检测到变化'); return; }
