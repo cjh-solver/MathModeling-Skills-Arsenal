@@ -24,7 +24,7 @@ const WorkbenchRanking = (() => {
       const changed = approval?.digests?.status === 'issues';
       const urgent = pending ? `${node.id} 节点记录待处理` : changed ? `${node.id} 批准文件待核` : null;
       add(node.review, { node: node.id, artifact: true, category: '审查与交付', urgent });
-      for (const item of node.evidence?.artifacts || []) add(item.path, { node: node.id, artifact: true });
+      for (const item of node.evidence?.artifacts || []) add(item.path, { node: node.id, artifact: true, urgent: pending ? `${node.id} 节点记录待处理` : null });
       for (const item of [...(node.evidence?.inputs || []), ...(node.evidence?.required_outputs || []), ...(node.evidence?.related || [])]) add(item.path, { node: node.id });
       if (changed) for (const item of approval.digests.files || []) if (item.status !== 'matches') add(item.path, { node: node.id, urgent: `${node.id} 登记文件变化或待核` });
     }

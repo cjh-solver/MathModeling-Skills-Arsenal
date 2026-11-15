@@ -33,6 +33,19 @@ test('changed approval evidence is prioritized without inferring approval', () =
   assert.match(items.find(item => item.path === 'figure.png').reasons[0], /待核/);
 });
 
+test('recorded review artifacts of a pending node are prioritized when the review file is not listed', () => {
+  const data = {
+    files: [{ path: 'evidence.pdf', modified: 1 }, { path: 'unrelated.txt', modified: 100 }],
+    nodes: [{ id: 'H6', status: 'review_pending', review: 'review.yaml', evidence: { artifacts: [{ path: 'evidence.pdf' }] } }],
+  };
+  const items = ranking.build(data);
+  assert.equal(items[0].path, 'evidence.pdf');
+  assert.equal(items[0].tier, 4);
+  assert.match(items[0].reasons[0], /H6 节点记录待处理/);
+  data.nodes[0].status = 'approved';
+  assert.equal(ranking.build(data).find(item => item.path === 'evidence.pdf').tier, 0);
+});
+
 test('evidence gaps and stale records receive attention without treating frozen records as pending', () => {
   const modified = {
     files: [{ path: 'gap.yaml' }, { path: 'stale.yaml' }, { path: 'frozen.yaml' }],
