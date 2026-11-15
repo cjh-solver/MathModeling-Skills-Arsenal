@@ -162,7 +162,7 @@ def check(replay_dir, phase=None):
                             or not meta.get('decision_card')):
                         bad.append(f'{fig}(数据图必须由 SciPilot 决策，再由 ModelViz 生成并经 SciPilot 质检)')
                 elif kind in {'flow', 'flowchart'} or is_diag and kind != 'schematic':
-                    if generator != 'tech-route-maker':
+                    if generator not in {'tech-route-maker', 'tikz-scientific-figures'}:
                         bad.append(f'{fig}(流程图 generator={generator or "missing"})')
                 elif kind == 'schematic':
                     if generator != 'tikz-scientific-figures':
@@ -173,7 +173,7 @@ def check(replay_dir, phase=None):
         if bad:
             r['C2 流程图工具'] = f'FAIL(图表来源不符合 v4.7 路由: {bad})'
         else:
-            r['C2 流程图工具'] = 'PASS(数据图=scipilot 决策→modelviz→scipilot；流程/路线=tech-route-maker；示意图=tikz-scientific-figures；Draw.io=显式请求)'
+            r['C2 流程图工具'] = 'PASS(数据图=scipilot 决策→modelviz→scipilot；流程/路线=tikz 或历史 tech-route-maker；示意图=tikz；Draw.io=显式请求)'
     else:
         r['C2 流程图工具'] = 'FAIL(缺 figure_registry.json；无法核验图表来源)'
     sensitivity = first_existing(res_dir / 'sensitivity_result.json' if res_dir else root / 'missing',

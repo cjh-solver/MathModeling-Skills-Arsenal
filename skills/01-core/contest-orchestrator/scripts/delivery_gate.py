@@ -249,8 +249,8 @@ def figure_registry_checks(workspace: Path, issues: list, warns: list, info: lis
                 decision_card = item.get("decision_card")
                 if not decision_card or not (source_root / str(decision_card)).exists():
                     bad.append(f"{key}: 数据图缺少可用的 SciPilot 图表决策卡")
-            if normalized_kind in {"flowchart", "flow"} and generator != "tech-route-maker":
-                bad.append(f"{key}: 流程图必须由 tech-route-maker 生成，实际 {generator or 'missing'}")
+            if normalized_kind in {"flowchart", "flow"} and generator not in {"tech-route-maker", "tikz-scientific-figures"}:
+                bad.append(f"{key}: 流程图必须使用 tikz-scientific-figures 或历史 tech-route-maker，实际 {generator or 'missing'}")
             if normalized_kind == "schematic" and generator != "tikz-scientific-figures":
                 bad.append(f"{key}: 示意图必须由 tikz-scientific-figures 生成，实际 {generator or 'missing'}")
             if normalized_kind == "drawio" and (generator != "drawio-diagram" or item.get("user_requested") is not True):
@@ -261,6 +261,8 @@ def figure_registry_checks(workspace: Path, issues: list, warns: list, info: lis
                     bad.append(f"{key}: tech-route-maker 仅允许问题分析流程图或技术路线框图")
                 if not str(item.get("script", "")).lower().endswith(".json"):
                     bad.append(f"{key}: tech-route-maker 必须登记 tech-route.json 源文件")
+            if generator == "tikz-scientific-figures" and not str(item.get("script", "")).lower().endswith(".tex"):
+                bad.append(f"{key}: TikZ 图必须登记可编辑 .tex 源文件")
             if isinstance(source, str):
                 source = [part.strip() for part in source.replace("；", ",").split(",") if part.strip()]
             for source_path in source or []:

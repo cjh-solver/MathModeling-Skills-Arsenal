@@ -56,7 +56,7 @@ REQUIRED_FILES = (
 )
 REQUIRED_DEPENDENCIES = (
     "data-science-stack", "pyomo", "heuristic-algorithms", "modelviz", "scipilot-figure-skill",
-    "tech-route-maker", "tikz-scientific-figures", "drawio-diagram", "mathmodel-latex-skill",
+    "tikz-scientific-figures", "drawio-diagram", "mathmodel-latex-skill",
     "bzd-review-paper", "academic-writing", "web-access", "math-model-selector", "humanizer-zh",
 )
 FORBIDDEN_REQUIRED_DEPENDENCIES = ("figure-generation", "fireworks-tech-graph")
@@ -115,7 +115,7 @@ def check(root: Path, strict: bool = False, smoke: bool = False) -> dict:
             failures.append(f"deprecated dependency remains required: {dependency}")
 
     if ("modelviz" not in skill_text or "scipilot-figure-skill" not in skill_text
-            or "tech-route-maker" not in skill_text or "tikz-scientific-figures" not in skill_text):
+            or "tikz-scientific-figures" not in skill_text):
         failures.append("figure routing policy is not explicit in SKILL.md")
     if "scripts/scope_router.py" not in skill_text:
         failures.append("SKILL.md does not expose the executable scope router")

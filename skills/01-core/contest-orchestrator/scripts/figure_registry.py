@@ -10,7 +10,7 @@ from pathlib import Path
 ALLOWED_FORMATS = {"png", "svg"}
 IMAGE_KINDS = {"data", "chart", "plot", "flow", "flowchart", "schematic", "drawio"}
 DATA_GENERATORS = {"modelviz"}
-FLOW_GENERATORS = {"tech-route-maker"}
+FLOW_GENERATORS = {"tech-route-maker", "tikz-scientific-figures"}
 SCHEMATIC_GENERATORS = {"tikz-scientific-figures"}
 DRAWIO_GENERATORS = {"drawio-diagram"}
 FLOW_ROLES = {"problem_analysis_flowchart", "technical_roadmap"}
@@ -97,7 +97,7 @@ def validate(registry: Path, workspace: Path) -> dict:
         if kind in {"data", "chart", "plot"} and generator not in DATA_GENERATORS:
             errors.append(f"{key}: data figure must use generator=modelviz")
         if kind in {"flow", "flowchart"} and generator not in FLOW_GENERATORS:
-            errors.append(f"{key}: flowchart generator must be tech-route-maker")
+            errors.append(f"{key}: flowchart generator must be tikz-scientific-figures or legacy tech-route-maker")
         if kind == "schematic" and generator not in SCHEMATIC_GENERATORS:
             errors.append(f"{key}: schematic generator must be tikz-scientific-figures")
         if kind == "drawio" and generator not in DRAWIO_GENERATORS:

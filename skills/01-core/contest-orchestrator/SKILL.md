@@ -134,7 +134,7 @@ python scripts/check_core_execution.py <replay> --phase B
 | 图表类型 | 路由与登记 |
 |---|---|
 | 数据结果图 | `SciPilot → ModelViz → SciPilot`；登记 `generator=modelviz`、`semantic_qa=scipilot-figure-skill`、`formats=[svg,png]`、`insertion_format=svg`；页面排版另登记 `layout_mode` |
-| 问题分析流程图、技术路线图、原理/机制/受力/几何和公式示意图 | Harness 按 H7 登记的路由执行；MathorCup 的问题分析与技术路线图用 `tech-route-maker`，机理/几何图用 `tikz-scientific-figures`。均须选择与路由一致的目录 `template_id`，保留可编辑源与 SVG/PNG，登记 starter 来源与哈希 |
+| 问题分析流程图、技术路线图、原理/机制/受力/几何和公式示意图 | 使用 `tikz-scientific-figures`，选择与路由一致的目录 `template_id`，保留可编辑 .tex 源与 SVG/PNG，登记 starter 来源与哈希；通用交付检查兼容已登记的历史 `tech-route-maker` 产物，H7 新图仍遵循当前路由 |
 | Draw.io 编辑图 | 仅用户明确要求时使用，登记 `user_requested=true`，输出 SVG/PNG 并保留 `.drawio` 源文件 |
 
 画图默认做视觉检查，确认图片美观、整洁、可读、层级清楚、标注完整；非画图默认不做视觉检查，只有用户明确要求或命令显式提供 `--visual-check` 时才渲染和检查。视觉检查不能替代公式、数字、引用、来源和结构门禁。

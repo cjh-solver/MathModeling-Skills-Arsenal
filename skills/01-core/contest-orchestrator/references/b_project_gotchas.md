@@ -26,7 +26,7 @@ figures:
 
 每张图必须包含：
 - `kind`：data/flowchart/roadmap/schematic/drawio
-- `generator`：匹配路由（data→modelviz，flowchart/roadmap→tech-route-maker，schematic→tikz-scientific-figures，drawio→drawio-diagram）
+- `generator`：匹配路由（data→modelviz，flowchart/roadmap/schematic→tikz-scientific-figures，drawio→drawio-diagram）
 - `formats`：必须含 svg+png
 - `insertion_format`：svg
 - `visual_qa`：passed/reviewed

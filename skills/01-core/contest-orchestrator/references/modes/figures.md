@@ -10,7 +10,7 @@
 - 通过视觉审计后，数据图再生成 SciPilot 决策卡。决策卡先于模板检索和批量生成，明确每张图服务的正文主张、数据源、数据结构、推荐图型、备选图型、排除图型、坐标、单位、图注和文件名；必要时记录图内画布比例，但不决定论文页面布局。
 - H7 图表 agent 负责完整视觉论证计划和非数据图的图型/路由判定；SciPilot 只为数据结果图生成决策卡并执行数据图语义、技术、视觉检查，不替代 H7 规划流程图、技术路线图或示意图。
 - 图表生成完成后，由论文排版层为每张登记图补齐唯一 `layout_mode`；页面布局只从 `single`、`side_by_side`、`wrap_short`、`tall_constrained` 四种入口选择，并与 `figure_policy.md` 保持一致。
-- 数据结果图严格执行 `SciPilot discovery → ModelViz generation → SciPilot QA → contest-orchestrator registry`；问题分析流程图和技术路线图使用 `tech-route-maker`；原理、机制、受力和几何示意图使用 `tikz-scientific-figures`；Draw.io 仅在用户明确要求时使用。登记规则以 `references/figure_policy.md` 为准。
+- 数据结果图严格执行 `SciPilot discovery → ModelViz generation → SciPilot QA → contest-orchestrator registry`；流程图、技术路线图和原理、机制、受力、几何示意图使用 `tikz-scientific-figures`；Draw.io 仅在用户明确要求时使用。登记规则以 `references/figure_policy.md` 为准。
 - 最终 registry 中每张图必须登记 `visual_slot_ids`，只能闭合到 `visual_argument_plan.yaml` 的已批准槽位；计划外图表不得进入论文。
 - 图片输出只保留 SVG 和 PNG，LaTeX 正式插入 SVG；编辑源文件单独保留，图片 PDF 不生成、不登记、不交付。
 - 绘图默认完成技术检查、渲染复核和视觉质检；用户肉眼确认作为最终补充。

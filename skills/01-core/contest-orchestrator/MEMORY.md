@@ -2,8 +2,8 @@
 
 ## Stable decisions
 
-- The canonical data-figure workflow is `ModelViz → scipilot-figure-skill`; register `generator: modelviz` and `semantic_qa: scipilot-figure-skill`.
-- Problem-analysis flowcharts and technical-roadmap diagrams use `tech-route-maker` and register `generator: tech-route-maker`; mechanism, force and geometry schematics use `tikz-scientific-figures` and register `generator: tikz-scientific-figures`; Draw.io is explicit-request only.
+- The canonical data-figure workflow is `scipilot-figure-skill → modelviz → scipilot-figure-skill`; register `generator: modelviz` and `semantic_qa: scipilot-figure-skill`.
+- Current non-data diagrams use `tikz-scientific-figures`; Draw.io is explicit-request only. Generic delivery checks retain historical `tech-route-maker` compatibility while H7 enforces the current approved route.
 - `COLLAB` pauses only at G0–G6 decision packages and binds approvals to artifact SHA-256 hashes. Routine writing and formatting remain continuous.
 - `full-contest-harness` uses H0–H9 with fixed roles, explicit per-node model routes, task cards, review packets and SHA-256-bound user approvals; H8 `evidence_gap` returns to H5/H6/H7 and keeps the run paused.
 - Appendix planning is coverage-first: each subproblem maps body material to real derivation, core code, and/or verification modules instead of manufacturing fixed appendix labels.

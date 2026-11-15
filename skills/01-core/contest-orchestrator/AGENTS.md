@@ -17,7 +17,7 @@ Maintain a deterministic mathematical-modeling contest orchestrator. The v4.18 s
 - `SKILL.md` is the concise entrypoint and router; `VERSION` is the single version source.
 - Detailed operational policy belongs in `references/`.
 - Deterministic checks belong in `scripts/` and must return meaningful exit codes.
-- Data result figures route through `ModelViz → scipilot-figure-skill`; problem-analysis flowcharts and technical-roadmap diagrams route to `tech-route-maker`; mechanism, force and geometry schematics route to `tikz-scientific-figures`; Draw.io is explicit-request only.
+- Data figures route through `scipilot-figure-skill → modelviz → scipilot-figure-skill`; non-data diagrams route to `tikz-scientific-figures`; Draw.io is explicit-request only. Generic delivery checks retain historical `tech-route-maker` compatibility; current H7 figures follow their approved route.
 - `scope_router.py` is the read-only scope/evidence planner; `delivery_all.py` is the canonical end-to-end delivery command for FULL_CONTEST.
 - Academic prose is routed through the local `academic-writing` adapter; claim-centered editing is opt-in and its `mathmodel_patch_guard.py` must pass before a prose patch is merged into a contest paper.
 
