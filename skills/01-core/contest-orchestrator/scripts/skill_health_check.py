@@ -67,12 +67,23 @@ def version(text: str) -> str | None:
     return match.group(1) if match else None
 
 
+def dependency_roots(root: Path) -> tuple[list[Path], str]:
+    """Distinguish repository packages from a flat host skill directory."""
+    parent = root.parent
+    if parent.name == "01-core" and parent.parent.name == "skills":
+        categories = (sorted(path for path in parent.parent.iterdir() if path.is_dir() and not path.name.startswith("."))
+                      if parent.parent.is_dir() else [])
+        return categories, "categorized skill packages; installation not checked"
+    return [parent], "flat skill directory"
+
+
 def check(root: Path, strict: bool = False, smoke: bool = False) -> dict:
     root = root.resolve()
-    skill_root = root.parent
+    dependency_dirs, dependency_layout = dependency_roots(root)
     failures: list[str] = []
     warnings: list[str] = []
     info: list[str] = []
+    info.append(f"dependency layout: {dependency_layout}")
     if check_skill_consistency is not None:
         consistency = check_skill_consistency(root)
         failures.extend(consistency.get("failures", []))
@@ -97,7 +108,7 @@ def check(root: Path, strict: bool = False, smoke: bool = False) -> dict:
         failures.append("manifest.yaml is missing schema_version")
 
     for dependency in REQUIRED_DEPENDENCIES:
-        if not (skill_root / dependency / "SKILL.md").exists():
+        if not any((directory / dependency / "SKILL.md").is_file() for directory in dependency_dirs):
             failures.append(f"missing required dependency: {dependency}")
     for dependency in FORBIDDEN_REQUIRED_DEPENDENCIES:
         if re.search(rf"^\s*-\s+{re.escape(dependency)}\s*$", manifest_text, re.MULTILINE):

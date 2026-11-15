@@ -32,3 +32,6 @@ jobs:
       - name: Public experience import tests
         working-directory: skills/01-core/contest-orchestrator
         run: python -m unittest discover -s tests -p 'test_public_jsonl_limitations.py'
+      - name: Health checker layout tests
+        working-directory: skills/01-core/contest-orchestrator
+        run: python -m unittest discover -s tests -p 'test_skill_health*.py'
