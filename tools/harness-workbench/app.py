@@ -45,6 +45,17 @@ NODE_NAMES = {"H0": "启动", "H1": "题意理解", "H2": "规格冻结", "H3": 
 ROLE_NAMES = {"H1": "题意理解", "H5": "解题", "H6": "独立验证", "H7": "图表", "H8": "论文"}
 CHAPTER_QUALITY_CHECKS = ("problem_answer", "model_and_derivation", "result_comparison", "interpretation", "continuity", "evidence_provenance")
 CHAPTER_KINDS = {"modeling", "validation", "evaluation", "conclusion", "analysis", "front_matter", "appendix", "abstract"}
+
+
+def valid_visual_slot(slot):
+    """Apply the Harness chapter workflow's visual-slot requirements."""
+    if not isinstance(slot, dict) or not isinstance(slot.get("slot_id"), str) or not slot["slot_id"]:
+        return False
+    representation = slot.get("representation")
+    mode = representation.get("mode") if isinstance(representation, dict) else representation
+    intent = slot.get("figure_intent")
+    route = slot.get("generation_route") or (intent.get("generation_route") if isinstance(intent, dict) else None)
+    return mode in ("figure", "table", "text") and (mode != "figure" or route in ("modelviz", "tikz-scientific-figures"))
 HARNESS_SKILLS = [
     ("contest-orchestrator", "全流程主控"), ("math-model-selector", "模型选择"),
     ("data-science-stack", "数据与验证"), ("scipilot-figure-skill", "科研数据图"),
@@ -499,7 +510,8 @@ def build_state(project, links_path=LINKS_PATH):
                 plan_binding = not visual_error and isinstance(chapter_id, str) and bool(chapter_id.strip()) and isinstance(revision_id, str) and bool(revision_id.strip()) and (
                     visual_plan.get("chapter_id") == item.get("chapter_id") and
                     visual_plan.get("revision_id") == revision_id and
-                    visual_plan.get("draft") == draft and isinstance(slots, list) and bool(slots)
+                    visual_plan.get("draft") == draft and isinstance(slots, list) and bool(slots) and
+                    all(valid_visual_slot(slot) for slot in slots)
                 )
                 prompts.append({"revision": revision.get("revision_id"), "path": prompt_path,
                                 "hash": prompt_hash["status"], "sha256": ref.get("sha256"), "visual_plan_path": visual_path,

@@ -248,6 +248,24 @@ dispatch_records:
         self.assertIsNone(app.recorded_timestamp('2026-02-30T13:00:00Z'))
         self.assertIsNone(app.recorded_timestamp(None))
 
+    def test_visual_slots_follow_harness_representation_rules(self):
+        valid = [
+            {'slot_id': 'a', 'representation': 'text'},
+            {'slot_id': 'b', 'representation': {'mode': 'table'}},
+            {'slot_id': 'c', 'representation': 'figure', 'generation_route': 'modelviz'},
+            {'slot_id': 'd', 'representation': {'mode': 'figure'}, 'figure_intent': {'generation_route': 'tikz-scientific-figures'}},
+        ]
+        invalid = [None, {}, {'slot_id': 'a'}, {'slot_id': '', 'representation': 'text'},
+                   {'slot_id': 'a', 'representation': 'figure'},
+                   {'slot_id': 'a', 'representation': 'figure', 'generation_route': 'unknown'},
+                   {'slot_id': 'a', 'representation': 'image'}]
+        for slot in valid:
+            with self.subTest(slot=slot):
+                self.assertTrue(app.valid_visual_slot(slot))
+        for slot in invalid:
+            with self.subTest(slot=slot):
+                self.assertFalse(app.valid_visual_slot(slot))
+
     def test_chapter_parallel_plan_and_prompt_follow_documented_schema(self):
         plan = self.project / 'plan.yaml'
         draft = self.project / 'q1.tex'
@@ -263,7 +281,7 @@ dispatch_records:
         draft_hash = hashlib.sha256(draft.read_bytes()).hexdigest()
         quality_data = {'status': 'ready', 'draft_sha256': draft_hash, 'checks': {key: 'PASS' for key in app.CHAPTER_QUALITY_CHECKS}}
         quality.write_text(app.yaml.safe_dump(quality_data), encoding='utf-8')
-        visual_plan.write_text(f'chapter_id: Q1\nrevision_id: r1\ndraft: {{path: q1.tex, sha256: {draft_hash}}}\nslots: [{{slot_id: figure1}}]\n', encoding='utf-8')
+        visual_plan.write_text(f'chapter_id: Q1\nrevision_id: r1\ndraft: {{path: q1.tex, sha256: {draft_hash}}}\nslots: [{{slot_id: figure1, representation: figure, generation_route: modelviz}}]\n', encoding='utf-8')
         prompt_hash = hashlib.sha256(prompt.read_bytes()).hexdigest()
         visual_hash = hashlib.sha256(visual_plan.read_bytes()).hexdigest()
         quality_hash = hashlib.sha256(quality.read_bytes()).hexdigest()
@@ -308,6 +326,14 @@ nodes:
         self.assertEqual(result['chapters'][0]['review_packet'], 'review.yaml')
         self.assertEqual(result['approvals'][0]['timestamp'], '2026-11-14T12:00:00+08:00')
         self.assertEqual(result['approvals'][0]['digests']['status'], 'matches')
+        invalid_visual = visual_plan.read_text(encoding='utf-8').replace('generation_route: modelviz', 'generation_route: unknown')
+        visual_plan.write_text(invalid_visual, encoding='utf-8')
+        invalid_hash = hashlib.sha256(visual_plan.read_bytes()).hexdigest()
+        self.control.write_text(self.control.read_text(encoding='utf-8').replace(visual_hash, invalid_hash), encoding='utf-8')
+        invalid = app.build_state(self.project, self.links)['chapters'][0]['prompts'][0]
+        self.assertEqual(invalid['visual_plan_hash'], 'matches')
+        self.assertFalse(invalid['plan_binding'])
+        self.control.write_text(self.control.read_text(encoding='utf-8').replace(invalid_hash, visual_hash), encoding='utf-8')
         visual_plan.write_text(f'chapter_id: WRONG\nrevision_id: r1\ndraft: {{path: q1.tex, sha256: {draft_hash}}}\nslots: [{{slot_id: figure1}}]\n', encoding='utf-8')
         updated_visual_hash = hashlib.sha256(visual_plan.read_bytes()).hexdigest()
         self.control.write_text(self.control.read_text(encoding='utf-8').replace(visual_hash, updated_visual_hash), encoding='utf-8')
