@@ -436,12 +436,10 @@ def validate_office_archive(path):
             raise ValueError("文档解压后的内容过大，无法预览")
 
 
-def digest_status(project, entries, cache=None):
+def digest_status(project, entries):
     """Compare recorded file hashes only; this does not validate approvals or gates."""
     if not isinstance(entries, dict):
         return {"status": "unrecorded", "files": []}
-    if cache is None:
-        cache = {}
     results = []
     for number, (name, expected) in enumerate(entries.items()):
         item = {"path": str(name), "status": "unverified"}
@@ -462,21 +460,17 @@ def digest_status(project, entries, cache=None):
                 else:
                     def signature(value):
                         return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
-                    key = (target, signature(stat))
-                    actual = cache.get(key)
-                    if actual is None:
-                        digest = hashlib.sha256()
-                        with target.open("rb") as file:
-                            before = os.fstat(file.fileno())
-                            for chunk in iter(lambda: file.read(1024 * 1024), b""):
-                                digest.update(chunk)
-                            after = os.fstat(file.fileno())
-                        # On Windows, path stat and fstat may report different
-                        # ctime meanings; compare their shared fields only.
-                        if signature(before)[:4] != key[1][:4] or signature(after)[:4] != key[1][:4] or signature(target.stat()) != key[1]:
-                            raise ValueError("file changed while hashing")
-                        actual = digest.hexdigest()
-                        cache[key] = actual
+                    signature_before = signature(stat)
+                    digest = hashlib.sha256()
+                    with target.open("rb") as file:
+                        before = os.fstat(file.fileno())
+                        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+                            digest.update(chunk)
+                        after = os.fstat(file.fileno())
+                    # Windows path stat and fstat can use different ctime meanings.
+                    if signature(before)[:4] != signature_before[:4] or signature(after)[:4] != signature_before[:4] or signature(target.stat()) != signature_before:
+                        raise ValueError("file changed while hashing")
+                    actual = digest.hexdigest()
                     item["status"] = "matches" if actual.lower() == expected.lower() else "changed"
             except FileNotFoundError:
                 item["status"] = "missing"
@@ -489,7 +483,6 @@ def digest_status(project, entries, cache=None):
 
 
 def build_state(project, links_path=LINKS_PATH):
-    digest_cache = {}  # Per request only: share hashes, never retain them across refreshes.
     control_path = project / ".contest" / "harness_control.yaml"
     control, error = read_project_yaml(project, ".contest/harness_control.yaml")
     if error:
@@ -583,7 +576,7 @@ def build_state(project, links_path=LINKS_PATH):
     plan_ref = preparation.get("writing_plan") if isinstance(preparation.get("writing_plan"), dict) else {}
     plan_path = plan_ref.get("path")
     plan, plan_error = read_project_yaml(project, plan_path)
-    plan_hash = digest_status(project, {plan_path: plan_ref.get("sha256")}, digest_cache) if isinstance(plan_path, str) else {"status": "unrecorded", "files": []}
+    plan_hash = digest_status(project, {plan_path: plan_ref.get("sha256")}) if isinstance(plan_path, str) else {"status": "unrecorded", "files": []}
     writing_plan = {"path": plan_path, "review_packet": ref_path(preparation.get("plan_review_packet")), "error": plan_error, "hash": plan_hash["status"],
                     "chapter_order": plan.get("chapter_order"), "writing_order": plan.get("writing_order"),
                     "central_thesis": plan.get("central_thesis"), "reader_journey": plan.get("reader_journey")}
@@ -601,10 +594,10 @@ def build_state(project, links_path=LINKS_PATH):
                     continue
                 ref = revision.get("prompt") if isinstance(revision.get("prompt"), dict) else {}
                 prompt_path = ref.get("path")
-                prompt_hash = digest_status(project, {prompt_path: ref.get("sha256")}, digest_cache) if isinstance(prompt_path, str) else {"status": "unrecorded"}
+                prompt_hash = digest_status(project, {prompt_path: ref.get("sha256")}) if isinstance(prompt_path, str) else {"status": "unrecorded"}
                 visual_ref = revision.get("visual_plan") if isinstance(revision.get("visual_plan"), dict) else {}
                 visual_path = visual_ref.get("path")
-                visual_hash = digest_status(project, {visual_path: visual_ref.get("sha256")}, digest_cache) if isinstance(visual_path, str) else {"status": "unrecorded"}
+                visual_hash = digest_status(project, {visual_path: visual_ref.get("sha256")}) if isinstance(visual_path, str) else {"status": "unrecorded"}
                 visual_plan, visual_error = read_project_yaml(project, visual_path)
                 revision_id = revision.get("revision_id")
                 slots = visual_plan.get("slots")
@@ -620,10 +613,10 @@ def build_state(project, links_path=LINKS_PATH):
                                 "visual_plan_hash": visual_hash["status"], "plan_binding": plan_binding,
                                 "prepared_at": recorded_timestamp(revision.get("prepared_at")), "supersedes": revision.get("supersedes")})
             draft_path = draft.get("path")
-            draft_hash = digest_status(project, {draft_path: draft.get("sha256")}, digest_cache) if isinstance(draft_path, str) else {"status": "unrecorded"}
+            draft_hash = digest_status(project, {draft_path: draft.get("sha256")}) if isinstance(draft_path, str) else {"status": "unrecorded"}
             quality = item.get("quality_review") if isinstance(item.get("quality_review"), dict) else {}
             quality_path = quality.get("path")
-            quality_hash = digest_status(project, {quality_path: quality.get("sha256")}, digest_cache) if isinstance(quality_path, str) else {"status": "unrecorded"}
+            quality_hash = digest_status(project, {quality_path: quality.get("sha256")}) if isinstance(quality_path, str) else {"status": "unrecorded"}
             quality_data, quality_error = read_project_yaml(project, quality_path)
             definitions = plan.get("chapters") if isinstance(plan.get("chapters"), list) else []
             matching_definitions = [entry for entry in definitions if isinstance(entry, dict) and entry.get("chapter_id") == item.get("chapter_id")]
@@ -708,7 +701,7 @@ def build_state(project, links_path=LINKS_PATH):
         "approvals": [
             {"gate": a.get("gate"), "decision": a.get("decision"),
              "timestamp": recorded_timestamp(a.get("timestamp")),
-             "digests": digest_status(project, a.get("artifact_digests"), digest_cache)}
+             "digests": digest_status(project, a.get("artifact_digests"))}
             for a in approvals_list if isinstance(a, dict)
         ],
         "approval_error": approval_error,

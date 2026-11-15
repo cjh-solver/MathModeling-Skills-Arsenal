@@ -692,21 +692,15 @@ nodes:
         (self.project / 'result.txt').write_text('changed', encoding='utf-8')
         self.assertEqual(app.digest_status(self.project, {'result.txt': expected})['files'][0]['status'], 'changed')
 
-    def test_shared_hash_cache_is_request_scoped_and_detects_file_changes(self):
+    def test_hash_detects_same_size_change_with_restored_timestamp(self):
         artifact = self.project / 'result.txt'
-        artifact.write_text('actual', encoding='utf-8')
-        expected = hashlib.sha256(b'actual').hexdigest()
-        cache = {}
-        sha256 = hashlib.sha256
-        with patch.object(app.hashlib, 'sha256', wraps=sha256) as calculate:
-            self.assertEqual(app.digest_status(self.project, {'result.txt': expected}, cache)['status'], 'matches')
-            self.assertEqual(app.digest_status(self.project, {'result.txt': expected}, cache)['status'], 'matches')
-            self.assertEqual(calculate.call_count, 1)
-            artifact.write_text('changed content', encoding='utf-8')
-            self.assertEqual(app.digest_status(self.project, {'result.txt': expected}, cache)['files'][0]['status'], 'changed')
-            self.assertEqual(calculate.call_count, 2)
-            self.assertEqual(app.digest_status(self.project, {'result.txt': expected})['files'][0]['status'], 'changed')
-            self.assertEqual(calculate.call_count, 3)
+        artifact.write_bytes(b'aaaa')
+        original_stat = artifact.stat()
+        expected = hashlib.sha256(b'aaaa').hexdigest()
+        self.assertEqual(app.digest_status(self.project, {'result.txt': expected})['status'], 'matches')
+        artifact.write_bytes(b'bbbb')
+        os.utime(artifact, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+        self.assertEqual(app.digest_status(self.project, {'result.txt': expected})['files'][0]['status'], 'changed')
 
     def test_file_changed_during_hash_is_not_reported_as_matching(self):
         artifact = self.project / 'result.txt'
