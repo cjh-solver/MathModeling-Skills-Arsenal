@@ -533,7 +533,12 @@ async function refresh() {
     if (!state) {
       try {
         const bootstrap = await fetch('/api/bootstrap');
-        if (bootstrap.ok) { state = { ...await bootstrap.json(), project: '' }; if (!$('#project-search-panel').hidden) showProjects(); }
+        if (bootstrap.ok) {
+          const data = await bootstrap.json();
+          if (generation !== syncGeneration || state?.project) return;
+          state = { ...data, project: '' };
+          if (!$('#project-search-panel').hidden) showProjects();
+        }
       } catch { /* The service itself is unreachable; keep the visible error. */ }
     }
   }
