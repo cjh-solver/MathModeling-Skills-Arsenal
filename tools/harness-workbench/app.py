@@ -471,7 +471,7 @@ def build_state(project, links_path=LINKS_PATH):
     plan_path = plan_ref.get("path")
     plan, plan_error = read_project_yaml(project, plan_path)
     plan_hash = digest_status(project, {plan_path: plan_ref.get("sha256")}) if isinstance(plan_path, str) else {"status": "unrecorded", "files": []}
-    writing_plan = {"path": plan_path, "error": plan_error, "hash": plan_hash["status"],
+    writing_plan = {"path": plan_path, "review_packet": ref_path(preparation.get("plan_review_packet")), "error": plan_error, "hash": plan_hash["status"],
                     "chapter_order": plan.get("chapter_order"), "writing_order": plan.get("writing_order"),
                     "central_thesis": plan.get("central_thesis"), "reader_journey": plan.get("reader_journey")}
     chapter_items = preparation.get("chapters", [])

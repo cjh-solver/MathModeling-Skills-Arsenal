@@ -274,6 +274,7 @@ nodes:
   H7:
     writer_preparation:
       writing_plan: {{path: plan.yaml, sha256: {plan_hash}}}
+      plan_review_packet: plan-review.yaml
       chapters:
         - chapter_id: Q1
           draft: {{path: q1.tex, sha256: {draft_hash}}}
@@ -291,6 +292,7 @@ nodes:
 ''', encoding='utf-8')
         result = app.build_state(self.project, self.links)
         self.assertEqual(result['writing_plan']['hash'], 'matches')
+        self.assertEqual(result['writing_plan']['review_packet'], 'plan-review.yaml')
         self.assertEqual(result['writing_plan']['writing_order'], ['Q1', 'abstract'])
         self.assertEqual(result['chapters'][0]['prompts'][0]['revision'], 'r1')
         self.assertEqual(result['chapters'][0]['prompts'][0]['hash'], 'matches')
