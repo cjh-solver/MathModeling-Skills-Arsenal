@@ -41,7 +41,8 @@ def main():
                 failures.append(f"Missing name/description: {path.relative_to(ROOT)}")
         except yaml.YAMLError:
             failures.append(f"Invalid YAML: {path.relative_to(ROOT)}")
-    documents = [ROOT / "README.md", ROOT / "CONTRIBUTING.md", *ROOT.glob("docs/*.md"), *ROOT.glob("examples/**/*.md")]
+    skill_readmes = list(ROOT.glob("skills/*/*/README*.md"))
+    documents = [ROOT / "README.md", ROOT / "CONTRIBUTING.md", *ROOT.glob("docs/*.md"), *ROOT.glob("examples/**/*.md"), *skill_readmes]
     for path in documents:
         text = path.read_text(encoding="utf-8-sig")
         for target in re.findall(r"\]\(([^\s)]+)\)", text):
@@ -50,7 +51,7 @@ def main():
             local = unquote(target.split("#", 1)[0])
             if not (path.parent / local).exists():
                 failures.append(f"Broken link: {path.relative_to(ROOT)} -> {local}")
-    for path in ROOT.glob("skills/*/*/README.md"):
+    for path in skill_readmes:
         text = path.read_text(encoding="utf-8-sig")
         for target in re.findall(r'<img\b[^>]*\bsrc=["\']([^"\']+)', text, re.IGNORECASE):
             if target.startswith(("http:", "https:", "data:", "#")):

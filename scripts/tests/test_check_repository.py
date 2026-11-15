@@ -29,6 +29,14 @@ class RepositoryCheckTests(unittest.TestCase):
                 (skill / "preview.png").write_bytes(b"fixture")
                 with contextlib.redirect_stdout(io.StringIO()):
                     self.assertEqual(check_repository.main(), 0)
+                (skill / "README_EN.md").write_text('[license](LICENSE)', encoding="utf-8")
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    self.assertEqual(check_repository.main(), 1)
+                self.assertIn("Broken link:", output.getvalue())
+                (skill / "LICENSE").write_text("fixture", encoding="utf-8")
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(check_repository.main(), 0)
 
 
 if __name__ == "__main__":

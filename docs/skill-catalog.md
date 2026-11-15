@@ -76,6 +76,7 @@
 | `humanizer-zh` | MIT | 歸藏 |
 | `fireworks-tech-graph` | MIT | fireworks-tech-graph contributors |
 | `tech-route-maker` | MIT | tech-route-maker contributors |
+| `darwin-skill` | MIT | alchaincyf（花叔） |
 
 各技能目录内保留原始 `LICENSE` 文件，分发时请一并保留。
 
