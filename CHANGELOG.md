@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Allow same-origin workbench actions through either `localhost` or `127.0.0.1`, while rejecting mismatched origins.
 - Restrict workbench HTTP host headers to loopback addresses to protect local project data from requests using unrelated hostnames.
 - Bring the public CUMCM template layout adapter in line with its documented SVG commands and non-forced table placement.
 - Preserve visible Excel columns when a workbook declares an incorrect sheet dimension, while keeping preview limits.

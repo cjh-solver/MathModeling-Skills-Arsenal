@@ -848,8 +848,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self.local_host():
             return self.respond(403, {"error": "仅允许通过本机地址访问工作台"})
         try:
-            origin = self.headers.get("Origin", "")
-            expected = f"http://127.0.0.1:{self.server.server_port}"
+            origin = self.headers.get("Origin", "").lower()
+            expected = f"http://{self.headers['Host'].lower()}"
             if origin != expected or self.headers.get("X-Workbench-Token") != self.token:
                 return self.respond(403, {"error": "请求来源或令牌无效"})
             length = int(self.headers.get("Content-Length", "0"))

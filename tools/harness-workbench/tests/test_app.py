@@ -584,6 +584,15 @@ nodes:
             urllib.request.urlopen(request)
         self.assertEqual(error.exception.code, 403)
         self.assertFalse(self.links.exists())
+        localhost = f'localhost:{server.server_port}'
+        request = urllib.request.Request(base + '/api/role-link', data=body, headers={'Host': localhost, 'Origin': base, 'X-Workbench-Token': 'test-token', 'Content-Type': 'application/json'})
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            urllib.request.urlopen(request)
+        self.assertEqual(error.exception.code, 403)
+        self.assertFalse(self.links.exists())
+        request = urllib.request.Request(base + '/api/role-link', data=body, headers={'Host': localhost, 'Origin': f'http://{localhost}', 'X-Workbench-Token': 'test-token', 'Content-Type': 'application/json'})
+        with urllib.request.urlopen(request) as response:
+            self.assertEqual(json.load(response), {'ok': True})
         request = urllib.request.Request(base + '/api/role-link', data=body, headers={'Origin': base, 'X-Workbench-Token': 'test-token', 'Content-Type': 'application/json'})
         with urllib.request.urlopen(request) as response:
             self.assertEqual(json.load(response), {'ok': True})
