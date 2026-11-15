@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Keep Harness control, role and approval records within the selected project boundary, including when symbolic links are present.
 - Remove unavailable ModelViz showcase image references and point readers to a clearly labeled reproducible example; check skill README image paths in repository validation.
 
 - Teach the orchestrator health check to distinguish categorized repository packages from a flat skill installation; repository presence does not certify installation.

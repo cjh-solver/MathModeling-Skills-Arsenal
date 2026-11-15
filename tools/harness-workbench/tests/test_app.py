@@ -158,6 +158,41 @@ dispatch_records:
         with self.assertRaises(ValueError):
             app.project_path(str(self.base))
 
+    def test_control_and_record_symlinks_respect_project_boundary(self):
+        outside = self.base / 'outside.yaml'
+        outside.write_text(
+            'active_mode: full-contest-harness\nnodes: {}\n'
+            'instances: [{role: 外部角色}]\napprovals: [{gate: H8, decision: approved}]\n',
+            encoding='utf-8',
+        )
+        try:
+            self.control.symlink_to(outside)
+        except OSError as error:
+            self.skipTest(f'symbolic links unavailable: {error}')
+        with self.assertRaises(ValueError):
+            app.project_path(str(self.project))
+        with self.assertRaises(ValueError):
+            app.build_state(self.project, self.links)
+
+        self.control.unlink()
+        self.write_control('active_mode: full-contest-harness\nnodes: {}\n')
+        (self.project / '.contest' / 'approval_log.yaml').symlink_to(outside)
+        (self.project / '.contest' / 'agent_registry.yaml').symlink_to(outside)
+        state = app.build_state(self.project, self.links)
+        self.assertEqual(state['approvals'], [])
+        self.assertIn('不在当前项目', state['approval_error'])
+        self.assertIn('不在当前项目', state['registry_error'])
+        self.assertNotIn('外部角色', [role['name'] for role in state['roles']])
+
+        internal = self.project / '.contest' / 'local_approvals.yaml'
+        internal.write_text('approvals: [{gate: H8, decision: approved}]\n', encoding='utf-8')
+        approval = self.project / '.contest' / 'approval_log.yaml'
+        approval.unlink()
+        approval.symlink_to(internal)
+        state = app.build_state(self.project, self.links)
+        self.assertIsNone(state['approval_error'])
+        self.assertEqual(state['approvals'][0]['gate'], 'H8')
+
     def test_file_listing_discloses_depth_limit_and_large_preview(self):
         deep = self.project / 'one' / 'two' / 'three' / 'four' / 'five'
         deep.mkdir(parents=True)

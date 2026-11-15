@@ -126,8 +126,10 @@ def project_path(value):
     path = Path(value).expanduser().resolve(strict=True)
     if not path.is_dir():
         raise ValueError("项目路径不是文件夹")
-    if not (path / ".contest" / "harness_control.yaml").is_file():
-        raise ValueError("项目没有 .contest/harness_control.yaml")
+    try:
+        safe_file(path, ".contest/harness_control.yaml")
+    except (OSError, ValueError) as error:
+        raise ValueError("项目控制记录缺失、无法读取或不在项目内") from error
     return path
 
 
@@ -438,7 +440,7 @@ def digest_status(project, entries):
 
 def build_state(project, links_path=LINKS_PATH):
     control_path = project / ".contest" / "harness_control.yaml"
-    control, error = read_yaml(control_path)
+    control, error = read_project_yaml(project, ".contest/harness_control.yaml")
     if error:
         raise ValueError(f"无法读取控制记录：{error}")
     if control.get("active_mode") != "full-contest-harness":
@@ -481,7 +483,7 @@ def build_state(project, links_path=LINKS_PATH):
         if name not in {item["name"] for item in roles}:
             roles.append({"name": name, "node": None, "instance_id": None, "thread_id": thread_id})
     registry_path = project / ".contest" / "agent_registry.yaml"
-    registry, registry_error = read_yaml(registry_path) if registry_path.exists() else ({}, "记录缺失")
+    registry, registry_error = read_project_yaml(project, ".contest/agent_registry.yaml") if registry_path.exists() else ({}, "记录缺失")
     instances_in_registry = registry.get("instances") if isinstance(registry.get("instances"), list) else []
     for entry in instances_in_registry:
         if not isinstance(entry, dict):
@@ -507,7 +509,7 @@ def build_state(project, links_path=LINKS_PATH):
             role["link_source"] = (role["history"][-1].get("source") if role["history"] else None) or "manual"
         role["dispatches"] = [{"task_id": record.get("task_id"), "node": record.get("node_id"), "model": record.get("model"), "reasoning_effort": record.get("reasoning_effort"), "task_card_path": record.get("task_card_path")} for record in records if isinstance(record, dict) and role.get("instance_id") and record.get("agent_instance_id") == role["instance_id"]] if isinstance(records, list) else []
     approvals_path = project / ".contest" / "approval_log.yaml"
-    approvals, approval_error = read_yaml(approvals_path) if approvals_path.exists() else ({}, "记录缺失")
+    approvals, approval_error = read_project_yaml(project, ".contest/approval_log.yaml") if approvals_path.exists() else ({}, "记录缺失")
     approvals_list = approvals.get("approvals", [])
     if "approvals" not in approvals and not approval_error:
         approval_error = "批准记录列表未登记"
