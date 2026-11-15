@@ -172,7 +172,7 @@ modules:
       - planner/appendix_capabilities.yaml
       - executor/execution.md
       - memory/paper_retrieval.py
-      - memory/writing_database.md
+      # The optional local writing experience database is not distributed.
 
   delivery:
     trigger: [交付, 门禁, delivery, submit, 提交, 数字一致性, 视觉契约, 硬性核对]
@@ -244,7 +244,7 @@ modules:
     files:
       - memory/memory.md
       - memory/index.yaml
-      - memory/decision_memory.md
+      # Private decision experience is optional and is not distributed.
       - memory/ranking.py
       - memory/retrieval.py
       - memory/semantic.py
@@ -252,7 +252,6 @@ modules:
       - memory/blueprint_retrieval.py
       - memory/math_blueprints/
       - memory/paper_retrieval.py
-      - memory/writing_database.md
       - memory/strategy_prior_template.md
       - memory/decision_trace/
       - memory/replay/

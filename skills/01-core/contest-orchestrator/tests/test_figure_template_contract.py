@@ -37,27 +37,23 @@ class FigureTemplateContractTests(unittest.TestCase):
         for template_id, entry in by_id.items():
             with self.subTest(template_id=template_id):
                 route = entry.get("generation_route")
-                self.assertIn(route, {"tech-route-maker", "tikz-scientific-figures"})
+                self.assertEqual(route, "tikz-scientific-figures")
                 starter_source = entry.get("starter_source")
                 self.assertIsInstance(starter_source, str)
-                starter_path = (self.skill_root.parent / starter_source).resolve()
+                flat_path = self.skill_root.parent / starter_source
+                categories = self.skill_root.parent.parent
+                matches = list(categories.glob(f"*/{starter_source}")) if categories.name == "skills" else []
+                self.assertLessEqual(len(matches), 1, starter_source)
+                starter_path = (matches[0] if matches else flat_path).resolve()
                 self.assertTrue(starter_path.is_file(), starter_path)
                 expected_hash = entry.get("template_sha256")
                 self.assertRegex(expected_hash or "", r"^[0-9a-f]{64}$")
                 actual_hash = hashlib.sha256(starter_path.read_bytes()).hexdigest()
                 self.assertEqual(actual_hash, expected_hash)
 
-                if route == "tech-route-maker":
-                    payload = json.loads(starter_path.read_text(encoding="utf-8"))
-                    provenance = payload.get("metadata", {}).get("contest_template", {})
-                    self.assertEqual(provenance.get("template_id"), template_id)
-                    self.assertEqual(provenance.get("starter_source"), starter_source)
-                    self.assertIn("template_sha256", provenance)
-                    self.assertIn(str(provenance.get("template_sha256")), {"", "<computed-at-generation>"})
-                else:
-                    source = starter_path.read_text(encoding="utf-8")
-                    self.assertIn(f"contest-template-id: {template_id}", source)
-                    self.assertIn("contest-template-sha256:", source)
+                source = starter_path.read_text(encoding="utf-8")
+                self.assertIn(f"contest-template-id: {template_id}", source)
+                self.assertIn("contest-template-sha256:", source)
 
     def test_catalog_routes_are_unique_and_have_fixture_contract(self):
         catalog = yaml.safe_load(self.catalog_path.read_text(encoding="utf-8"))
@@ -73,16 +69,15 @@ class FigureTemplateContractTests(unittest.TestCase):
         entry = next(item for item in catalog["templates"] if item["template_id"] == "algorithm-iteration-flow")
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            script_path = root / "figures" / "algorithm" / "tech-route.json"
+            script_path = root / "figures" / "algorithm" / "figure.tex"
             report_path = root / "figures" / "algorithm" / "template_fixture.yaml"
             script_path.parent.mkdir(parents=True)
-            script_path.write_text(json.dumps({
-                "metadata": {"contest_template": {
-                    "template_id": entry["template_id"],
-                    "starter_source": entry["starter_source"],
-                    "template_sha256": entry["template_sha256"],
-                }}
-            }), encoding="utf-8")
+            script_path.write_text(
+                f"% contest-template-id: {entry['template_id']}\n"
+                f"% contest-template-source: {entry['starter_source']}\n"
+                f"% contest-template-sha256: {entry['template_sha256']}\n",
+                encoding="utf-8",
+            )
             report_path.write_text(yaml.safe_dump({
                 "status": "passed",
                 "template_id": entry["template_id"],
@@ -90,11 +85,11 @@ class FigureTemplateContractTests(unittest.TestCase):
                 "visual_qa": "passed",
             }), encoding="utf-8")
             figure = {
-                "generator": "tech-route-maker",
+                "generator": "tikz-scientific-figures",
                 "template_id": entry["template_id"],
                 "starter_source": entry["starter_source"],
                 "template_sha256": entry["template_sha256"],
-                "script": "figures/algorithm/tech-route.json",
+                "script": "figures/algorithm/figure.tex",
                 "layout_mode": "single",
                 "canvas_profile": {"orientation": "horizontal", "target_layout": "single", "top_level_node_limit": 7},
                 "visible_element_map": [

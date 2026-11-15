@@ -39,7 +39,7 @@ def _figure_intent(category):
         "model_structure": "tikz-scientific-figures",
         "result_evidence": "modelviz",
         "validation_robustness": "modelviz",
-    }.get(category, "tech-route-maker")
+    }.get(category, "tikz-scientific-figures")
     template_id = {
         "orientation": "problem-analysis-flow",
         "algorithm_process": "algorithm-iteration-flow",
@@ -241,10 +241,7 @@ def _registry_for(plan):
             "template_status": source_slot["figure_intent"]["template_status"],
             "template_id": template_id,
             "starter_source": (
-                "tech-route-maker/assets/contest-starters/"
-                f"{template_id}.json"
-                if route == "tech-route-maker"
-                else "tikz-scientific-figures/assets/contest-starters/"
+                "tikz-scientific-figures/assets/contest-starters/"
                 f"{template_id}.tex"
                 if route == "tikz-scientific-figures"
                 else None
@@ -400,9 +397,9 @@ class VisualArgumentPlanTests(unittest.TestCase):
         plan = _valid_visual_plan()
         figure_slot = next(
             slot for item in plan["subproblems"] for slot in item["visual_audit"]
-            if slot["figure_intent"]["generation_route"] == "tech-route-maker"
+            if slot["figure_intent"]["template_id"] == "problem-analysis-flow"
         )
-        figure_slot["figure_intent"]["template_id"] = "model-summary-frame"
+        figure_slot["figure_intent"]["template_id"] = "modelviz/result-figure"
         report = check_visual_evidence.validate_visual_argument_plan(
             plan,
             expected_subproblems=["Q1", "Q2"],
@@ -410,7 +407,7 @@ class VisualArgumentPlanTests(unittest.TestCase):
             stage="plan",
         )
         self.assertEqual(report["status"], "BLOCK")
-        self.assertTrue(any("template_id" in item and "路由" in item for item in report["errors"]))
+        self.assertTrue(any("template_id" in item and "contest starter" in item for item in report["errors"]))
 
     def test_final_registry_requires_template_fixture_hash_and_visual_qa(self):
         plan = _bind_plan_to_packet(_valid_visual_plan())

@@ -7,6 +7,8 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
+ACADEMIC_WRITING = (ROOT.parent.parent / "03-writing" / "academic-writing"
+                    if ROOT.parent.parent.name == "skills" else ROOT.parent / "academic-writing")
 CHECKER = ROOT / "scripts" / "check_harness_control.py"
 SPEC = importlib.util.spec_from_file_location("check_harness_control", CHECKER)
 checker = importlib.util.module_from_spec(SPEC)
@@ -530,13 +532,13 @@ class AuthoringArchitectureTests(unittest.TestCase):
         self.assertIn("先写论证", execution)
 
     def test_academic_writing_h8c_uses_reader_first_full_paper_pass(self):
-        skill = (ROOT.parent / "academic-writing" / "SKILL.md").read_text(encoding="utf-8")
+        skill = (ACADEMIC_WRITING / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("H8C", skill)
         self.assertIn("通读全文", skill)
         self.assertIn("读者路径", skill)
 
     def test_b_chapter_templates_use_the_canonical_two_section_layout(self):
-        templates_root = ROOT.parent / "academic-writing" / "references" / "b_chapter_templates"
+        templates_root = ACADEMIC_WRITING / "references" / "b_chapter_templates"
         readme = (templates_root / "README.md").read_text(encoding="utf-8")
         self.assertIn("统一章节骨架", readme)
         self.assertIn("模型建立", readme)

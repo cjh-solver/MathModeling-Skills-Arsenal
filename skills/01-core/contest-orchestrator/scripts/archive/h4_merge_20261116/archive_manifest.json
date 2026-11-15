@@ -1,0 +1,80 @@
+{
+  "purpose": "One-time H4 to H5 migration helpers; retained for recovery",
+  "files": [
+    {
+      "original": "scripts/debug_block_reason.py",
+      "archived": "scripts/archive/h4_merge_20261116/debug_block_reason.py",
+      "sha256": "32efe71c6c95991e07c506360333c61fb44dc6d80bcb8aa97b8747b0aa3e89ec"
+    },
+    {
+      "original": "scripts/fix_h4_planner.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_h4_planner.py",
+      "sha256": "30bca2ecef54d90681060b5d45b84f316cba6800512828893dae62cce4e63af1"
+    },
+    {
+      "original": "scripts/fix_h4_references.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_h4_references.py",
+      "sha256": "c94979fd120087b163df336ec6a812e83e836742d8ee2f8d2cb9f5cc339c2910"
+    },
+    {
+      "original": "scripts/fix_h4_skip.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_h4_skip.py",
+      "sha256": "5099889bfc2bec4d7a468825d77bbb38c959f66c3684582dcc1318a83777c2a0"
+    },
+    {
+      "original": "scripts/fix_h4_status_history.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_h4_status_history.py",
+      "sha256": "692993b4b86d4c167eadf3e3637dd392bbcea675773cac9f9f46741204f67c94"
+    },
+    {
+      "original": "scripts/fix_h5_chart_requirements.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_h5_chart_requirements.py",
+      "sha256": "b82c0c33e2a3f875b7d75e49d72bc40a8646c28645b3921248f2eadf6aeba8bd"
+    },
+    {
+      "original": "scripts/fix_role_h4.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_role_h4.py",
+      "sha256": "e02432c0dfd15c2eb08f18cd915848ee13370f91cd4e0d62d60ecde7c3e465ad"
+    },
+    {
+      "original": "scripts/fix_syntax.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_syntax.py",
+      "sha256": "9aff4ecae9ec3df9fb357a9e89d55a11882519f3f7a42c052d3cd5c7e40eacd1"
+    },
+    {
+      "original": "scripts/fix_tests_h4.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_tests_h4.py",
+      "sha256": "90ec6539a8681c58dca96e7ec84b2ac014806f3dff0de4788ebb6f5bdd2869ed"
+    },
+    {
+      "original": "scripts/fix_tests_harness_control.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_tests_harness_control.py",
+      "sha256": "16ee656fd911c697ff6a8cc82602929240d2cd4ac6529f7601b67a0c05b993cc"
+    },
+    {
+      "original": "scripts/fix_tests_incremental.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_tests_incremental.py",
+      "sha256": "feb42e17daaa2a015800fdafe6105630a14da1850ed8ae47d50d44ea2f1e5920"
+    },
+    {
+      "original": "scripts/fix_tests_runtime.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_tests_runtime.py",
+      "sha256": "3b69c2f85fa0cdf71b4f61fcab8a1c7b1241138ca358c655836b98469b8cf280"
+    },
+    {
+      "original": "scripts/fix_tests_skill_structure.py",
+      "archived": "scripts/archive/h4_merge_20261116/fix_tests_skill_structure.py",
+      "sha256": "497e5a180bfb05f8c15007d89e1e1bd2a1adee85d95bda83544a7e191376c7b3"
+    },
+    {
+      "original": "scripts/merge_h4_into_h5.py",
+      "archived": "scripts/archive/h4_merge_20261116/merge_h4_into_h5.py",
+      "sha256": "92717da086a096ebc49dd1d3704ea7c6be0b888611484de49188485740ee14fa"
+    },
+    {
+      "original": "scripts/temp_restore_h4.py",
+      "archived": "scripts/archive/h4_merge_20261116/temp_restore_h4.py",
+      "sha256": "aada8974fef03917c81beb7ee51f92a22e1f8c7858f88458bcad32660346f7bd"
+    }
+  ]
+}

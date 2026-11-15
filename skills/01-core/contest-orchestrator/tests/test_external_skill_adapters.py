@@ -7,16 +7,30 @@ into project deliverables.
 """
 
 from pathlib import Path
+import os
 import re
 import unittest
 
 
-SKILL_ROOT = Path(r"C:\Users\USER\.agents\skills")
-ORCHESTRATOR_ROOT = SKILL_ROOT / "contest-orchestrator"
+ORCHESTRATOR_ROOT = Path(__file__).resolve().parents[1]
+SKILL_ROOT = ORCHESTRATOR_ROOT.parent
 
 
 def skill_text(name: str) -> str:
-    return (SKILL_ROOT / name / "SKILL.md").read_text(encoding="utf-8")
+    categories = SKILL_ROOT.parent
+    if categories.name == "skills":
+        matches = list(categories.glob(f"*/{name}/SKILL.md"))
+        external_root = os.environ.get("MATH_SKILL_EXTERNAL_ROOT")
+        if not matches and external_root:
+            external = Path(external_root) / name / "SKILL.md"
+            if external.is_file():
+                matches = [external]
+        if len(matches) != 1:
+            raise FileNotFoundError(f"Expected one public skill entry for {name}, found {len(matches)}")
+        path = matches[0]
+    else:
+        path = SKILL_ROOT / name / "SKILL.md"
+    return path.read_text(encoding="utf-8")
 
 
 class ExternalSkillAdapterContractTests(unittest.TestCase):

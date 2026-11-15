@@ -12,7 +12,7 @@
 
 在 Windows、Python 3.13 环境下，公开仓库的 Harness 106 项、MathorCup 140 项测试通过；工作台 Python 28 项和 Node.js 33 项测试通过。仓库检查和合成数据示例通过。GitHub Actions 的实时结果以[工作流页面](https://github.com/cjh-solver/MathModeling-Skills-Arsenal/actions/workflows/validate.yml)为准。
 
-完整严格检查仍未通过：版本登记不一致、15 个脚本尚未分类，且部分未发布的私有引用缺失。健康检查现已识别仓库的分类目录，不再把仓库中存在的技能包误报为缺失；这只证明包在仓库中，不证明宿主已安装或能调用它们。需要逐项处理剩余问题后才能评价完整发布状态。
+公开包不包含私有的决策和写作经验库：相应检索器在文件缺失时返回空记录，不能把空库当成已获得经验。版本标识已统一，一次性维护脚本已隔离到历史归档。健康检查识别仓库的分类目录，这只证明包在仓库中，不证明宿主已安装或能调用它们。完整发布仍需独立的真实项目闭环和其他发布检查。
 
 ## 2026-11-01 历史记录
 
@@ -22,9 +22,9 @@
 
 ## 已知发布阻碍
 
-- 主控 `VERSION` 与 manifest 登记 4.18，SKILL 元数据为 4.19，发布登记尚未统一。本次更新不提升稳定版版本号。
-- 15 个历史维护脚本尚未在技能内部 registry 分类；严格检查还会指出部分私有引用缺失。
-- 因此，针对相关流程的 CI 通过不等于完整发布检查通过；`test_current_skill_passes_strict_consistency_audit` 记录了版本与分类问题。
+- 主控包含未发布的开发改动，版本标识为 4.18；统一标识不代表已完成新版本发布。
+- 私有经验库不随公开包发布；没有本地经验时采用冷启动，不能声称已检索到私有经验。
+- 公开论文模板已对齐主控的章节契约；图表计划和模板测试使用现行 TikZ 路由，并支持从分类目录检查 starter。公开包不含 `math-modeling`、`latex-paper-en`、`mineru-parse` 和 `word-document`；适配器测试可通过 `MATH_SKILL_EXTERNAL_ROOT` 指定本机平铺技能目录来验证这些外部技能。未提供该目录时，缺失技能仍明确报错；本机通过不代表这些技能已包含在公开包中。
 - 临时工程代理与用户可直接进入的长期角色会话不是同一能力。MathorCup 本次独立工程审查代理因工作区额度限制未完成最终审查；本地测试不冒充独立签署。
 
 ## 本地复现
@@ -34,10 +34,12 @@ python -m pip install pyyaml
 python scripts/check_repository.py
 python examples/chapter-parallel/calculate.py
 cd skills/01-core/contest-orchestrator
+# 可选：指向本机已有的外部技能目录，不修改或安装该目录。
+export MATH_SKILL_EXTERNAL_ROOT="/path/to/installed/skills"
 python -m unittest discover -s tests -p 'test_mathorcup*.py'
 python -m unittest discover -s tests -p 'test_harness*.py'
 
-# 完整检查：目前预期会报告上面的既有一致性阻碍。
+# 完整检查：检查通过仍不等于正式竞赛闭环或稳定版发布。
 python -m unittest discover -s tests -p 'test_*.py'
 python scripts/skill_health_check.py . --strict --smoke
 python scripts/replay_profiles.py --strict
