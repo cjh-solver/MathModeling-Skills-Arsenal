@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Mark historical JSON reports with conflicting duplicate fields as unreadable instead of silently showing a potentially misleading pass result.
 - Reject duplicate fields in role-session JSON records before saving, preserving existing session history for manual recovery.
 - Surface unreadable or malformed project role registries without hiding valid manual session links.
 - Repair tech-route-maker links and example commands for clean checkouts; validate documentation targets against the Git index rather than ignored local files.

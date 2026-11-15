@@ -169,24 +169,24 @@ def safe_file(project, name):
     return target
 
 
-def unique_link_fields(pairs):
+def unique_json_fields(pairs):
     result = {}
     for key, value in pairs:
         if key in result:
-            raise ValueError("角色登记文件存在重复字段，原记录未修改")
+            raise ValueError("JSON 存在重复字段")
         result[key] = value
     return result
 
 
 def load_links(path=LINKS_PATH):
     try:
-        data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_link_fields)
+        data = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_json_fields)
         if not isinstance(data, dict):
             raise ValueError("角色登记文件格式错误，原记录未修改")
         return data
     except FileNotFoundError:
         return {}
-    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+    except (OSError, UnicodeError, ValueError) as error:
         raise ValueError(f"角色登记文件无法读取：{error}") from error
 
 
@@ -418,7 +418,7 @@ def read_report(project, relative, title):
     try:
         target = safe_file(project, relative)
         with target.open(encoding="utf-8-sig") as file:
-            data = json.load(file)
+            data = json.load(file, object_pairs_hook=unique_json_fields)
         if not isinstance(data, dict):
             raise ValueError("报告不是对象")
         passed = data.get("passed")

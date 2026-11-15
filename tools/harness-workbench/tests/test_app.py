@@ -710,6 +710,13 @@ nodes:
         self.assertFalse(result['passed'])
         self.assertEqual(result['issues'], ['build failed'])
         self.assertIsNotNone(result['modified'])
+        for content in ('{"passed": false, "passed": true}', '{"passed": true, "details": {"status": "failed", "status": "passed"}}'):
+            report.write_text(content, encoding='utf-8')
+            before = report.read_bytes()
+            result = app.read_report(self.project, 'report.json', 'Compile')
+            self.assertIsNone(result['passed'])
+            self.assertIn('重复字段', result['error'])
+            self.assertEqual(report.read_bytes(), before)
 
 
 if __name__ == '__main__':
