@@ -248,6 +248,15 @@ dispatch_records:
         self.assertIsNone(app.recorded_timestamp('2026-02-30T13:00:00Z'))
         self.assertIsNone(app.recorded_timestamp(None))
 
+    def test_json_safe_preserves_shared_values_and_rejects_cycles(self):
+        shared = [float('nan'), 2.5]
+        self.assertEqual(app.json_safe({'first': shared, 'second': shared}),
+                         {'first': ['NaN', 2.5], 'second': ['NaN', 2.5]})
+        cycle = []
+        cycle.append(cycle)
+        with self.assertRaisesRegex(ValueError, '循环引用'):
+            app.json_safe(cycle)
+
     def test_visual_slots_follow_harness_representation_rules(self):
         valid = [
             {'slot_id': 'a', 'representation': 'text'},
@@ -386,6 +395,16 @@ nodes:
             self.assertEqual(json.load(response)['project'], str(other))
         with urllib.request.urlopen(base + '/api/state') as response:
             self.assertEqual(json.load(response)['project'], str(self.project))
+        self.write_control('active_mode: full-contest-harness\nproblem_scope: {subproblems: [Q1]}\nnodes:\n  H5: {model_summary_cards: models.yaml}\n')
+        model_file = self.project / 'models.yaml'
+        model_file.write_text('cards:\n  - subproblem_id: Q1\n    result: {values: [.nan, .inf, -.inf, 1.25]}\n', encoding='utf-8')
+        original = model_file.read_bytes()
+        def reject_nonstandard_constant(value):
+            raise AssertionError(f'Nonstandard JSON constant: {value}')
+        with urllib.request.urlopen(base + '/api/state') as response:
+            state = json.load(response, parse_constant=reject_nonstandard_constant)
+        self.assertEqual(state['question_views'][0]['models'][0]['result']['values'], ['NaN', 'Infinity', '-Infinity', 1.25])
+        self.assertEqual(model_file.read_bytes(), original)
         self.write_control('invalid: [')
         with self.assertRaises(urllib.error.HTTPError):
             urllib.request.urlopen(base + '/api/state')

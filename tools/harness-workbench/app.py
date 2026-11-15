@@ -4,6 +4,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import mimetypes
 import os
 import re
@@ -66,6 +67,24 @@ HARNESS_SKILLS = [
 PREVIEW_EXTENSIONS = {".md", ".txt", ".yaml", ".yml", ".json", ".tex", ".csv", ".pdf", ".png", ".jpg", ".jpeg", ".svg", ".py", ".bib", ".docx", ".xlsx"}
 LIST_EXTENSIONS = PREVIEW_EXTENSIONS | {".docx", ".xlsx", ".xls", ".py", ".ipynb", ".bib", ".zip"}
 LINKS_LOCK = threading.Lock()
+
+
+def json_safe(value, active=None):
+    """Keep non-finite measurements visible while emitting valid JSON."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return "NaN" if math.isnan(value) else ("Infinity" if value > 0 else "-Infinity")
+    if not isinstance(value, (dict, list, tuple)):
+        return value
+    active = set() if active is None else active
+    if id(value) in active:
+        raise ValueError("记录包含循环引用，无法显示")
+    active.add(id(value))
+    try:
+        if isinstance(value, dict):
+            return {key: json_safe(item, active) for key, item in value.items()}
+        return [json_safe(item, active) for item in value]
+    finally:
+        active.remove(id(value))
 
 
 def read_yaml(path):
@@ -622,7 +641,7 @@ class Handler(BaseHTTPRequestHandler):
     token = secrets.token_urlsafe(32)
 
     def respond(self, status, data, content_type="application/json; charset=utf-8"):
-        body = json.dumps(data, ensure_ascii=False, default=str).encode("utf-8") if isinstance(data, (dict, list)) else data
+        body = json.dumps(json_safe(data), ensure_ascii=False, default=str, allow_nan=False).encode("utf-8") if isinstance(data, (dict, list)) else data
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
