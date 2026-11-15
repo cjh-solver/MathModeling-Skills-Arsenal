@@ -4,24 +4,28 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
+const textResponse = text => ({ ok: true, arrayBuffer: async () => Buffer.from(text, 'utf8') });
+
 function createPreview(fetch) {
   const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
   const start = source.indexOf('async function openFile(path)');
   const end = source.indexOf("\ndocument.addEventListener('click'", start);
-  assert.ok(start >= 0 && end > start);
+  const decoderStart = source.indexOf('async function decodeTextPreview(response)');
+  const decoderEnd = source.indexOf('\nasync function renderCatalogPreview(', decoderStart);
+  assert.ok(start >= 0 && end > start && decoderStart >= 0 && decoderEnd > decoderStart);
   const body = { children: [], replaceChildren() { this.children = []; }, append(item) { this.children.push(item); } };
   const dialog = { open: false, showModal() { this.open = true; } };
   const title = {};
   const context = {
     $: selector => ({ '#file-dialog': dialog, '#file-title': title, '#file-body': body })[selector],
-    document: { createElement: () => ({ textContent: '', addEventListener(type, callback) { this[type] = callback; }, remove() { this.removed = true; }, after(item) { const index = body.children.indexOf(this); if (index >= 0) body.children.splice(index + 1, 0, item); } }) },
+    document: { createElement: () => ({ textContent: '', addEventListener(type, callback) { this[type] = callback; }, remove() { this.removed = true; }, before(item) { const index = body.children.indexOf(this); if (index >= 0) body.children.splice(index, 0, item); }, after(item) { const index = body.children.indexOf(this); if (index >= 0) body.children.splice(index + 1, 0, item); } }) },
     fileUrl: value => value,
-    fetch,
+    fetch, TextDecoder,
     resultPreferences: () => ({ views: {} }),
     preferenceKey: () => 'preferences',
     localStorage: { setItem() {} },
   };
-  vm.runInNewContext(source.slice(start, end), context);
+  vm.runInNewContext(source.slice(decoderStart, decoderEnd) + source.slice(start, end), context);
   return { context, body, dialog };
 }
 
@@ -35,14 +39,44 @@ test('text preview reports missing files and network errors', async () => {
 });
 
 test('text preview shows successfully loaded content', async () => {
-  const { context, body } = createPreview(async () => ({ ok: true, text: async () => '已有内容' }));
+  const { context, body } = createPreview(async () => textResponse('已有内容'));
   await context.openFile('paper.md');
   assert.equal(body.children[0].textContent, '已有内容');
 });
 
+test('GB18030 text previews show the decoded text and an encoding notice', async () => {
+  const bytes = Uint8Array.from([0xd6, 0xd0, 0xce, 0xc4]);
+  const { context, body } = createPreview(async () => ({ ok: true, arrayBuffer: async () => bytes }));
+  await context.openFile('notes.txt');
+  assert.match(body.children[0].textContent, /GB18030.*核对/);
+  assert.equal(body.children[1].textContent, '中文');
+});
+
+test('undecodable text reports an error instead of displaying replacement characters', async () => {
+  const { context, body } = createPreview(async () => ({ ok: true, arrayBuffer: async () => Uint8Array.from([0xff]) }));
+  await context.openFile('notes.txt');
+  assert.match(body.children[0].textContent, /无法识别文本编码/);
+});
+
+test('catalog preview uses the same GB18030 fallback', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('async function decodeTextPreview(response)');
+  const end = source.indexOf('\nasync function openFile(', start);
+  assert.ok(start >= 0 && end > start);
+  const container = { children: [], replaceChildren(...items) { this.children = items; } };
+  const context = {
+    TextDecoder, document: { createElement: () => ({ textContent: '' }) },
+    fileUrl: value => value, fetch: async () => ({ ok: true, arrayBuffer: async () => Uint8Array.from([0xd6, 0xd0, 0xce, 0xc4]) }),
+  };
+  vm.runInNewContext(source.slice(start, end), context);
+  await context.renderCatalogPreview(container, 'notes.txt');
+  assert.match(container.children[0].textContent, /GB18030/);
+  assert.equal(container.children[1].textContent, '中文');
+});
+
 test('long text preview starts bounded and can be expanded', async () => {
   const text = 'x'.repeat(40001);
-  const { context, body } = createPreview(async () => ({ ok: true, text: async () => text }));
+  const { context, body } = createPreview(async () => textResponse(text));
   await context.openFile('long.md');
   assert.match(body.children[0].textContent, /预览已截断/);
   assert.equal(body.children[1].textContent, '展开完整内容');
@@ -56,9 +90,9 @@ test('a delayed long text preview does not change a newer preview', async () => 
   const pending = new Promise(resolve => { finish = resolve; });
   const { context, body } = createPreview(() => pending);
   const older = context.openFile('old.md');
-  context.fetch = async () => ({ ok: true, text: async () => 'new content' });
+  context.fetch = async () => textResponse('new content');
   await context.openFile('new.md');
-  finish({ ok: true, text: async () => 'x'.repeat(40001) });
+  finish(textResponse('x'.repeat(40001)));
   await older;
   assert.equal(body.children.length, 1);
   assert.equal(body.children[0].textContent, 'new content');
@@ -74,7 +108,7 @@ test('view history stays with the original project while a file is loading', asy
   context.localStorage = { setItem(key, value) { saved[key] = JSON.parse(value); } };
   const preview = context.openFile('paper.md');
   project = 'project-b';
-  finish({ ok: true, text: async () => 'content' });
+  finish(textResponse('content'));
   await preview;
   assert.ok(saved['project-a'].views['paper.md']);
   assert.equal(saved['project-b'], undefined);

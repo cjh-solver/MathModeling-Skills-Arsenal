@@ -676,6 +676,19 @@ function previewImage(path, alt) {
   return image;
 }
 
+async function decodeTextPreview(response) {
+  const bytes = await response.arrayBuffer();
+  try {
+    return { text: new TextDecoder('utf-8', { fatal: true }).decode(bytes), fallback: false };
+  } catch {
+    try {
+      return { text: new TextDecoder('gb18030', { fatal: true }).decode(bytes), fallback: true };
+    } catch {
+      throw new Error('无法识别文本编码');
+    }
+  }
+}
+
 async function renderCatalogPreview(container, path) {
   if (!path) return;
   if (/\.pdf$/i.test(path)) return renderPdf(container, path);
@@ -687,10 +700,14 @@ async function renderCatalogPreview(container, path) {
   try {
     const response = await fetch(fileUrl(path));
     if (!response.ok) throw new Error('文件无法读取');
-    const text = await response.text();
+    const { text, fallback } = await decodeTextPreview(response);
     const pre = document.createElement('pre');
     pre.textContent = text.length > 40000 ? `${text.slice(0, 40000)}\n\n（预览已截断）` : text;
-    container.replaceChildren(pre);
+    if (fallback) {
+      const note = document.createElement('p');
+      note.textContent = '按 GB18030 尝试解码，请核对原文。';
+      container.replaceChildren(note, pre);
+    } else container.replaceChildren(pre);
   } catch (error) { container.textContent = `预览不可用：${error.message}`; }
 }
 
@@ -715,7 +732,12 @@ async function openFile(path) {
     try {
       const response = await fetch(url);
       if (!response.ok) throw new Error('文件不存在或无法读取');
-      const text = await response.text();
+      const { text, fallback } = await decodeTextPreview(response);
+      if (fallback) {
+        const note = document.createElement('p');
+        note.textContent = '按 GB18030 尝试解码，请核对原文。';
+        pre.before(note);
+      }
       pre.textContent = text.length > 40000 ? `${text.slice(0, 40000)}\n\n（预览已截断）` : text;
       if (text.length > 40000) {
         const expand = document.createElement('button');
