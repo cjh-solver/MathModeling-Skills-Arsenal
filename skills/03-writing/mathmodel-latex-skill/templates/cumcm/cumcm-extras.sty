@@ -240,12 +240,25 @@
   \end{figure}%
 }
 
-% 兼容旧调用接口；第三个参数使用不带扩展名的 SVG 基础路径。
+% 兼容旧调用接口；第三个参数支持 SVG 基础路径或显式 .svg 扩展名。
 \NewDocumentCommand{\figplot}{mmmm}{%
   \begin{figure}[!htbp]
     \centering
     \def\pkbFigPath{}%
-    \IfFileExists{#3.svg}{\edef\pkbFigPath{#3}}{}%
+    \def\pkbSvgExtension{svg}%
+    \filename@parse{#3}%
+    \ifx\filename@ext\pkbSvgExtension
+      \IfFileExists{#3}{\edef\pkbFigPath{#3}}{}%
+      \IfFileExists{./figures/#3}{%
+        \ifx\pkbFigPath\empty\edef\pkbFigPath{./figures/#3}\fi
+      }{}%
+      \IfFileExists{../02_figures/#3}{%
+        \ifx\pkbFigPath\empty\edef\pkbFigPath{../02_figures/#3}\fi
+      }{}%
+    \fi
+    \IfFileExists{#3.svg}{%
+      \ifx\pkbFigPath\empty\edef\pkbFigPath{#3}\fi
+    }{}%
     \IfFileExists{./figures/#3.svg}{%
       \ifx\pkbFigPath\empty\edef\pkbFigPath{./figures/#3}\fi
     }{}%

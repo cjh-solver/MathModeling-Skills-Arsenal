@@ -2,6 +2,7 @@
 
 ## 2026-11-15 — repository maintenance
 
+- Preserve legacy `.svg` paths in the CUMCM `\figplot` interface instead of silently displaying a missing-image placeholder.
 - Check HTML image references throughout public documentation, including the homepage, against tracked files.
 - Allow same-origin workbench actions through either `localhost` or `127.0.0.1`, while rejecting mismatched origins.
 - Restrict workbench HTTP host headers to loopback addresses to protect local project data from requests using unrelated hostnames.

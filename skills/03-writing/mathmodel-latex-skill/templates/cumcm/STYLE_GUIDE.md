@@ -150,7 +150,7 @@
 - 用 `[!htbp]` 浮动（符合 figure_policy，禁止 `[H]`）
 - 图宽 0.76\textwidth（figure_policy 推荐 0.6-0.85）
 - 第 4 个参数为制图说明，可留空 `{}`
-- 第 3 个参数为不带扩展名的 SVG 路径；缺图占位框只用于草稿，终稿前必须补齐真实图件。
+- 第 3 个参数推荐使用不带扩展名的 SVG 路径，也兼容历史记录中的 `.svg` 路径；缺图占位框只用于草稿，终稿前必须补齐真实图件。
 
 按已登记的 `layout_mode` 选择 `\PaperFigure`、`\PaperTwoColumn`、`\PaperWrapFigure` 或 `\PaperTallFigure`；不要为占满页面新增图表。
 

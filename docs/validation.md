@@ -8,7 +8,7 @@
 
 ## 2026-11-15 维护检查
 
-公开版 CUMCM 排版适配器已在本机用 XeLaTeX 编译三个模板及布局冒烟样例，并用合成 SVG 验证 Inkscape 转换链路。CI 检查模板与布局命令的契约；这些检查不代表真实论文或特定比赛规则已通过交付审核。
+公开版 CUMCM 排版适配器已在本机用 XeLaTeX 编译三个模板及布局冒烟样例，并用合成 SVG 验证 Inkscape 转换链路。设置环境变量 `CUMCM_RUN_LATEX_TESTS=1` 可启用额外的 XeLaTeX 路径兼容测试；CI 默认只检查源码契约。这些检查不代表真实论文或特定比赛规则已通过交付审核。
 
 在 Windows、Python 3.13 环境下，公开仓库的 Harness 106 项、MathorCup 140 项测试通过；工作台 Python 28 项和 Node.js 33 项测试通过。仓库检查和合成数据示例通过。GitHub Actions 的实时结果以[工作流页面](https://github.com/cjh-solver/MathModeling-Skills-Arsenal/actions/workflows/validate.yml)为准。
 
