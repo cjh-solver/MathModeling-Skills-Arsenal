@@ -3386,14 +3386,20 @@ def _validate_writer_preparation(root: Path, control: dict[str, Any], log: dict[
 def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool = False) -> dict[str, Any]:
     if preflight_draft:
         report = check_harness_control(root, through="H6")
-        control = load_mapping(root / ".contest/harness_control.yaml")
-        log = load_mapping(root / ".contest/approval_log.yaml")
+        report["through"] = "H7-draft"
+        try:
+            control = load_mapping(root / ".contest/harness_control.yaml")
+        except (OSError, ValueError, yaml.YAMLError):
+            return report  # The H6 report already explains the invalid control.
+        try:
+            log = load_mapping(root / ".contest/approval_log.yaml")
+        except (OSError, ValueError, yaml.YAMLError):
+            log = {"approvals": []}  # Missing or unreadable approvals cannot grant admission.
         if control.get("visual_workflow") not in {"writer_first_draft", "chapter_parallel"}:
             report["failures"].append("draft admission requires an explicit writer-led workflow")
         else:
             _validate_writer_preparation(root.resolve(), control, log, report["missing"], report["failures"], admission_only=True)
         report["status"] = "BLOCK" if report["failures"] else "PAUSE" if report["missing"] or report["evidence_gaps"] else "PASS"
-        report["through"] = "H7-draft"
         return report
     root = root.resolve()
     failures: list[str] = []

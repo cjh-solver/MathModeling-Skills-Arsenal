@@ -135,3 +135,25 @@ class WriterPreparationTests(unittest.TestCase):
         self.assertNotEqual(report["status"], "PASS")  # a plan cannot replace missing bootstrap/H6 evidence
         self.assertEqual(report["through"], "H7-draft")
         self.assertEqual([(self.root / ref["path"]).read_bytes() for ref in (control, log)], before)
+
+    def test_preflight_reports_missing_or_invalid_control_without_crashing(self):
+        report = checker.check_harness_control(self.root, preflight_draft=True)
+        self.assertEqual(report["status"], "BLOCK")
+        self.assertEqual(report["through"], "H7-draft")
+        self.assertTrue(any("harness_control.yaml" in item for item in report["failures"]))
+        self.put(".contest/harness_control.yaml", "- not a mapping\n")
+        report = checker.check_harness_control(self.root, preflight_draft=True)
+        self.assertEqual(report["status"], "BLOCK")
+        self.assertEqual(report["through"], "H7-draft")
+        self.assertTrue(report["failures"])
+
+    def test_preflight_missing_approval_log_never_grants_admission(self):
+        self.put(".contest/harness_control.yaml", self.control)
+        report = checker.check_harness_control(self.root, preflight_draft=True)
+        self.assertNotEqual(report["status"], "PASS")
+        self.assertEqual(report["through"], "H7-draft")
+        self.assertTrue(any("H6" in item for item in report["missing"] + report["failures"]))
+        self.put(".contest/approval_log.yaml", "- invalid approval log\n")
+        report = checker.check_harness_control(self.root, preflight_draft=True)
+        self.assertEqual(report["status"], "BLOCK")
+        self.assertTrue(any("approval_log" in item for item in report["failures"]))
