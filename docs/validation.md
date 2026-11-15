@@ -6,17 +6,23 @@
 
 `examples/chapter-parallel` 使用可复算的合成线性数据，其误差为零源于数据构造方式。示例中的正文、交接提示词不构成真实比赛记录或自动生成质量评测。
 
-## 本轮记录
+## 2026-11-15 维护检查
+
+在 Windows、Python 3.13 环境下，公开仓库的 Harness 106 项、MathorCup 140 项测试通过；工作台 Python 28 项和 Node.js 33 项测试通过。仓库检查和合成数据示例通过。GitHub Actions 的实时结果以[工作流页面](https://github.com/cjh-solver/MathModeling-Skills-Arsenal/actions/workflows/validate.yml)为准。
+
+完整严格检查仍未通过：除版本登记不一致及 15 个脚本尚未分类外，直接在分类目录运行时也报告依赖目录未按平铺布局发现，以及部分未发布的私有引用缺失。这里的缺失提示包含公开打包与运行环境问题，不能直接当作已安装环境的检查结果；需要逐项处理后才能评价完整发布状态。
+
+## 2026-11-01 历史记录
 
 同步前的维护环境为 Windows、Python 3.13：MathorCup 140 项、Harness 106 项相关测试通过；严格 smoke 和机理、优化、预测三类 replay 通过。完整检查点运行 617 项，其中 616 项通过，一项原有一致性检查失败；其后新增两项返修链测试由最终 MathorCup 套件覆盖。
 
-这些是维护检查，不是本届比赛的重训、正式论文编译或提交验证。公开副本的复查结果记录在同目录 [public-validation.json](public-validation.json)。CI 从公开副本重新运行相关套件，不依赖维护者的本地路径。
+这些是当时的维护检查，不是本届比赛的重训、正式论文编译或提交验证。公开副本当时的复查结果记录在 [public-validation.json](public-validation.json)；其中日期与数量是历史快照，不自动代表最新运行结果。
 
 ## 已知发布阻碍
 
 - 主控 `VERSION` 与 manifest 登记 4.18，SKILL 元数据为 4.19，发布登记尚未统一。本次更新不提升稳定版版本号。
-- 15 个历史维护脚本尚未在技能内部 registry 分类。严格 health 共报告 17 个条目，包含重复的版本一致性发现。
-- 因此，针对相关流程的 CI 通过不等于完整发布检查通过。全量失败项为 `test_current_skill_passes_strict_consistency_audit`。
+- 15 个历史维护脚本尚未在技能内部 registry 分类；严格检查还会指出分类仓库布局下未发现平铺依赖和部分私有引用缺失。
+- 因此，针对相关流程的 CI 通过不等于完整发布检查通过；`test_current_skill_passes_strict_consistency_audit` 记录了版本与分类问题。
 - 临时工程代理与用户可直接进入的长期角色会话不是同一能力。MathorCup 本次独立工程审查代理因工作区额度限制未完成最终审查；本地测试不冒充独立签署。
 
 ## 本地复现

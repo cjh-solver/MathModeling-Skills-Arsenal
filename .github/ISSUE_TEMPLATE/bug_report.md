@@ -1,17 +1,20 @@
 ---
-name: Bug report
-about: Reproducible skill or workflow behavior
+name: 问题反馈
+about: 报告可复现的技能或工作流问题
 title: "[Bug] "
 labels: bug
 ---
 
-## Environment
-Host/version, OS, Python version, skill name, repository commit:
+## 运行环境
 
-## Task and expected result
+宿主及版本、操作系统、Python 版本、技能名称、仓库提交：
 
-## Reproduction
-Provide commands and a small synthetic input. Remove secrets, private papers and personal paths.
+## 任务与预期结果
 
-## Observed result
-Include the failing check and sanitized error. Distinguish local tool errors from an incorrect skill decision.
+## 复现步骤
+
+请提供命令和精简的合成输入，移除凭据、未公开论文和个人路径。
+
+## 实际结果
+
+请附检查结果及脱敏后的错误信息；尽量区分本机工具故障与技能决策问题。

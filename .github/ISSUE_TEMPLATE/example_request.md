@@ -1,16 +1,18 @@
 ---
-name: Example request
-about: Suggest a concrete task or contribute a reproducible example
+name: 示例建议
+about: 提出具体任务或贡献可复现的示例
 title: "[Example] "
 labels: enhancement
 ---
 
-## User task
+## 使用任务
 
-## Desired output
+## 期望产物
 
-## Available input
-Describe synthetic or redistribution-permitted data, source rights and required external tools.
+## 可用输入
 
-## Acceptance criteria
-How can another user inspect or reproduce the result?
+说明合成数据或可再分发数据、来源权利和所需外部工具。
+
+## 验收方式
+
+其他使用者怎样查看或复现结果？

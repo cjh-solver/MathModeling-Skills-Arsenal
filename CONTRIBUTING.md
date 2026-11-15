@@ -1,14 +1,18 @@
-# Contributing
+# 参与贡献
 
-Report a concrete task, skill name, host environment, reproduction steps and expected versus observed behavior. Use synthetic or redistribution-permitted inputs. Remove credentials, private papers and personal paths before sharing.
+欢迎提交可复现的问题、示例和改进。先在 [Issues](https://github.com/cjh-solver/MathModeling-Skills-Arsenal/issues) 搜索已有讨论；报告时说明使用的宿主、系统、Python 版本、技能名称和仓库提交，以及实际结果与预期结果。
 
-For changes:
+请使用合成数据或有权再分发的材料。提交前移除密码、令牌、个人路径、未公开的竞赛数据和论文全文；模型结果、比赛成绩和引用来源须有可核验依据。
 
-1. Read AGENTS.md and MEMORY.md; preserve skill names, licenses and unrelated edits.
-2. Keep instructions scoped. Add a script only when deterministic execution helps the task.
-3. Run `python scripts/check_repository.py`, the affected tests and any required external-tool checks.
-4. Describe what changed, what was actually verified and any remaining limitation. Do not present workflow tests as competition-performance evidence.
+## 提交修改
 
-The Actions workflow runs repository hygiene and affected Harness/MathorCup behavior tests. The full orchestrator release audit has separately documented blockers in [validation](docs/validation.md); a green focused workflow does not certify a stable release.
+1. 从最新 `main` 创建分支，保留技能目录名称、依赖路由与第三方许可证。
+2. 聚焦一个问题，说明触发条件和修改后的行为；新脚本应解决需要确定性执行的任务。
+3. 运行 `python scripts/check_repository.py` 和相关测试；涉及 LaTeX 编译、绘图或特定宿主的改动，还需说明实际使用的工具及未覆盖的环境。
+4. 在 Pull Request 中写明验证结果、复现步骤与限制。流程测试通过不能证明获奖概率、模型精度或完整交付已经通过。
 
-New examples should include source/data rights, runnable commands, expected artifacts and the meaning of any reported number. Label synthetic data and upstream artwork explicitly. Keep third-party LICENSE files with their resources.
+工作台与主控测试命令见[验证说明](docs/validation.md)，项目维护范围见[维护与路线](docs/maintenance.md)。仓库的完整发布检查尚有已知阻碍，针对性 CI 通过不等于稳定版认证。
+
+## 提供示例
+
+请写明任务、可再分发的数据来源、运行环境、命令、预期产物和结果含义。合成数据应明确标注；不要把构造数据上的结果描述为真实比赛表现。

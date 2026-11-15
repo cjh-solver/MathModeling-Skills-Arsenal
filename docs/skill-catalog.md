@@ -8,7 +8,7 @@
 
 | 技能 | 作用 |
 |---|---|
-| [contest-orchestrator](../skills/01-core/contest-orchestrator/SKILL.md) | 竞赛唯一主控流程。题目解析、选题与模型规划、baseline、求解、图表、论文成稿、评审、交付门禁与 replay 复盘。支持 AUTO / COLLAB / LOCK 三级自主度，按 A 到 G 阶段推进并逐段验收 |
+| [contest-orchestrator](../skills/01-core/contest-orchestrator/SKILL.md) | 竞赛主控入口，覆盖题意、建模、图表、论文与交付；支持 Harness、MathorCup 和既有协作模式，节点及人工批准要求以所选模式为准 |
 
 ### 02 建模与求解
 
@@ -37,7 +37,7 @@
 | [figure-generation](../skills/04-figures/figure-generation/SKILL.md) | matplotlib 与 seaborn 出版级配图。查询扩展、代码生成执行、视觉反馈三段流水线 |
 | [tikz-scientific-figures](../skills/04-figures/tikz-scientific-figures/SKILL.md) | TikZ 与 PGFPlots 排版级插图。输出 SVG 与 PNG，适合需要矢量精确控制的示意图 |
 | [fireworks-tech-graph](../skills/04-figures/fireworks-tech-graph/SKILL.md) | 技术类图示。软件架构、数据流、流程图、时序图、C4 评审、云部署与事件流 |
-| [tech-route-maker](../skills/04-figures/tech-route-maker/SKILL.md) | 技术路线图。历史独立路线图工具；主控现统一使用 tikz-scientific-figures |
+| [tech-route-maker](../skills/04-figures/tech-route-maker/SKILL.md) | 技术路线图工具；是否使用以主控所选模式及批准记录为准 |
 | [drawio-diagram](../skills/04-figures/drawio-diagram/SKILL.md) | 生成标准 `.drawio` 格式图表，可在 diagrams.net 继续编辑 |
 
 ### 05 通用工具
