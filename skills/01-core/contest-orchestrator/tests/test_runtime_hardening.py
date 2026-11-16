@@ -140,11 +140,24 @@ class RuntimeHardeningTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             tool_dir = Path(raw)
             (tool_dir / "inkscape.exe").write_text("placeholder", encoding="utf-8")
-            with patch.object(compiler, "WINDOWS_TOOL_DIRS", (tool_dir,)):
+            with patch.object(compiler, "WINDOWS_TOOL_DIRS", (tool_dir,)), patch.object(compiler.os, "name", "nt"):
                 env = compiler.utf8_subprocess_env()
 
         path_key = next(key for key in env if key.lower() == "path")
         self.assertEqual(str(tool_dir), env[path_key].split(os.pathsep)[0])
+
+    def test_compile_env_keeps_non_windows_path_unchanged(self):
+        compiler = load_module("scripts/compile_paper.py", "compile_paper_env_posix")
+        with tempfile.TemporaryDirectory() as raw:
+            tool_dir = Path(raw)
+            original_path = "existing-bin"
+            with patch.object(compiler, "WINDOWS_TOOL_DIRS", (tool_dir,)), \
+                 patch.object(compiler.os, "name", "posix"), \
+                 patch.dict(compiler.os.environ, {"PATH": original_path}, clear=True):
+                env = compiler.utf8_subprocess_env()
+        self.assertEqual(env["PATH"], original_path)
+        self.assertEqual(env["PYTHONUTF8"], "1")
+        self.assertEqual(env["PYTHONIOENCODING"], "utf-8")
 
 
 if __name__ == "__main__":
