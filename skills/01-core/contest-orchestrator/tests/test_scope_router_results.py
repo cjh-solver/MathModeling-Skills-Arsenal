@@ -38,6 +38,20 @@ class ScopeRouterResultTests(unittest.TestCase):
             with self.subTest(prompt=prompt):
                 self.assertEqual(router.infer_scope(prompt), expected)
 
+    def test_mixed_audit_and_execution_requires_separate_plans(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "paper.pdf").write_bytes(b"synthetic")
+            for prompt in ("只审阅论文，然后求解问题二", "仅检查论文，再做敏感性分析", "只审阅论文。\n然后求解问题二"):
+                with self.subTest(prompt=prompt):
+                    plan = router.build_plan(router.infer_scope(prompt), root, prompt)
+                    self.assertEqual(plan["execution_status"], "BLOCKED")
+                    self.assertIn("分别生成", plan["input_gate"]["message"])
+            prompt = "只审阅论文，然后不要求解问题二"
+            plan = router.build_plan(router.infer_scope(prompt), root, prompt)
+            self.assertEqual(plan["execution_status"], "READY")
+            self.assertTrue(plan["read_only"])
+
     def test_skips_excluded_subtrees_without_skipping_parent_named_reports(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw) / "reports" / "project"

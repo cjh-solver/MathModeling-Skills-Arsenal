@@ -177,6 +177,14 @@ def build_plan(scope: str, workspace: Path | None, prompt: str = "", strict: boo
     evidence_ok, evidence_message = has_required_evidence(scope, evidence)
     canonical = bool(workspace) and not any(marker in str(workspace).lower() for marker in TEMP_MARKERS + ("\\tmp\\",))
     warnings = []
+    # A single-scope plan cannot represent an audit followed by separate work.
+    if scope == "DELIVERY_AUDIT" and re.search(
+        r"(?:只|仅)(?:读)?(?:做|进行)?(?:审计|检查|审阅|评审|核对|复核).*?(?:然后|随后|接着|再)\s*(?:求解|建模求解|做敏感性分析|出图)",
+        prompt, re.DOTALL,
+    ):
+        evidence_ok = False
+        evidence_message = "请求包含只读审计和后续执行：请按顺序分别生成审计计划和执行计划"
+        warnings.append(evidence_message)
     if is_inside_skill_root(workspace):
         canonical = False
         warnings.append("项目根目录位于技能安装目录：技能内的 replay/历史产物不会作为正式项目输入")
