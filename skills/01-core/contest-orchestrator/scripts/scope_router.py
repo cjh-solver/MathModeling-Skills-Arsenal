@@ -95,7 +95,15 @@ def infer_scope(prompt: str) -> str:
         paper_full and any(word in text for word in ("完整", "全文", "交付", "验证", "严格", "提交"))
     ):
         return "FULL_CONTEST"
-    if any(word in text for word in ("审计", "检查", "模拟评审", "找问题")):
+    audit_text = re.sub(
+        r"(?:不需要|不要|无需|不必|禁止|暂不|先别|别|不)(?:再|去|做|进行)?(?:审计|检查|审阅|评审|核对|复核)",
+        "", text,
+    )
+    if any(word in audit_text for word in ("审计", "检查", "找问题")):
+        return "DELIVERY_AUDIT"
+    if re.search(r"(?:求解(?:问题|模型|并|，|,)|建模求解)", text):
+        return "SUBPROBLEM"
+    if any(word in audit_text for word in ("审阅", "评审", "核对", "复核")):
         return "DELIVERY_AUDIT"
     if any(word in text for word in ("求解", "敏感性", "出图", "改一个章节", "问题二")):
         return "SUBPROBLEM"

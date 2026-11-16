@@ -17,6 +17,13 @@ class ScopeRouterResultTests(unittest.TestCase):
         cases = {
             "只检查完整论文，不修改任何文件": "DELIVERY_AUDIT",
             "仅审阅完整论文是否能正式提交": "DELIVERY_AUDIT",
+            "请审阅论文并指出问题": "DELIVERY_AUDIT",
+            "帮我核对论文和结果": "DELIVERY_AUDIT",
+            "请复核已有成果": "DELIVERY_AUDIT",
+            "审阅求解结果": "DELIVERY_AUDIT",
+            "求解问题二并核对结果": "SUBPROBLEM",
+            "先分析题目，无需审阅论文": "PLAN_ONLY",
+            "先分析题目，不要检查成果": "PLAN_ONLY",
             "先分析题目，不要开始建模": "PLAN_ONLY",
             "先审计，不要正式提交": "DELIVERY_AUDIT",
             "请以PLAN_ONLY模式，只做规划，不要开始建模": "PLAN_ONLY",
