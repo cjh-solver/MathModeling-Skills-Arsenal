@@ -1,8 +1,12 @@
 import hashlib
 import importlib.util
+import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 
@@ -194,6 +198,34 @@ class IncrementalValidationTests(unittest.TestCase):
             errors, plan = router.validate_control_validation(root, {"validation": {"profile": []}, "nodes": {}})
             self.assertTrue(any("validation.profile" in error for error in errors))
             self.assertIsNone(plan)
+
+    def test_invalid_utf8_change_card_blocks_control_and_cli(self):
+        router = load_module("scripts/validation_router.py", "validation_router_bad_encoding")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "change.yaml").write_bytes(b"\xff\xfe")
+            control = {"nodes": {}, "validation": {"profile": "competition_fast", "change_impact_card": "change.yaml"}}
+            errors, plan = router.validate_control_validation(root, control)
+            self.assertTrue(any("change_impact_card 不可读" in error for error in errors), errors)
+            self.assertIsNone(plan)
+            result = subprocess.run(
+                [sys.executable, "-X", "utf8", str(ROOT / "scripts" / "validation_router.py"), str(root), "--card", str(root / "change.yaml")],
+                capture_output=True, text=True, encoding="utf-8", check=False,
+            )
+            self.assertEqual(result.returncode, 1, result.stderr)
+            report = json.loads(result.stdout)
+            self.assertEqual(report["status"], "BLOCK")
+            self.assertIn("change_impact_card 不可读", report["errors"][0])
+            self.assertIsNone(report["plan"])
+
+    def test_unreadable_changed_artifact_blocks_plan(self):
+        router = load_module("scripts/validation_router.py", "validation_router_unreadable")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            card = self.make_card(root, "L0", "paper_prose")
+            with patch.object(router, "_sha256", side_effect=PermissionError("access denied")):
+                errors = router.validate_change_impact(root, card)
+            self.assertTrue(any("文件不可读" in error for error in errors), errors)
 
     def test_h9_remains_mandatory_in_every_profile_plan(self):
         router = load_module("scripts/validation_router.py", "validation_router_h9")

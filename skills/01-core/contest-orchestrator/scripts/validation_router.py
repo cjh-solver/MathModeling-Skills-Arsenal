@@ -123,8 +123,14 @@ def validate_change_impact(root: Path, card: dict[str, Any]) -> list[str]:
         after = artifact.get("after_sha256")
         if not isinstance(after, str) or not HASH_RE.fullmatch(after):
             errors.append(f"{label}.after_sha256 必须为 64 位十六进制字符串")
-        elif path is not None and path.is_file() and _sha256(path).lower() != after.lower():
-            errors.append(f"{label}.after_sha256 与当前文件不匹配: {artifact.get('path')}")
+        elif path is not None and path.is_file():
+            try:
+                current_hash = _sha256(path)
+            except OSError as exc:
+                errors.append(f"{label}.path 文件不可读: {artifact.get('path')} ({exc})")
+            else:
+                if current_hash.lower() != after.lower():
+                    errors.append(f"{label}.after_sha256 与当前文件不匹配: {artifact.get('path')}")
         before = artifact.get("before_sha256")
         if before is not None:
             if not isinstance(before, str) or not HASH_RE.fullmatch(before):
@@ -252,7 +258,7 @@ def validate_control_validation(root: Path, control: dict[str, Any]) -> tuple[li
         return errors, None
     try:
         card = yaml.safe_load(card_path.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError) as exc:
+    except (OSError, UnicodeError, yaml.YAMLError) as exc:
         errors.append(f"change_impact_card 不可读: {exc}")
         return errors, None
     errors.extend(validate_change_impact(root, card))
@@ -298,7 +304,7 @@ def main() -> int:
             if not errors:
                 report["status"] = "PASS"
                 report["plan"] = build_validation_plan(card)
-        except (OSError, yaml.YAMLError) as exc:
+        except (OSError, UnicodeError, yaml.YAMLError) as exc:
             report["errors"] = [f"change_impact_card 不可读: {exc}"]
     payload = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     if args.out:
