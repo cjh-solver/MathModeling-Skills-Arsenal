@@ -1437,10 +1437,11 @@ def _load_project_mapping(root: Path, raw_path: Any, label: str, missing: list[s
         return None, None
 
 
-def _h6_targeted_scope(root: Path, nodes: dict[str, Any]) -> set[str] | None:
+def _h6_targeted_scope(root: Path, nodes: dict[str, Any],
+                       problem_scope: dict[str, Any] | None = None, through: str | None = None) -> set[str] | None:
     """Return the subproblems explicitly rechecked by a targeted H6 run."""
     h6 = nodes.get("H6", {})
-    raw_scope = h6.get("h6_verification_scope") if isinstance(h6, dict) else None
+    raw_scope = (h6.get("verification_scope") or h6.get("h6_verification_scope")) if isinstance(h6, dict) else None
     path = resolve_project_path(root, raw_scope) if isinstance(raw_scope, str) else None
     if path is None or not path.is_file():
         return None
@@ -1449,12 +1450,29 @@ def _h6_targeted_scope(root: Path, nodes: dict[str, Any]) -> set[str] | None:
     except (OSError, ValueError, yaml.YAMLError):
         return None
     mode = str(scope.get("mode", "")).strip().lower()
-    if mode not in {"targeted", "targeted_review"}:
+    if mode not in {"targeted_recheck", "targeted", "targeted_review"}:
         return None
+    if mode == "targeted_recheck":
+        if through != "H6":
+            return None
+        from check_h6_verification_scope import check_scope
+        try:
+            if not check_scope(scope)["passed"]:
+                return None
+        except (TypeError, ValueError):
+            return None
     values = scope.get("rechecked_subproblems")
-    if not isinstance(values, list):
+    if not isinstance(values, list) or any(not isinstance(item, str) or not item.strip() for item in values):
         return None
-    result = {str(item).strip() for item in values if str(item).strip()}
+    result = {item.strip() for item in values}
+    if mode == "targeted_recheck":
+        items = problem_scope.get("subproblems", []) if isinstance(problem_scope, dict) else []
+        if not isinstance(items, list):
+            return None
+        known = {item.get("id") if isinstance(item, dict) else item for item in items
+                 if isinstance(item, str) or (isinstance(item, dict) and isinstance(item.get("id"), str))}
+        if not result or not result.issubset(known):
+            return None
     return result or None
 
 
@@ -1716,7 +1734,7 @@ def _validate_result_interpretation_cards(root: Path, nodes: dict[str, Any], thr
         failures.append("result_interpretation_cards: cards 必须为非空列表")
         return
     seen_ids: set[str] = set()
-    targeted_subproblems = _h6_targeted_scope(root, nodes)
+    targeted_subproblems = _h6_targeted_scope(root, nodes, (control or {}).get("problem_scope"), through)
     required_fields = ("card_id", "subproblem_id", "result_statement", "meaning", "reasoning_basis", "supported_scope")
     for index, card in enumerate(cards):
         label = f"result_interpretation_cards.cards[{index}]"
@@ -1786,7 +1804,7 @@ def _validate_visual_evidence_packet(root: Path, nodes: dict[str, Any], problem_
             value = item.get("id") if isinstance(item, dict) else item
             if isinstance(value, str) and value.strip():
                 expected_ids.append(value.strip())
-    targeted_subproblems = _h6_targeted_scope(root, nodes)
+    targeted_subproblems = _h6_targeted_scope(root, nodes, problem_scope, through)
     if targeted_subproblems is not None:
         expected_ids = [item for item in expected_ids if item in targeted_subproblems]
     h5 = nodes.get("H5", {})
@@ -2097,7 +2115,7 @@ def _validate_model_summary_cards(root: Path, nodes: dict[str, Any], problem_sco
             if isinstance(value, str) and value.strip():
                 expected_ids.add(value.strip())
     seen_ids: set[str] = set()
-    targeted_subproblems = _h6_targeted_scope(root, nodes)
+    targeted_subproblems = _h6_targeted_scope(root, nodes, problem_scope, through)
     for index, card in enumerate(cards):
         label = f"model_summary_cards.cards[{index}]"
         if not isinstance(card, dict):
@@ -2644,7 +2662,7 @@ def _validate_h1_problem_statement(root: Path, node: dict[str, Any],
 
 
 def _validate_h6_interface(root: Path, nodes: dict[str, Any], problem_scope: dict[str, Any],
-                            missing: list[str], failures: list[str]) -> None:
+                            missing: list[str], failures: list[str], through: str | None = None) -> None:
     path, report = _load_project_mapping(root, nodes.get("H6", {}).get("global_interface_check"),
                                          "H6: global_interface_check", missing, failures)
     if path is None or report is None:
@@ -2706,7 +2724,7 @@ def _validate_h6_interface(root: Path, nodes: dict[str, Any], problem_scope: dic
                     expected_subs.add(item.strip())
                 elif isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"].strip():
                     expected_subs.add(item["id"].strip())
-        targeted_subproblems = _h6_targeted_scope(root, nodes)
+        targeted_subproblems = _h6_targeted_scope(root, nodes, problem_scope, through)
         if targeted_subproblems is not None:
             expected_subs = expected_subs.intersection(targeted_subproblems)
         actual_subs: set[str] = set()
@@ -3548,7 +3566,7 @@ def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool
     _validate_result_interpretation_cards(root, nodes, through, missing, failures, control=control)
     paper_material_status = None
     if "H6" in checked_nodes:
-        _validate_h6_interface(root, nodes, control.get("problem_scope", {}), missing, failures)
+        _validate_h6_interface(root, nodes, control.get("problem_scope", {}), missing, failures, through)
         _validate_model_summary_cards(
             root, nodes, control.get("problem_scope", {}), missing, failures,
             through=through, control=control,

@@ -3,6 +3,7 @@
 schema_version: "1.0"
 mode: initial_review           # initial_review | targeted_recheck
 trigger: h5_result_freeze      # initial: h5_result_freeze; targeted: model/data/key_result/interpretation_card_change
+rechecked_subproblems: []     # targeted_recheck 可登记小问 ID；空列表保持全量核验
 changed_artifacts: []          # targeted_recheck 时逐项登记 path 与 sha256
 mandatory_checks:
   - contract_anchors
