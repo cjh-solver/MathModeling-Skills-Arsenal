@@ -42,6 +42,25 @@ class H6VerificationScopeTests(unittest.TestCase):
         self.assertTrue(any("changed_artifacts" in item for item in report["failures"]))
         self.assertTrue(any("mandatory_checks" in item for item in report["failures"]))
 
+    def test_invalid_scope_fields_fail_without_exceptions(self):
+        valid = {
+            "schema_version": "1.0", "mode": "targeted_recheck", "trigger": "key_result_change",
+            "changed_artifacts": [{"path": "results/q1.yaml", "sha256": "a" * 64}],
+            "mandatory_checks": sorted(MODULE.MANDATORY_CHECKS), "deep_sample_refs": [],
+        }
+        cases = (
+            ("mode", []), ("trigger", {}), ("mandatory_checks", [{}]),
+            ("changed_artifacts", [{"path": None, "sha256": None}]),
+            ("changed_artifacts", [{"path": "results/q1.yaml", "sha256": "placeholder"}]),
+            ("deep_sample_refs", [{"path": 12, "sha256": "a" * 64}]),
+        )
+        for field, value in cases:
+            with self.subTest(field=field, value=value):
+                report = MODULE.check_scope({**valid, field: value})
+                self.assertFalse(report["passed"])
+                self.assertTrue(any(field in error for error in report["failures"]))
+        self.assertTrue(MODULE.check_scope(valid)["passed"])
+
     def test_canonical_scope_registration_reaches_harness_checker(self):
         spec = importlib.util.spec_from_file_location("h6_scope_harness", ROOT / "scripts" / "check_harness_control.py")
         checker = importlib.util.module_from_spec(spec)

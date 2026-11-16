@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -28,10 +29,12 @@ def check_scope(scope: dict[str, Any]) -> dict[str, Any]:
     if scope.get("schema_version") != "1.0":
         failures.append("schema_version 必须为 1.0")
     mode = scope.get("mode")
-    if mode not in {"initial_review", "targeted_recheck"}:
+    if not isinstance(mode, str) or mode not in {"initial_review", "targeted_recheck"}:
         failures.append("mode 必须为 initial_review 或 targeted_recheck")
     trigger = scope.get("trigger")
-    if trigger in NON_H6_TRIGGERS:
+    if not isinstance(trigger, str):
+        failures.append("trigger 必须为字符串")
+    elif trigger in NON_H6_TRIGGERS:
         failures.append(f"trigger={trigger} 不触发 H6；该改动不应派发独立验证 agent")
     elif mode == "initial_review" and trigger not in INITIAL_TRIGGERS:
         failures.append("initial_review 只能由 h5_result_freeze 触发")
@@ -39,7 +42,8 @@ def check_scope(scope: dict[str, Any]) -> dict[str, Any]:
         failures.append("targeted_recheck 只能由模型、数据、关键结果或结果解释卡变化触发")
 
     mandatory_checks = scope.get("mandatory_checks")
-    if not isinstance(mandatory_checks, list) or not MANDATORY_CHECKS.issubset(set(mandatory_checks)):
+    if (not isinstance(mandatory_checks, list) or any(not isinstance(item, str) for item in mandatory_checks)
+            or not MANDATORY_CHECKS.issubset(set(mandatory_checks))):
         failures.append("mandatory_checks 必须包含 contract_anchors、cross_question_interfaces、result_interpretation_cards")
     changed = scope.get("changed_artifacts")
     if mode == "initial_review":
@@ -48,10 +52,19 @@ def check_scope(scope: dict[str, Any]) -> dict[str, Any]:
     elif mode == "targeted_recheck":
         if not isinstance(changed, list) or not changed:
             failures.append("targeted_recheck 必须提供非空 changed_artifacts")
-        else:
-            for index, item in enumerate(changed):
-                if not isinstance(item, dict) or not str(item.get("path", "")).strip() or not str(item.get("sha256", "")).strip():
-                    failures.append(f"changed_artifacts[{index}] 必须包含 path 与 sha256")
+    for field in ("changed_artifacts", "deep_sample_refs"):
+        items = scope.get(field)
+        if not isinstance(items, list):
+            continue
+        for index, item in enumerate(items):
+            if not isinstance(item, dict):
+                failures.append(f"{field}[{index}] 必须为包含 path 与 sha256 的对象")
+                continue
+            path, digest = item.get("path"), item.get("sha256")
+            if not isinstance(path, str) or not path.strip():
+                failures.append(f"{field}[{index}].path 必须为非空字符串")
+            if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", digest):
+                failures.append(f"{field}[{index}].sha256 必须为 64 位十六进制字符串")
     samples = scope.get("deep_sample_refs")
     if not isinstance(samples, list):
         failures.append("deep_sample_refs 必须为列表")
