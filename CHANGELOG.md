@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-17 — reuse question-scoped sensitivity evidence
+
+- Let one sensitivity report serve H5 traceability and multiple questions by binding each result row to its subproblem; retain single-question header compatibility.
+- Check only the requested question's rows and search past reports explicitly belonging to other questions. Keep the first matching report authoritative even when it is incomplete.
+- Require real perturbation records and reject missing or conflicting question bindings, while preserving zero-valued objectives and infeasible-scenario records.
+- Document one report schema and add the cross-question contract regressions to CI; no project results or approvals are rewritten.
+
 ## 2026-11-17 — reduce repeated evidence reads
 
 - Reuse unchanged file digests within one Harness control check, while reevaluating every validation and approval condition. Discard the cache when the call finishes or raises an exception.

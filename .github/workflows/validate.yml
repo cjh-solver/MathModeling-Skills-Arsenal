@@ -46,6 +46,9 @@ jobs:
       - name: B project initialization tests
         working-directory: skills/01-core/contest-orchestrator
         run: python -m unittest discover -s tests -p 'test_init_b_project.py'
+      - name: Question-scoped sensitivity reports
+        working-directory: skills/01-core/contest-orchestrator
+        run: python -m unittest discover -s tests -p 'test_sensitivity_report_contract.py'
       - name: Public experience import tests
         working-directory: skills/01-core/contest-orchestrator
         run: python -m unittest discover -s tests -p 'test_public_jsonl_limitations.py'

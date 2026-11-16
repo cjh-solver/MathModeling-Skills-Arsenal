@@ -347,10 +347,7 @@ claims:
 
 ### 9.1 三重硬约束（P0-02 新增）
 
-`check_model_evidence.py` 的 `_check_sensitivity_report()` 增加三重硬约束：
-1. `status` 只允许 `verified`（不允许 `pending`、`draft` 等）
-2. `subproblem_id` 必须绑定到具体子问题
-3. 扰动点数值完整性（每个扰动点必须有 `parameter`、`baseline_value`、`perturbed_value`、`objective_change`）
+报告字段与单问、多问归属统一遵循 [H5 结果追溯包的灵敏度报告协议](research_evidence_contract.md#灵敏度报告的小问归属)。模型证据检查要求 `verified` 状态、明确的小问归属和非空扰动记录；无归属的历史记录保持待补，不自动映射到当前小问。H5 与论文检查共用同一份汇总报告，不再要求为每问重复整理。
 
 ### 9.2 报告位置
 

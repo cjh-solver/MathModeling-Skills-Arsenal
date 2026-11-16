@@ -2,6 +2,7 @@
 schema_version: '1.0'
 subproblem_id: null
 status: draft
+method: null
 canonical_report:
   path: null
   sha256: null

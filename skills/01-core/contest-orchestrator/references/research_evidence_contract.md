@@ -106,6 +106,31 @@ Harness 的 H5 节点必须登记 `run_manifest`，并运行 `scripts/check_h5_r
 
 该检查器只读取项目文件并返回 `PASS`、`PAUSE` 或 `BLOCK`：缺少证据保持 `PAUSE`，路径越界、文件不存在、格式错误或 SHA-256 不一致为 `BLOCK`。H6 仍需在独立实例中核验这些记录；H5 结果追溯通过不替代 H6、H8 或 H9 门禁。
 
+### 灵敏度报告的小问归属
+
+单问报告在顶层登记 `subproblem_id`，其结果项可继承该归属；多问汇总报告省略顶层小问，在每个 `results` 项登记 `subproblem_id`。H5 追溯包与后续模型证据检查可以读取同一份汇总文件，无须为每问复制报告。示例为待填写骨架：
+
+```yaml
+schema_version: '1.0'
+status: draft
+method: <实际扰动或稳健性方法>
+model_contract_sha256: <模型契约 SHA-256>
+canonical_report: {path: <原始扰动结果项目相对路径>, sha256: <SHA-256>}
+results:
+  - subproblem_id: <小问 ID>
+    parameter: <扰动参数>
+    baseline: <参数基准值>
+    perturbation_points:
+      - value: <扰动后的参数值>
+        objective: null
+        feasible: null
+        decision_change: null
+```
+
+`verified` 报告中，本问必须有非空扰动记录，每点的 `objective`、`feasible`、`decision_change` 必须有实际值，或对应的 `<字段>_not_applicable_reason`。零目标值和不可行场景的 `false` 是有效记录；不以布尔真假代替是否填写的判断。
+
+模型证据检查沿现有文件名及目录顺序选择第一份明确归属本问的报告，再检查内容；归属其他小问的文件不遮蔽本问报告。已匹配本问的草稿或不完整报告不会被后面的通过记录替代。顶层与结果项归属冲突、缺少明确归属或本问没有扰动记录时保留缺项，不补造映射。最终全项目检查仍逐问执行。
+
 ## 检查边界
 
 该契约只检查字段完整性、路径安全、证据 ID、位置和关系是否可追溯，不替代数学正确性、来源真实性、论文表达审阅或图表视觉检查。它本身不触发视觉检查；图表视觉检查按 `references/figure_policy.md` 执行，其他流程只有用户明确要求或显式传入 `--visual-check` 时启用。

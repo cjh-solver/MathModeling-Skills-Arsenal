@@ -378,37 +378,51 @@ def _check_sensitivity_report(root: Path, qid: str) -> list[str]:
     Returns list of warning messages (empty if report exists and is valid).
     """
     warnings = []
-    report_path = None
-    for name in SENSITIVITY_REPORT_NAMES:
-        candidate = root / name
-        if candidate.is_file():
-            report_path = candidate
+    directories = [root, *(root / subdir for subdir in ("results", "04_结果", "validation", "05_验证"))]
+    candidates = (
+        directory / name
+        for directory in directories
+        for name in SENSITIVITY_REPORT_NAMES
+        if (directory / name).is_file()
+    )
+    # Select by question identity, never by whether a report happens to pass.
+    target = qid.strip().upper()
+    report = None
+    fallback = None
+    scoped_results = []
+    for report_path in candidates:
+        try:
+            candidate = _load_yaml(report_path)
+        except Exception as exc:
+            return [f"{qid}: 灵敏度报告格式解析失败: {exc}"]
+        if not isinstance(candidate, dict):
+            return [f"{qid}: 灵敏度报告根节点必须为对象"]
+        if fallback is None:
+            fallback = candidate
+        header = candidate.get("subproblem_id")
+        header_id = header.strip().upper() if isinstance(header, str) else None
+        results = candidate.get("results")
+        rows = list(enumerate(results)) if isinstance(results, list) else []
+        if header_id == target:
+            report, scoped_results = candidate, rows
             break
-    if report_path is None:
-        # Also check common subdirectories
-        for subdir in ("results", "04_结果", "validation", "05_验证"):
-            for name in SENSITIVITY_REPORT_NAMES:
-                candidate = root / subdir / name
-                if candidate.is_file():
-                    report_path = candidate
-                    break
-            if report_path:
-                break
-    if report_path is None:
-        warnings.append(
-            f"{qid}: optimization 能力子问题缺少灵敏度/鲁棒性报告（sensitivity_report.yaml 或 robustness_report.yaml）。"
-            f"请运行 pyomo/scripts/sensitivity_analysis.py 或 heuristic-algorithms/scripts/robustness_check.py 生成报告。"
-        )
-        return warnings
-    # Validate report format
-    try:
-        report = _load_yaml(report_path)
-    except Exception as exc:
-        warnings.append(f"{qid}: 灵敏度报告格式解析失败: {exc}")
-        return warnings
-    if not isinstance(report, dict):
-        warnings.append(f"{qid}: 灵敏度报告根节点必须为对象")
-        return warnings
+        if header not in (None, ""):
+            continue
+        matching = [
+            (index, row) for index, row in rows
+            if isinstance(row, dict) and isinstance(row.get("subproblem_id"), str)
+            and row["subproblem_id"].strip().upper() == target
+        ]
+        if matching:
+            report, scoped_results = candidate, matching
+            break
+    if report is None:
+        if fallback is None:
+            return [
+                f"{qid}: optimization 能力子问题缺少灵敏度/鲁棒性报告（sensitivity_report.yaml 或 robustness_report.yaml）。"
+                f"请运行 pyomo/scripts/sensitivity_analysis.py 或 heuristic-algorithms/scripts/robustness_check.py 生成报告。"
+            ]
+        report = fallback
     missing = [field for field in SENSITIVITY_REQUIRED_FIELDS if field not in report]
     if missing:
         warnings.append(f"{qid}: 灵敏度报告缺少必需字段: {', '.join(missing)}")
@@ -418,23 +432,34 @@ def _check_sensitivity_report(root: Path, qid: str) -> list[str]:
     status = report.get("status")
     if status != "verified":
         warnings.append(f"{qid}: 灵敏度报告 status 必须为 verified（当前: {status}）；completed/manual_required 为空证据通路，不得通过")
-    # P0-02: 报告必须绑定 subproblem_id，禁止 Q1 报告满足 Q2
+    # Single-question reports bind their rows; aggregates bind each result row.
     report_qid = report.get("subproblem_id")
-    if report_qid and str(report_qid).upper() != qid.upper():
+    if report_qid not in (None, "") and (not isinstance(report_qid, str) or report_qid.strip().upper() != target):
         warnings.append(f"{qid}: 灵敏度报告 subproblem_id({report_qid}) 与当前子问题({qid}) 不匹配，禁止跨小问复用")
+    elif not scoped_results and report_qid in (None, ""):
+        warnings.append(f"{qid}: 灵敏度报告必须在顶层或 results 中登记匹配的 subproblem_id，未绑定记录不能跨小问复用")
     results = report.get("results")
-    if results is not None and not isinstance(results, list):
+    if not isinstance(results, list):
         warnings.append(f"{qid}: 灵敏度报告 results 必须为列表")
     elif isinstance(results, list) and status == "verified":
+        if not scoped_results:
+            warnings.append(f"{qid}: 灵敏度报告 results 必须包含当前小问的非空结果记录")
         # P0-02: 每个扰动点的 objective/feasible/decision_change 必须非空或有明确 not_applicable_reason
-        for ridx, result in enumerate(results):
+        for ridx, result in scoped_results:
             if not isinstance(result, dict):
                 warnings.append(f"{qid}: 灵敏度报告 results[{ridx}] 必须为对象")
                 continue
+            row_qid = result.get("subproblem_id")
+            if row_qid not in (None, "") and (not isinstance(row_qid, str) or row_qid.strip().upper() != target):
+                warnings.append(f"{qid}: 灵敏度报告 results[{ridx}].subproblem_id({row_qid}) 与报告绑定不一致")
+                continue
             points = result.get("perturbation_points")
-            if isinstance(points, list):
+            if not isinstance(points, list) or not points:
+                warnings.append(f"{qid}: 灵敏度报告 results[{ridx}].perturbation_points 必须为非空列表")
+            else:
                 for pidx, point in enumerate(points):
                     if not isinstance(point, dict):
+                        warnings.append(f"{qid}: 灵敏度报告 results[{ridx}].perturbation_points[{pidx}] 必须为对象")
                         continue
                     for field in ("objective", "feasible", "decision_change"):
                         value = point.get(field)
