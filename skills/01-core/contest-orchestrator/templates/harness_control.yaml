@@ -8,26 +8,8 @@ visual_workflow: chapter_parallel
 reader_evidence_protocol: "1.0"
 bootstrap:
   required_skill: superpowers:using-superpowers
-  # 每次 superpowers 调用都登记证据：task_id 为 superpowers 实际返回，completed=true 且 status=completed
-  invocations:
-    - skill: superpowers:using-superpowers
-      task_id: <superpowers 返回的 task ID>
-      purpose: bootstrap          # H0 激活
-      completed: true
-      status: completed
-      created: [H1]
-      agent_ids: {H1: <H1 agent_instance_id>}
-    - skill: superpowers:using-superpowers
-      task_id: <superpowers 返回的 task ID>
-      purpose: spawn_roles        # H1 产出题面后一次性创建全部固定角色
-      completed: true
-      status: completed
-      created: [H5, H6, H7, H8]
-      agent_ids:
-        H5: <H5 agent_instance_id>
-        H6: <H6 agent_instance_id>   # 必须 ≠ H5
-        H7: <H7 agent_instance_id>
-        H8: <H8 agent_instance_id>
+  # 仅在实际调用完成后追加调用证据，初始化时不登记已完成任务。
+  invocations: []
 roles:
   主 agent: {kind: controller}
   题意理解 agent: {kind: child}
@@ -41,14 +23,8 @@ agent_runtime_routes:
   H6: {model: gpt-5.6-sol, reasoning_effort: high}
   H7: {model: gpt-5.6-terra, reasoning_effort: medium}
   H8: {model: gpt-5.6-sol, reasoning_effort: high}
-# 实例注册表：H1 产出 problem_statement.md 后一次性创建全部固定角色，创建时 preloaded 必须含题面+对应角色预热包。
-# 回流复用同一实例时本表不新增，dispatch_records 新增派发记录且 agent_instance_id 不变。
-agent_instances:
-  H1: {agent_instance_id: <H1 agent_instance_id>, preloaded: [problem_statement.md]}
-  H5: {agent_instance_id: <H5 agent_instance_id>, preloaded: [problem_statement.md, references/warmup/h5_solver_warmup.md]}
-  H6: {agent_instance_id: <H6 agent_instance_id>, preloaded: [problem_statement.md, references/warmup/h6_verifier_warmup.md]}
-  H7: {agent_instance_id: <H7 agent_instance_id>, preloaded: [problem_statement.md, references/warmup/h7_figure_warmup.md]}
-  H8: {agent_instance_id: <H8 agent_instance_id>, preloaded: [problem_statement.md, references/warmup/h8_writer_warmup.md, references/h8_writer_first_protocol.md, references/model_summary_protocol.md, references/paper_author_evidence_protocol.md]}
+# 实际创建并登记用户可访问的角色会话后，再填写实例与预载证据。
+agent_instances: {}
 problem_scope:
   subproblems: []
 solver_instance_id: null

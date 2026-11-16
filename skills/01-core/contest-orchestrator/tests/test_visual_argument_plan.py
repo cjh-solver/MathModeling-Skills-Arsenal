@@ -351,6 +351,9 @@ class VisualArgumentPlanTests(unittest.TestCase):
                 with self.subTest(path=path, slot=slot.get("slot_id")):
                     intent = slot.get("figure_intent")
                     self.assertIsInstance(intent, dict)
+                    self.assertIn(intent.get("generation_route"), {
+                        "modelviz", "tikz-scientific-figures", "drawio-diagram",
+                    })
                     self.assertTrue({
                         "reader_question", "explanatory_relation", "must_show", "must_not_show",
                         "body_anchor", "pre_text_function", "post_text_function",

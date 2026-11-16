@@ -1,5 +1,5 @@
 # H8 论文 agent 任务卡。H8A 生成作者简报；H8B 每次只派发一个章节；H8C 交给独立编辑。
-task_id: H8-task-001
+task_id: <H8 实际任务 ID>
 node_id: H8
 owner_role: 论文 agent
 objective: 依据当前章节写作卡，以冻结证据完成一个连贯、可审查的论文章节。

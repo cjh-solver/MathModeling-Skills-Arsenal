@@ -1,5 +1,5 @@
 schema_version: "1.0"
-status: ready
+status: draft
 paper_author_brief_sha256: <paper_author_brief.yaml sha256>
 chapter_writing_card_sha256: <chapter_writing_card.yaml sha256>
 central_thesis: <全文中心主张>

@@ -1,13 +1,11 @@
 # H7 节点任务卡：输入、范围、输出、验证要求
-task_id: H7-task-001
+task_id: <H7 实际任务 ID>
 node_id: H7
 owner_role: 图表 agent
 objective: H7 节点任务
 inputs:
-- path: H7_input.md
-  sha256: 8cfdc46657cf57b89581d5ebb9a27d5be30297313fb4dfa90f7fa7656bbd5ce1
 - path: problem_statement.md
-  sha256: c55d9c5d19168f7a4b877de68cde979cb439dc364aedc391180f375152ed5a97
+  sha256: <sha256>
 - path: chart_requirements.yaml
   sha256: <sha256>
 - path: model_summary_cards.yaml

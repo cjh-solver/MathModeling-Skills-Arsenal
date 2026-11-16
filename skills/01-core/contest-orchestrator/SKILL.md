@@ -250,7 +250,7 @@ python scripts/init_b_project.py "C:\Users\me\Workspace\2026国赛B题" --name "
 ```
 
 初始化脚本会：
-- 从 `templates/b_project_template/` 复制 43 个配置文件与目录结构
+- 从 `templates/b_project_template/` 创建待填写配置和目录结构，不携带演示批准、派发或验证通过记录
 - 自动填充项目名称、日期
 - 生成 README.md（含项目结构和快速开始指南）
 

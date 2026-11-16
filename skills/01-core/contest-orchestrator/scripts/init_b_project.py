@@ -131,6 +131,8 @@ def init_project(project_dir: Path, name: str | None = None, date: str | None = 
 
 B 题（优化决策类）数学建模项目，基于 contest-orchestrator skill 模板初始化。
 
+当前各阶段尚未开始，H4 已并入 H5。批准、派发、角色实例与状态历史为空；模型、结果、图表及验证文件均为待填写骨架。完成真实任务与人工审查后，再登记执行证据和批准记录。
+
 ## 项目结构
 
 ```

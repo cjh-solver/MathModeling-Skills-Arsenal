@@ -1,11 +1,9 @@
 # H5 节点任务卡：输入、范围、输出、验证要求
-task_id: H5-task-001
+task_id: <H5 实际任务 ID>
 node_id: H5
 owner_role: 解题 agent
 objective: H5 节点任务
 inputs:
-- path: H5_input.md
-  sha256: 6a9510ea988a5115675ce5d79915acbe6d865f6a8c3623ad98cc87f23b700261
 - path: problem_statement.md
   sha256: <sha256>
 - path: literature_sources.yaml
@@ -140,11 +138,8 @@ evidence_handoff:
 model: gpt-5.6-sol
 reasoning_effort: high
 dispatch_kind: primary_solver
-solver_instance_id: solver-001
-covered_subproblems:
-- Q1
-- Q2
-- Q3
+solver_instance_id: null
+covered_subproblems: []
 cross_question_interface: true
 authority:
   may_change_model_route: false

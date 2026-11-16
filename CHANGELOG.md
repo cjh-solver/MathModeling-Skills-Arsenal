@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-17 — clean initial contest state
+
+- Start new B projects with pending stages, empty approvals, role instances and execution history; keep H4 merged into H5 and preserve chapter-parallel writing configuration.
+- Remove prefilled scientific conclusions, result values, sensitivity runs, figure QA and stale example digests from startup scaffolds. Leave verification identity and time unrecorded until work actually occurs.
+- Clear fabricated bootstrap records in the general Harness template and mark the global-interface template as awaiting verification. Existing project files and historical approvals are not migrated or rewritten.
+- Align fresh visual-plan templates with the current TikZ route, matching the installed skill while preserving historical delivery compatibility.
+- Test that freshly initialized projects cannot pass H5, H6, H8 or H9 without real work and evidence.
+
 ## 2026-11-17 — preserve project inputs during initialization
 
 - Check all B-project template destinations and the generated README before writing; refuse existing files, directory conflicts and redirected template directories instead of overwriting contest records.

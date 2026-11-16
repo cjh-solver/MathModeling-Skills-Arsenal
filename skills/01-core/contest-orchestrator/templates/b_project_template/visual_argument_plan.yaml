@@ -64,7 +64,7 @@ subproblems:
           body_anchor: <本问模型求解与结果分析小节的算法说明后>
           pre_text_function: <说明流程图要帮助复现哪条求解路径>
           post_text_function: <解释关键循环、停止条件及其与结果的关系>
-          generation_route: tech-route-maker
+          generation_route: tikz-scientific-figures
           template_status: native
           template_id: algorithm-iteration-flow
           visible_element_map:
@@ -151,7 +151,7 @@ subproblems:
           body_anchor: <本问标题后的问题引入与建模思路段之后>
           pre_text_function: <建立读者对问题结构的共同认识>
           post_text_function: <承接到本问的建模任务与变量定义>
-          generation_route: tech-route-maker
+          generation_route: tikz-scientific-figures
           template_status: native
           template_id: problem-analysis-flow
           visible_element_map:

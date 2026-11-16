@@ -4,7 +4,7 @@ status: draft
 package_mode: indexed_minimal
 source_node: H5
 created_by: H5
-model_contract_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
+model_contract_sha256: <sha256>
 subproblems:
 - subproblem_id: Q1
   task_goal: <本小问需要回答的决策问题>
@@ -16,7 +16,7 @@ subproblems:
     meaning: <事实对读者理解模型的意义>
     evidence_refs:
     - path: model_contract.yaml
-      sha256: '0000000000000000000000000000000000000000000000000000000000000000'
+      sha256: <sha256>
       locator: <JSON或YAML定位>
     scope: <适用数据、参数或条件范围>
     unit: <数值单位或无量纲>
@@ -26,7 +26,7 @@ subproblems:
     meaning: <事实对决策或结论的意义>
     evidence_refs:
     - path: results/result.yaml
-      sha256: '0000000000000000000000000000000000000000000000000000000000000000'
+      sha256: <sha256>
       locator: <JSON或YAML定位>
     scope: <适用数据、参数或条件范围>
     unit: <数值单位或无量纲>

@@ -1,5 +1,6 @@
 """Project initialization must preserve inputs and existing contest records."""
 import hashlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -163,6 +164,75 @@ class BProjectInitializationTests(unittest.TestCase):
         self.assertTrue((self.project / "model_summary_cards.yaml").is_file())
         self.assertTrue((self.project / "h6_verification_scope.yaml").is_file())
         self.assertEqual(snapshot(init_b_project.TEMPLATE_DIR), source_before)
+
+    def test_shipped_project_starts_without_approvals_or_execution_history(self):
+        self.template_patch.stop()
+        init_b_project.init_project(self.project)
+        control = yaml.safe_load((self.project / ".contest/harness_control.yaml").read_text(encoding="utf-8"))
+
+        for node_id, node in control["nodes"].items():
+            self.assertEqual(node["status"], "merged" if node_id == "H4" else "not_started", node_id)
+            self.assertFalse(node.get("skill_invocations"), node_id)
+            self.assertFalse(node.get("agent_instance_id"), node_id)
+        self.assertEqual(control["bootstrap"]["invocations"], [])
+        self.assertEqual(control["agent_instances"], {})
+        self.assertEqual(control["dispatch_records"], [])
+        self.assertFalse(control.get("solver_instance_id"))
+        for name, field in (("approval_log.yaml", "approvals"), ("status_history.yaml", "transitions")):
+            record = yaml.safe_load((self.project / ".contest" / name).read_text(encoding="utf-8"))
+            self.assertEqual(record[field], [], name)
+        self.assertFalse((self.project / ".contest/reviews/H4_review_packet.yaml").exists())
+
+    def test_shipped_scaffolds_do_not_claim_completed_scientific_work(self):
+        self.template_patch.stop()
+        init_b_project.init_project(self.project)
+        successful = {"approved", "verified", "pass", "passed", "completed", "ready", "no_gaps", "reviewed"}
+
+        def check(value, location):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    current = f"{location}.{key}"
+                    if key in {"status", "qa_status", "visual_qa", "comparison_status"}:
+                        self.assertNotIn(str(item).lower(), successful, current)
+                    if key in {"approved", "passed", "completed", "all_gaps_covered"}:
+                        self.assertIsNot(item, True, current)
+                    if key in {"verification_agent_instance_id", "verification_timestamp", "verified_by"}:
+                        self.assertFalse(item, current)
+                    if isinstance(key, str) and key.endswith("sha256") and isinstance(item, str):
+                        self.assertIsNone(re.fullmatch(r"[0-9a-fA-F]{64}", item), current)
+                    check(item, current)
+            elif isinstance(value, list):
+                for index, item in enumerate(value):
+                    check(item, f"{location}[{index}]")
+
+        for path in self.project.rglob("*.yaml"):
+            with self.subTest(path=path.relative_to(self.project)):
+                check(yaml.safe_load(path.read_text(encoding="utf-8")), path.name)
+        for name, field in (("figure_registry.yaml", "figures"), ("results/sensitivity_report.yaml", "results"), ("results/input_manifest.yaml", "files")):
+            record = yaml.safe_load((self.project / name).read_text(encoding="utf-8"))
+            self.assertEqual(record[field], [], name)
+        blueprint = yaml.safe_load((self.project / "paper_argument_blueprint.yaml").read_text(encoding="utf-8"))
+        for argument in blueprint["arguments"]:
+            self.assertTrue(argument["claim"].startswith("<"), argument)
+
+    def test_new_project_cannot_pass_approval_verification_or_writing_gates(self):
+        from scripts.check_harness_control import check_harness_control
+
+        self.template_patch.stop()
+        init_b_project.init_project(self.project)
+
+        for through in ("H5", "H6", "H8", "H9"):
+            with self.subTest(through=through):
+                report = check_harness_control(self.project, through=through)
+                self.assertNotEqual(report["status"], "PASS", report)
+                self.assertTrue(report["missing"] or report["failures"])
+
+    def test_general_harness_template_has_no_fabricated_bootstrap(self):
+        path = Path(init_b_project.__file__).resolve().parents[1] / "templates/harness_control.yaml"
+        control = yaml.safe_load(path.read_text(encoding="utf-8"))
+
+        self.assertEqual(control["bootstrap"]["invocations"], [])
+        self.assertEqual(control["agent_instances"], {})
 
 
 if __name__ == "__main__":

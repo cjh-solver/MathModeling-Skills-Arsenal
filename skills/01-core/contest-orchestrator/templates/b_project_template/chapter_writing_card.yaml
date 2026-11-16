@@ -1,6 +1,6 @@
 schema_version: "1.0"
 reader_evidence_version: "1.0"
-status: ready
+status: draft
 prepared_from_author_brief_sha256: <paper_author_brief.yaml sha256>
 chapter_id: <section-id>
 chapter_kind: modeling_question
