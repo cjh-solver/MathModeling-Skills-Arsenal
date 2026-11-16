@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-17 — complete result interpretation handoff
+
+- Require verified result interpretations for every registered question at the complete H6-to-writing handoff, and report out-of-scope question bindings instead of letting one question's cards stand in for another.
+- Allow multiple distinct result cards per question. Keep legitimate H6 targeted rechecks limited to affected questions while restoring complete coverage at H7–H9.
+- Reuse the existing result-card check and file hashes; add no agent, registration file or extra checkpoint. Link H5 preparation to the canonical author-evidence protocol.
+- Add handoff regressions and synchronize the affected checker function and instructions with the installed skill without copying unrelated local files.
+
 ## 2026-11-17 — current Harness question records in the workbench
 
 - Read structured subproblem IDs and current H1 question profiles alongside legacy records, without expanding the registered contest scope.

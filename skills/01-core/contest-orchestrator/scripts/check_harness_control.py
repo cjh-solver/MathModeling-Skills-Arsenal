@@ -1803,7 +1803,15 @@ def _validate_result_interpretation_cards(root: Path, nodes: dict[str, Any], thr
         failures.append("result_interpretation_cards: cards 必须为非空列表")
         return
     seen_ids: set[str] = set()
-    targeted_subproblems = _h6_targeted_scope(root, nodes, (control or {}).get("problem_scope"), through)
+    problem_scope = (control or {}).get("problem_scope")
+    scope_items = problem_scope.get("subproblems", []) if isinstance(problem_scope, dict) else []
+    expected_ids: set[str] = set()
+    for item in scope_items if isinstance(scope_items, list) else []:
+        question = item.get("id") if isinstance(item, dict) else item
+        if isinstance(question, str) and question.strip():
+            expected_ids.add(question.strip())
+    covered_ids: set[str] = set()
+    targeted_subproblems = _h6_targeted_scope(root, nodes, problem_scope, through)
     required_fields = ("card_id", "subproblem_id", "result_statement", "meaning", "reasoning_basis", "supported_scope")
     for index, card in enumerate(cards):
         label = f"result_interpretation_cards.cards[{index}]"
@@ -1815,6 +1823,11 @@ def _validate_result_interpretation_cards(root: Path, nodes: dict[str, Any], thr
         for field in required_fields:
             if not isinstance(card.get(field), str) or not card[field].strip():
                 failures.append(f"{label}: 缺少 {field}")
+        question = card.get("subproblem_id")
+        if isinstance(question, str) and question.strip():
+            covered_ids.add(question)
+            if expected_ids and question not in expected_ids:
+                failures.append(f"{label}: subproblem_id 不在 problem_scope 中: {question}")
         card_id = card.get("card_id")
         if isinstance(card_id, str) and card_id.strip():
             if card_id in seen_ids:
@@ -1830,6 +1843,12 @@ def _validate_result_interpretation_cards(root: Path, nodes: dict[str, Any], thr
                 failures.append(f"{label}: evidence_refs 含不存在、过期或哈希不匹配的证据")
         if reader_protocol_enabled:
             failures.extend(validate_result_card(card, label))
+    required_ids = expected_ids if targeted_subproblems is None else expected_ids & targeted_subproblems
+    if required_ids - covered_ids:
+        failures.append(
+            "result_interpretation_cards: 未覆盖登记小问 "
+            f"{','.join(sorted(required_ids - covered_ids))}；H5 补充结果解释后由 H6 核验"
+        )
 
 
 def _validate_visual_evidence_packet(root: Path, nodes: dict[str, Any], problem_scope: dict[str, Any],

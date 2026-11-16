@@ -26,7 +26,7 @@
 3. 统一符号表，跨问变量、单位、数据版本、字段、时间尺度保持一致
 4. 承担跨问接口责任：`cross_question_interface: true`，前一问输出是后一问输入时显式登记
 5. 回填 `paper_narrative.yaml` 的 `key_result`：每问精确量化结果，不写泛泛描述
-6. 产出 `result_interpretation_cards.yaml`：每个核心结果必须写清事实、它回答的题目问题、证据支持的意义、解释依据、适用范围和冻结证据路径；不得以直觉补写含义
+6. 产出 `result_interpretation_cards.yaml`：每个核心结果必须写清事实、它回答的题目问题、证据支持的意义、解释依据、适用范围和冻结证据路径；不得以直觉补写含义。小问覆盖与多卡规则见[作者证据协议](../paper_author_evidence_protocol.md)第 4 节
 7. 产出 `model_summary_cards.yaml`：每个小问一张唯一模型卡，集中给出最终可计算表达式、决策变量、参数、约束/边界、来源公式和 solver interface；卡片必须绑定 `model_contract.yaml` 哈希
 8. 产出 `validation_contract.yaml`：列出可验证项、验证方法、预期锚点
 9. 产出 `visual_evidence_packet.yaml`：每个小问登记至少两个独立、可追溯的信息单元；只写索引、事实、意义、范围、单位和哈希绑定定位，不嵌入全文或过程材料
