@@ -1,6 +1,6 @@
 # contest-orchestrator manifest（机器可读路由）
 name: contest-orchestrator
-version: "4.18"
+version: "4.19"
 schema_version: "2.0"
 entry:
   skill: SKILL.md

@@ -280,7 +280,8 @@ def replay(name: str, keep: bool = False) -> dict:
          "--strict"],
         [PY, str(scripts / "check_numerical_sanity.py"), str(raw),
          "--strict"],
-        [PY, str(scripts.parent.parent / "academic-writing" / "scripts" / "style_check.py"), str(raw / "paper"),
+        [PY, str((ROOT.parent.parent / "03-writing" if ROOT.parent.parent.name == "skills" else ROOT.parent)
+                 / "academic-writing" / "scripts" / "style_check.py"), str(raw / "paper"),
          "--strict"],
         [PY, str(scripts / "check_latex_appendix_contract.py"), str(raw / "paper"),
          "--project-root", str(raw), "--strict"],

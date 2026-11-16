@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-16 — contest orchestrator 4.19 development
+
+- Align the skill version across its entrypoint, manifest and version file; the merged H4/H5 workflow remains a development version pending complete release verification.
+- Resolve the academic-writing adapter in both categorized repositories and flat installations so isolated replays use the intended skill.
+
 ## 2026-11-15 — repository maintenance
 
 - Fail LaTeX reference checks when included source or declared bibliography files are missing, while ignoring commented-out includes.
