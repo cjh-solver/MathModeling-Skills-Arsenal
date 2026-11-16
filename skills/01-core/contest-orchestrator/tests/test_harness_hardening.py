@@ -292,6 +292,25 @@ def add_h5_dispatch(root: Path, control: dict, task_id: str, agent_instance_id: 
 
 
 class HarnessHardeningTests(unittest.TestCase):
+    def test_invalid_utf8_records_are_blocked_without_replacement(self):
+        checker = load_checker()
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            damaged = b'status: approved\nreviewer: "bad\xff"\n'
+            (root / "record.yaml").write_bytes(damaged)
+            with self.assertRaises(UnicodeDecodeError):
+                checker.load_mapping(root / "record.yaml")
+            missing, failures = [], []
+            path, record = checker._load_project_mapping(root, "record.yaml", "evidence", missing, failures)
+            self.assertIsNone(path)
+            self.assertIsNone(record)
+            self.assertTrue(any("文件不可读" in failure for failure in failures))
+            (root / ".contest").mkdir()
+            (root / ".contest" / "harness_control.yaml").write_bytes(damaged)
+            report = checker.check_harness_control(root, "H0")
+            self.assertEqual(report["status"], "BLOCK")
+            self.assertTrue(any("utf-8" in failure for failure in report["failures"]))
+
     def test_primary_solver_must_cover_every_registered_subproblem(self):
         checker = load_checker()
         with tempfile.TemporaryDirectory() as raw:

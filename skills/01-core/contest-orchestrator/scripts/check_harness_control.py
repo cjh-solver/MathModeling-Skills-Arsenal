@@ -610,7 +610,7 @@ def default_control() -> dict[str, Any]:
 
 def load_mapping(path: Path) -> dict[str, Any]:
     value = yaml.load(
-        path.read_text(encoding="utf-8", errors="replace"), Loader=_UniqueKeyLoader,
+        path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader,
     ) or {}
     if not isinstance(value, dict):
         raise ValueError(f"配置必须为对象: {path}")
