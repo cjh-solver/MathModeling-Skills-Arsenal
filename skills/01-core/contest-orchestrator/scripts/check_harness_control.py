@@ -83,10 +83,7 @@ ROLE_BY_NODE = {
 AGENT_NODES = {"H1", "H5", "H6", "H7", "H8"}
 CONTROLLER_NODES = set(NODES) - AGENT_NODES
 REQUIRED_INPUT_BY_NODE = {
-    "H5": [
-        "problem_statement.md", "literature_sources.yaml", "method_transfer_map.json",
-        "model_blueprint.yaml", "model_contract.yaml",
-    ],
+    "H5": ["problem_statement.md", "literature_sources.yaml"],
     "H6": [
         "problem_statement.md", "validation_contract.yaml", "model_summary_cards.yaml",
         "h6_verification_scope.yaml", "result_interpretation_cards.yaml",

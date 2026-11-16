@@ -103,6 +103,14 @@ python scripts/check_harness_control.py <project-root> --through H<n>
 | `H8` | 论文 agent / `required` | `paper_material_readiness.yaml`、`paper_narrative.yaml`、`result_interpretation_cards.yaml`、经 H6 核验的 `model_summary_cards.yaml`、经用户批准的 `visual_argument_plan.yaml`、`paper_argument_blueprint.yaml`、`paper_author_brief.yaml`、`abstract_argument_card.yaml`、`chapter_writing_card.yaml`、`paper_continuity_context.yaml`、`paper_claim_coverage.yaml`、论文草稿和编辑报告 | 素材准入和主张覆盖均为 `PASS` 后进入 H8A：`academic-writing` 先生成论证蓝图、作者简报和摘要论证卡，主 agent 生成写作计划；摘要论证卡固定摘要的读者契约、统一建模主线、逐问方法—结果—意义、验证结论、总评和关键词，逐问绑定冻结证据。简报、摘要论证卡、视觉论证计划和写作计划一并提交用户审查。`paper_narrative.global.paper_spine` 规定唯一章节顺序，`core` 章节承载建模与求解，`support` 章节服务于核心论证；每章登记 `chapter_role`、`reads_from`、`feeds_to`、`new_claims_allowed` 和 `handoff_question`。H8B 由同一论文 agent 按章节写作卡、连续性包、摘要论证卡、视觉论证计划和模型总结卡逐章写作；每张章节卡必须填写 `abstract_contribution`，供 H8C 汇总摘要。建模问题章节先写不编号的问题引入与建模思路，再设“模型建立”和“模型求解与结果分析”两个编号小节，并在模型建立小节末尾呈现最终求解模型框；一级标题采用中文序号，“模型假设”和“符号说明”分设为两个全局一级章节。H8B 只能使用已批准计划中登记的图表，不得新增计划外图表或以图表填充篇幅；H8B 不写最终摘要。H8C 由 `academic-writing` 先通读完整论文、检查读者路径、章节递进和主线承接，再依据摘要论证卡和各章摘要贡献最后写摘要，并运行 `scripts/check_abstract_contract.py --strict` 登记 `abstract_contract_report`；报告未通过不得完成 H8。材料不足回到对应节点补证据，表达问题才形成局部正文补丁。H8 的 `skill_invocations` 还必须实际登记 `academic-writing` 与 `mathmodel-latex-skill`，每项带存在性可校验的 `evidence_ref`；用户批准后进入 H9 |
 | `H9` | 主 agent / `controller_only` | 最终交付审计包、门禁报告、交付清单 | 交付前必须运行 `python scripts/delivery_all.py <项目根> --strict`，全部 PASS 后才交付；H9 的 `skill_invocations` 必须实际登记 `bzd-review-paper` 与 `mathmodel-latex-skill`，每项带存在性可校验的 `evidence_ref`；用户最终批准后交付 |
 
+### H5 合并后的输入与产物
+
+H5 的唯一主解题实例负责模型路线设计和求解，覆盖全部登记小问及跨问接口。首次派发的任务卡 `inputs` 绑定上游已形成的 `problem_statement.md` 和 `literature_sources.yaml`，并按任务需要加入已有数据或约束；需要数据字典或结构化事实时，按 H1 的 `unified_problem_package` 登记路径加入统一问题包，不猜测固定文件名。`method_transfer_map.json`、`model_blueprint.yaml` 和 `model_contract.yaml` 是 H5 的产物，不要求在首次派发前生成或填入冻结输入。其他阶段的输入要求不变。
+
+同一 H5 任务内部按蓝图设计、快速验证、优化迭代、完善冻结接续执行。设计时生成方法迁移表、蓝图、模型契约、图表需求和叙事蓝图，随后按真实实验更新模型、结果及交接卡；不把同一文件同时登记为此次任务的固定输入与可变产物，不新增 H4 批准门。H5 完成时仍检查设计文件、结果追溯、模型与结果交接材料；用户批准 H5 后才能进入独立 H6 核验。
+
+历史任务卡仍校验其显式登记的全部输入哈希，不自动删除旧输入或刷新哈希。已批准路线、共享约束或数据发生变化时，沿现有变更影响与返工流程处理；新任务引用已有设计材料时，按实际需要冻结原版本，不覆盖历史任务卡。
+
 ### `chapter_parallel` 的 H7/H8 覆盖时序
 
 当 `visual_workflow: chapter_parallel` 时，上表 H7/H8 的正式图件输入改按以下时序解释，其他科学、路由、QA、H8 整合和 H9 要求不变：

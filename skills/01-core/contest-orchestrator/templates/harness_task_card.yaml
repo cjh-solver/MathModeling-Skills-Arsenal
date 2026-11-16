@@ -9,6 +9,8 @@ objective: <本节点唯一目标>
   #   4. 6.x 建模求解章节只读该章素材文件
 inputs:
   # H1 节点：必须包含题目原文
+  # H5 首次任务冻结题面与文献等上游输入；方法迁移表、蓝图和模型契约列入 required_outputs。
+  # H5 输入与产物分工见 references/modes/full-contest-harness.md 的 H5 合并章节；历史显式输入仍校验原哈希。
   # H7/H8 节点：必须包含 problem_statement.md 作为只读语境输入
   # H6/H7 还必须读取 H5 产出、H6 核验的 visual_evidence_packet.yaml；图表槽位和登记表必须引用其中的信息单元。
   # 旧分支 H7 阶段一先产出全局视觉计划，并等待 H7_VISUAL_PLAN 批准。

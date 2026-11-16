@@ -2,17 +2,11 @@
 task_id: <H5 实际任务 ID>
 node_id: H5
 owner_role: 解题 agent
-objective: H5 节点任务
+objective: 在同一主解题实例中完成蓝图设计、快速验证、优化迭代和结果冻结
 inputs:
 - path: problem_statement.md
   sha256: <sha256>
 - path: literature_sources.yaml
-  sha256: <sha256>
-- path: method_transfer_map.json
-  sha256: <sha256>
-- path: model_blueprint.yaml
-  sha256: <sha256>
-- path: model_contract.yaml
   sha256: <sha256>
 scope: 受控范围
 method_selection_requirements:
@@ -115,7 +109,13 @@ numerical_sanity_check:
   output_requirement: 自检结果必须写入 run_manifest，包含每项检查的 PASS/WARN 状态和具体问题
   checker: scripts/check_numerical_sanity.py（通用检查，H5 完成后自动运行）
 required_outputs:
-- 节点产物
+- method_transfer_map.json
+- model_blueprint.yaml
+- model_contract.yaml
+- chart_requirements.yaml
+- paper_narrative.yaml
+- validation_contract.yaml
+- result_interpretation_cards.yaml
 - run_manifest.yaml（可复现运行、正式记录、结果哈希和模型契约哈希）
 - model_summary_cards.yaml（每个小问一张最终求解模型卡）
 - baseline_result（每个子问题的简单基线结果）

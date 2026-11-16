@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-17 — remove merged H5 entry self-dependencies
+
+- Require upstream problem and literature records at H5 entry; stop requiring method-transfer, blueprint and model-contract files as frozen inputs before the same solver creates them.
+- Move design and handoff files into the fresh B-task output list, and align the solver warmup with H5's combined design-and-solve responsibility across all registered questions.
+- Retain checks on every explicitly recorded legacy input, completed design artifacts, approved literature, result traceability and human approval. No new H4 gate or role is introduced.
+- Test initial dispatch, internal design iterations, real project initialization and legacy hash protection; synchronize the scoped contract, templates and role instructions with the installed copy.
+
 ## 2026-11-17 — complete result interpretation handoff
 
 - Require verified result interpretations for every registered question at the complete H6-to-writing handoff, and report out-of-scope question bindings instead of letting one question's cards stand in for another.
