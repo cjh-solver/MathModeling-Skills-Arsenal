@@ -24,6 +24,12 @@
 9. H4 已并入 H5，当前复核计划不再生成独立 H4 节点；历史变更卡以 H4 为最早失效节点时，从 H5 开始复核。历史批准记录保留原状。
 10. `competition_fast` 的复核计划不得从已标记 `stale` 的更早节点之后开始；应先核对变更原因与影响范围。H9 仍按完整交付门单独执行。
 
+## 单次主控检查内的哈希复用
+
+`check_harness_control.py` 在一次调用内复用未变化文件的 SHA-256，减少同一冻结证据被多个检查重复读取。每次命中前比较设备、文件标识、大小、修改时间和变更时间；只有读取前后信息一致才保存哈希。Windows 使用系统 [FILE_BASIC_INFO.ChangeTime](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_basic_info)，无法取得变更信息时直接重新读取。
+
+本次检查结束或抛出异常后立即丢弃缓存，下次调用重新计算。缓存只保存文件哈希，不保存门禁结论、解析内容或批准决定；所有审查、独立验证、下游证据与 H9 完整交付检查仍逐项执行。
+
 ## H8 素材就绪卡
 
 `paper_material_readiness.yaml` 的 `schema_version: "2.0"` 使用 `evidence_matrix` 提供每个小问的紧凑证据状态。矩阵字段必须覆盖问题映射、假设、符号、推导、算法与参数、量化结果、验证、图表或表格、文献使用、结论与边界、敏感性或稳健性；另设 `global.target_length`。

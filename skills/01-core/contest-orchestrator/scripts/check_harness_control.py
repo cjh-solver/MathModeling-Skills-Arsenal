@@ -4,11 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import hashlib
 import json
 import re
 import sys
+from contextvars import ContextVar
 from datetime import datetime
+from functools import wraps
 from pathlib import Path
 from typing import Any
 
@@ -617,8 +620,75 @@ def load_mapping(path: Path) -> dict[str, Any]:
     return value
 
 
+_DIGEST_CACHE: ContextVar[dict | None] = ContextVar("harness_digest_cache", default=None)
+
+
+def _with_digest_cache(function):
+    """Share unchanged file digests only within one synchronous gate check."""
+    @wraps(function)
+    def run(*args, **kwargs):
+        if _DIGEST_CACHE.get() is not None:
+            return function(*args, **kwargs)
+        token = _DIGEST_CACHE.set({})
+        try:
+            return function(*args, **kwargs)
+        finally:
+            _DIGEST_CACHE.reset(token)
+    return run
+
+
+class _WindowsFileBasicInfo(ctypes.Structure):
+    _fields_ = [
+        ("creation_time", ctypes.c_int64),
+        ("last_access_time", ctypes.c_int64),
+        ("last_write_time", ctypes.c_int64),
+        ("change_time", ctypes.c_int64),
+        ("attributes", ctypes.c_uint32),
+    ]
+
+
+def _windows_change_time(path: Path) -> int | None:
+    """Read FILE_BASIC_INFO.ChangeTime; Python's Windows ctime is creation time."""
+    info = _WindowsFileBasicInfo()
+    try:
+        import msvcrt
+
+        with path.open("rb") as file:
+            handle = ctypes.c_void_p(msvcrt.get_osfhandle(file.fileno()))
+            result = ctypes.windll.kernel32.GetFileInformationByHandleEx(
+                handle, 0, ctypes.byref(info), ctypes.sizeof(info),
+            )
+        return info.change_time if result and info.change_time > 0 else None
+    except (ImportError, AttributeError, OSError, ValueError):
+        return None
+
+
+def _digest_signature(path: Path) -> tuple | None:
+    stat = path.stat()
+    change_time = _windows_change_time(path) if sys.platform == "win32" else stat.st_ctime_ns
+    if change_time is None:
+        return None
+    return stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, change_time
+
+
 def digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    cache = _DIGEST_CACHE.get()
+    if cache is None:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    path = path.resolve()
+    before = _digest_signature(path)
+    if before is None:
+        cache.pop(path, None)
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    entry = cache.get(path)
+    if entry is not None and entry[0] == before:
+        return entry[1]
+    value = hashlib.sha256(path.read_bytes()).hexdigest()
+    if _digest_signature(path) == before:
+        cache[path] = (before, value)
+    else:
+        cache.pop(path, None)
+    return value
 
 
 def validate_abstract_argument_card(path: Path,
@@ -3418,6 +3488,7 @@ def _validate_writer_preparation(root: Path, control: dict[str, Any], log: dict[
             failures.append("H7: final node approval cannot precede selected figure versions")
 
 
+@_with_digest_cache
 def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool = False) -> dict[str, Any]:
     if preflight_draft:
         report = check_harness_control(root, through="H6")

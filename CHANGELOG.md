@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-17 — reduce repeated evidence reads
+
+- Reuse unchanged file digests within one Harness control check, while reevaluating every validation and approval condition. Discard the cache when the call finishes or raises an exception.
+- Invalidate entries after edits, replacements or deletions; use Windows file change metadata to detect same-size edits even when modification time is restored. Recompute when reliable metadata is unavailable.
+- Add regressions for cache lifetime, nested checks, concurrent changes during a read, restored timestamps and missing metadata. Human approvals, independent verification and the complete H9 gate remain required.
+
 ## 2026-11-17 — clean initial contest state
 
 - Start new B projects with pending stages, empty approvals, role instances and execution history; keep H4 merged into H5 and preserve chapter-parallel writing configuration.
