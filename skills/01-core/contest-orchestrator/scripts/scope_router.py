@@ -79,9 +79,17 @@ def is_inside_skill_root(path: Path | None) -> bool:
 
 def infer_scope(prompt: str) -> str:
     text = prompt.lower()
-    explicit = re.search(r"\b(plan_only|subproblem|full_contest|delivery_audit)\b", text)
+    explicit = re.search(r"(?<![a-z0-9_])(plan_only|subproblem|full_contest|delivery_audit)(?![a-z0-9_])", text)
     if explicit:
         return explicit.group(1).upper()
+    audit_only = re.search(r"(?:只|仅)(?:读)?(?:做|进行)?(?:审计|检查|审阅|评审|核对|复核)", text)
+    later_full_work = re.search(r"(?:然后|随后|接着|再|并且|并)\s*(?:开始建模|完成完整论文|正式提交|正式交付|走全流程)", text)
+    if audit_only and not later_full_work:
+        return "DELIVERY_AUDIT"
+    text = re.sub(
+        r"(?:不需要|不要|无需|不必|禁止|暂不|先别|别|不)(?:再|去|做|写|生成|完成|撰写)?(?:开始建模|正式提交|正式交付|完整论文|全流程)",
+        "", text,
+    )
     paper_full = any(word in text for word in ("写", "生成", "完成", "撰写")) and "论文" in text
     if any(word in text for word in ("正式提交", "正式交付", "完整论文", "全流程", "开始建模")) or (
         paper_full and any(word in text for word in ("完整", "全文", "交付", "验证", "严格", "提交"))

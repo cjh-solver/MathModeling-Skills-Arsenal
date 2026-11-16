@@ -13,6 +13,20 @@ SPEC.loader.exec_module(router)
 
 
 class ScopeRouterResultTests(unittest.TestCase):
+    def test_scope_inference_respects_read_only_and_negated_work(self):
+        cases = {
+            "只检查完整论文，不修改任何文件": "DELIVERY_AUDIT",
+            "仅审阅完整论文是否能正式提交": "DELIVERY_AUDIT",
+            "先分析题目，不要开始建模": "PLAN_ONLY",
+            "先审计，不要正式提交": "DELIVERY_AUDIT",
+            "请以PLAN_ONLY模式，只做规划，不要开始建模": "PLAN_ONLY",
+            "先检查论文，再完成完整论文并正式提交": "FULL_CONTEST",
+            "只检查论文，随后开始建模": "FULL_CONTEST",
+        }
+        for prompt, expected in cases.items():
+            with self.subTest(prompt=prompt):
+                self.assertEqual(router.infer_scope(prompt), expected)
+
     def test_skips_excluded_subtrees_without_skipping_parent_named_reports(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw) / "reports" / "project"
