@@ -32,6 +32,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_harness*.py'
           python -m unittest discover -s tests -p 'test_h6_verification_scope.py'
+          python -m unittest discover -s tests -p 'test_authoring_architecture.py'
       - name: Scope and incremental validation tests
         working-directory: skills/01-core/contest-orchestrator
         run: |

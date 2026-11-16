@@ -616,7 +616,7 @@ class AuthoringArchitectureTests(unittest.TestCase):
         self.assertTrue(any("final_formulation" in item for item in failures))
         self.assertTrue(any("paper_structure" in item for item in failures))
 
-    def test_valid_model_summary_card_is_accepted(self):
+    def test_model_summary_requires_one_final_card_per_subproblem(self):
         failures, missing = [], []
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -652,8 +652,16 @@ class AuthoringArchitectureTests(unittest.TestCase):
             checker._validate_model_summary_cards(
                 root, nodes, {"subproblems": [{"id": "Q1"}]}, missing, failures,
             )
+            document = yaml.safe_load(summary.read_text(encoding="utf-8"))
+            document["cards"].append({**document["cards"][0], "card_id": "Q1-alternative-model"})
+            summary.write_text(yaml.safe_dump(document, allow_unicode=True), encoding="utf-8")
+            duplicate_failures = []
+            checker._validate_model_summary_cards(
+                root, nodes, {"subproblems": [{"id": "Q1"}]}, [], duplicate_failures,
+            )
         self.assertEqual(missing, [])
         self.assertEqual(failures, [])
+        self.assertTrue(any("只能登记一张最终模型卡" in item for item in duplicate_failures))
 
     def test_chapter_card_requires_opening_bridge_and_two_section_layout(self):
         failures, missing = [], []

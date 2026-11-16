@@ -2181,13 +2181,14 @@ def _validate_model_summary_cards(root: Path, nodes: dict[str, Any], problem_sco
                 failures.append(f"{label}: paper_structure.optional_sections 必须为列表")
         if reader_protocol_enabled:
             failures.extend(validate_model_card(card, label))
-    if expected_ids:
-        card_subproblem_ids = {
-            item.get("subproblem_id") for item in cards
-            if isinstance(item, dict) and isinstance(item.get("subproblem_id"), str)
-        }
-        if card_subproblem_ids != expected_ids:
-            failures.append("model_summary_cards: cards 必须逐一覆盖且只能覆盖 problem_scope.subproblems")
+    card_subproblem_ids = [
+        item.get("subproblem_id") for item in cards
+        if isinstance(item, dict) and isinstance(item.get("subproblem_id"), str)
+    ]
+    if len(card_subproblem_ids) != len(set(card_subproblem_ids)):
+        failures.append("model_summary_cards: 每个 subproblem_id 只能登记一张最终模型卡")
+    if expected_ids and set(card_subproblem_ids) != expected_ids:
+        failures.append("model_summary_cards: cards 必须逐一覆盖且只能覆盖 problem_scope.subproblems")
 
 
 def _validate_paper_continuity_context(root: Path, node: dict[str, Any],
