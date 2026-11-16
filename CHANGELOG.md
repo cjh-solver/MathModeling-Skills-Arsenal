@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-17 — legacy figure registry migration
+
+- Preserve recorded figure paths, decision cards, QA, custom metadata and registry metadata when preparing a v2 migration candidate; repeated previews retain the original provenance.
+- Leave unknown layout and review facts pending instead of fabricating them. Reject duplicate IDs or malformed entries without writing a candidate.
+- Protect the original registry, including file aliases, and existing default candidates from accidental overwrite; add migration and provenance checks to CI.
+
 ## 2026-11-16 — contest orchestrator 4.19 development
 
 - Align the skill version across its entrypoint, manifest and version file; the merged H4/H5 workflow remains a development version pending complete release verification.

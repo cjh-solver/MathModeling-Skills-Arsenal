@@ -154,6 +154,20 @@ Before ModelViz is called, each figure must have a complete decision card contai
 - Missing evidence, unresolved inferred nodes, invented variables, unsupported relations, missing source files or stale registry entries block paper use.
 - Keep every non-data diagram's semantic source editable as `.tex`; retain `.drawio` only for explicitly requested Draw.io artifacts.
 
+## Legacy registry migration
+
+`migrate_figure_registry.py` prepares a v2 candidate; it does not validate the model, generate missing figures, or grant approval. Inspect the candidate before adopting it:
+
+```text
+python scripts/migrate_figure_registry.py <legacy-registry.json> --check-only
+python scripts/migrate_figure_registry.py <legacy-registry.json> --out <new-registry.v2.json>
+python scripts/figure_registry.py <new-registry.v2.json> --workspace <project-root> --strict
+```
+
+Keep the original registry read-only. Migration preserves recorded figure paths, decision cards, QA and provenance fields, custom metadata, and wrapped registry metadata. It retains the original `legacy_generator` when rerun, and never invents a layout, a generator, or a passing review for missing records. Duplicate figure IDs and malformed entries require correction before migration; they must not be silently discarded. The output cannot replace the source; an existing default candidate is also protected from accidental overwrite.
+
+A successful migration only means the metadata was converted. Missing layout or provenance remains a registration gap for manual review; it does not by itself prove the underlying model or results are wrong. Current figure-route and delivery gates still apply, and migrated bytes require fresh hash-bound approval before formal use.
+
 ## Registry examples
 
 ```json
