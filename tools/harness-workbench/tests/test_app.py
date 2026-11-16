@@ -255,6 +255,24 @@ dispatch_records:
         self.assertFalse(next(file for file in files if file['path'] == 'large.txt')['previewable'])
         self.assertNotIn('one/two/three/four/five/hidden.md', [file['path'] for file in files])
 
+    def test_file_listing_prunes_virtual_environments_before_scanning(self):
+        excluded = {'venv', '.VENV', 'NODE_MODULES'}
+        for name in excluded:
+            directory = self.project / name
+            directory.mkdir()
+            (directory / 'dependency.py').write_text('dependency', encoding='utf-8')
+        results = self.project / 'results'
+        results.mkdir()
+        (results / 'result.csv').write_text('value\n1\n', encoding='utf-8')
+        real_scandir = os.scandir
+        def guarded_scandir(path):
+            self.assertNotIn(Path(path).name, excluded, 'Dependency directories must not be scanned')
+            return real_scandir(path)
+        with patch.object(app.os, 'scandir', side_effect=guarded_scandir):
+            files, incomplete = app.list_files(self.project)
+        self.assertEqual([item['path'] for item in files], ['results/result.csv'])
+        self.assertFalse(incomplete)
+
     def test_file_listing_limit_is_only_incomplete_when_exceeded(self):
         for index in range(1500):
             (self.project / f'{index:04}.txt').touch()

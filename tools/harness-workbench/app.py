@@ -245,14 +245,14 @@ def list_files(project):
     """List useful project artifacts without descending into runtimes or dependencies."""
     files = []
     incomplete = False
-    excluded = {".git", "node_modules", ".venv", "__pycache__", ".runtime"}
+    excluded = {".git", "node_modules", ".venv", "venv", "__pycache__", ".runtime"}
     def scan_error(_error):
         nonlocal incomplete
         incomplete = True
 
     for root, dirs, names in os.walk(project, followlinks=False, onerror=scan_error):
         directory = Path(root)
-        dirs[:] = sorted(d for d in dirs if d not in excluded and not (directory / d).is_symlink())
+        dirs[:] = sorted(d for d in dirs if d.casefold() not in excluded and not (directory / d).is_symlink())
         if len(directory.relative_to(project).parts) >= 4:
             incomplete = incomplete or bool(dirs)
             dirs[:] = []
