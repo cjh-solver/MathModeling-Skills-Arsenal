@@ -61,6 +61,9 @@ def _make_node(node_id: str, status: str, **kwargs) -> dict:
 
 
 class StatusTransitionTests(unittest.TestCase):
+    def test_human_review_gates_exclude_only_the_merged_h4(self):
+        self.assertEqual(set(checker.REVIEW_NODES), {"H2", "H3", "H5", "H6", "H7", "H8", "H9"})
+
     def test_rejects_invalid_status_transition(self):
         """not_started cannot jump directly to approved."""
         transitions = checker.STATUS_TRANSITIONS

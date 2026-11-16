@@ -90,7 +90,7 @@ class SkillStructureContractTests(unittest.TestCase):
             self.assertIn(role, harness)
         self.assertIn("harness_control.yaml", harness)
         self.assertIn("owner_role", harness)
-        self.assertIn("H2–H9", harness)
+        self.assertIn("H2、H3、H5–H9", harness)
         self.assertIn("review_packet", harness)
         self.assertIn("user_approval", harness)
         self.assertIn("controller_only", harness)

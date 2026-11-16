@@ -109,7 +109,7 @@ B 题（优化决策类）数学建模项目，基于 contest-orchestrator skill
 │   ├── harness_control.yaml     # 节点状态、dispatch_records
 │   ├── approval_log.yaml        # 用户批准日志
 │   ├── status_history.yaml      # 状态转移历史
-│   ├── reviews/                 # 各节点审查包（H2-H9）
+│   ├── reviews/                 # 各节点审查包（H2、H3、H5-H9）
 │   └── task_cards/              # 各节点任务卡（H1, H5-H8）
 ├── paper/                       # 论文素材
 ├── figures/                     # 图表

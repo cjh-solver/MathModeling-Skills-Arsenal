@@ -71,7 +71,7 @@ def _reader_protocol_state(control: dict[str, Any] | None, payload: dict[str, An
 
 
 NODES = tuple(f"H{index}" for index in range(10))
-REVIEW_NODES = tuple(f"H{index}" for index in range(2, 10))
+REVIEW_NODES = ("H2", "H3", "H5", "H6", "H7", "H8", "H9")
 ROLE_BY_NODE = {
     "H0": "主 agent", "H1": "题意理解 agent", "H2": "主 agent", "H3": "主 agent",
     "H4": "主 agent", "H5": "解题 agent", "H6": "验证 agent", "H7": "图表 agent",

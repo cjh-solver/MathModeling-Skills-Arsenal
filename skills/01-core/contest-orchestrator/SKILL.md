@@ -39,7 +39,7 @@ python scripts/scope_router.py --prompt "用户原话" --workspace <项目根>
 
 仅当 `active_mode=full-contest-harness` 时，主 agent 必须在 H0 前实际调用 `superpowers:using-superpowers`，并按 `references/modes/full-contest-harness.md` 登记固定角色、节点任务卡和调用记录。题意理解、解题、验证、图表、论文由各自固定角色在其节点实际调度；主 agent 不代做这些专业产物。未调用、调用记录缺失、任务卡缺失或以单 agent 流程替代时，状态必须为 `BLOCKED_INPUT` 或 `PAUSE`。H8 必须实际调用 `academic-writing` 与 `mathmodel-latex-skill`；H9 必须实际调用 `bzd-review-paper` 与 `mathmodel-latex-skill`，每项都要登记可存在性校验的 `evidence_ref`，缺失即不得过门。
 
-Harness 的 H2–H9 均为人工批准门：节点完成后先提交 `review_packet` 中的重要文件，再由用户明确批准；审查包或产物哈希变化即暂停。每张实际子 agent 任务卡还必须显式指定节点绑定的 `model` 与 `reasoning_effort`，不得只依赖运行时默认值。使用 `templates/harness_control.yaml` 初始化项目控制记录；比赛期间使用 `validation.profile=competition_fast` 和 `.contest/change_impact_card.yaml` 选择增量复核范围。进入下一节点或完成变更复核前运行：
+Harness 的 H2、H3、H5–H9 均为人工批准门：节点完成后先提交 `review_packet` 中的重要文件，再由用户明确批准；审查包或产物哈希变化即暂停。每张实际子 agent 任务卡还必须显式指定节点绑定的 `model` 与 `reasoning_effort`，不得只依赖运行时默认值。使用 `templates/harness_control.yaml` 初始化项目控制记录；比赛期间使用 `validation.profile=competition_fast` 和 `.contest/change_impact_card.yaml` 选择增量复核范围。进入下一节点或完成变更复核前运行：
 
 ```text
 python scripts/check_harness_control.py <project-root> --through H<n>
@@ -72,7 +72,7 @@ H6 仅按 `h6_verification_scope.yaml` 派发：首次在 H5 结果冻结后执�
 | L2 | 单个小问的模型、代码、数据或结果变化 | 该小问 H5，定向 H6，受影响 H7/H8 | 仅受影响图表 |
 | L3 | 全局数据、符号、跨问接口、全局假设或多小问关系变化 | 从 `earliest_invalid_node` 到 H8 的完整相关链 | 涉及图表时是 |
 
-`competition_fast` 只减少与变更无关的重复验证：项目文件变化不触发技能全套测试；技能源码或检查器源码变化时，将 `skill_code_changed` 设为 `true` 并执行完整技能测试。H2–H9 的用户批准门、冻结哈希和 H9 完整交付门禁始终保留。上游变更后只将引用变更字段的下游产物标记为 `stale`；未受影响的产物不得重新生成。需要描述具体下游影响时，可在同一变更记录中附 `rework_patch.yaml`。
+`competition_fast` 只减少与变更无关的重复验证：项目文件变化不触发技能全套测试；技能源码或检查器源码变化时，将 `skill_code_changed` 设为 `true` 并执行完整技能测试。H2、H3、H5–H9 的用户批准门、冻结哈希和 H9 完整交付门禁始终保留。上游变更后只将引用变更字段的下游产物标记为 `stale`；未受影响的产物不得重新生成。需要描述具体下游影响时，可在同一变更记录中附 `rework_patch.yaml`。
 
 范围类型：
 
@@ -262,7 +262,7 @@ templates/b_project_template/
 │   ├── harness_control.yaml     # 节点状态、dispatch_records、skill_invocations
 │   ├── approval_log.yaml        # 用户批准日志
 │   ├── status_history.yaml      # 状态转移历史（P1-01 校验）
-│   ├── reviews/                 # 各节点审查包（H2-H9）
+│   ├── reviews/                 # 各节点审查包（H2、H3、H5-H9）
 │   └── task_cards/              # 各节点任务卡（H1, H5-H8）
 ├── paper/                       # 论文素材目录
 ├── figures/                     # 图表目录

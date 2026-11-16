@@ -59,7 +59,7 @@ H7 生成任务卡必须将 `scope.phase` 设为 `H7_generate` 并登记 `scope.
 
 ## 审查包与批准记录
 
-H2–H9 每个节点完成后都必须：
+H2、H3、H5–H9 每个节点完成后都必须：
 
 1. 生成 `review_packet`，包含 `node_id`、摘要、重要产物及 SHA-256、检查结果、待批准决定和下一节点；
 2. 向用户提供审查包中的重要文件；
@@ -113,7 +113,7 @@ python scripts/check_harness_control.py <project-root> --through H<n>
 4. H7 的每一张图必须绑定最新提示词、其视觉计划槽位、`chapter_id`、`prompt_revision_id` 和真实 `H7_generate` 派发。最终汇总计划等于所有最新章节计划的槽位集合，包含 `slots`、`global_visual_slots` 和各小问 `visual_audit`，不得加入未被论文需求覆盖的图件。
 5. 所有非摘要章节批准后，未完成的图件或返修只阻塞最终 H7 图件闭合。正式 H8 按 `chapter_order` 接入选定图件、局部编辑与排版，并最后写摘要；不得从头重写已批准正文。
 
-🔴 **CHECKPOINT · H2–H9 人工批准门**：`review_packet` 和 `user_approval` 是逐节点硬门；H1 的题意产物由 H2 的审查包统一提交用户审查。任一硬门未经用户批准不得推进下一节点。
+🔴 **CHECKPOINT · H2、H3、H5–H9 人工批准门**：`review_packet` 和 `user_approval` 是逐节点硬门；H1 的题意产物由 H2 的审查包统一提交用户审查。任一硬门未经用户批准不得推进下一节点。
 
 🛑 **STOP 条件**：任一节点 `failures` 非空（如伪造 skill 名、哈希不匹配、越权登记）立即 `BLOCK` 停止，修复前不得继续；`missing` 非空（缺产物、缺批准、缺绑定调用）保持 `PAUSE` 等补齐。
 
@@ -171,7 +171,7 @@ H8 论文草稿完成后，主 agent 调度 `academic-writing` 执行论证中�
 | L2 | 单个小问的模型、代码、数据或结果变化 | 该小问 H5，定向 H6，受影响 H7/H8 | 仅受影响图表 |
 | L3 | 全局数据、符号、跨问接口、全局假设或多小问关系变化 | 从 `earliest_invalid_node` 到 H8 的完整相关链 | 涉及图表时是 |
 
-`competition_fast` 只减少与变更无关的重复验证：项目文件变化不触发技能全套测试；技能源码或检查器源码变化必须将 `skill_code_changed` 设为 `true` 并执行完整技能测试。H2–H9 的用户批准门、冻结哈希和 `H9` 完整交付门禁始终保留。上游变更后只将引用变更字段的下游产物标记为 `stale`；未受影响的产物不得重新生成。需要描述具体下游影响时，可在同一变更记录中附 `rework_patch.yaml`。
+`competition_fast` 只减少与变更无关的重复验证：项目文件变化不触发技能全套测试；技能源码或检查器源码变化必须将 `skill_code_changed` 设为 `true` 并执行完整技能测试。H2、H3、H5–H9 的用户批准门、冻结哈希和 `H9` 完整交付门禁始终保留。上游变更后只将引用变更字段的下游产物标记为 `stale`；未受影响的产物不得重新生成。需要描述具体下游影响时，可在同一变更记录中附 `rework_patch.yaml`。
 
 ## 信息最小分发
 
