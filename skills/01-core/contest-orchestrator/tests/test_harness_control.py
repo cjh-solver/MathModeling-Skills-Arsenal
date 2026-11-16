@@ -253,6 +253,11 @@ class HarnessControlTests(unittest.TestCase):
                     {"node_id": node_id, "from_status": "review_pending", "to_status": "approved",
                      "timestamp": f"{base_time}{i*10+2:02d}:00+00:00", "executor": "user"},
                 ])
+            transitions.extend([
+                {"node_id": "H2", "from_status": "not_started", "to_status": "draft", "timestamp": "2026-08-31T11:03:00+00:00"},
+                {"node_id": "H2", "from_status": "draft", "to_status": "review_pending", "timestamp": "2026-08-31T11:04:00+00:00"},
+            ])
+            payload["nodes"]["H2"]["status"] = "review_pending"
             status_history.write_text(yaml.safe_dump({"transitions": transitions}, allow_unicode=True, sort_keys=False), encoding="utf-8")
             control.write_text(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8")
 
@@ -275,6 +280,9 @@ class HarnessControlTests(unittest.TestCase):
                 "artifact_digests": {".contest/reviews/H2_review_packet.yaml": sha256(packet)},
             }]}, allow_unicode=True, sort_keys=False), encoding="utf-8")
             payload["nodes"]["H2"]["review_packet"] = ".contest/reviews/H2_review_packet.yaml"
+            payload["nodes"]["H2"]["status"] = "approved"
+            transitions.append({"node_id": "H2", "from_status": "review_pending", "to_status": "approved", "timestamp": "2026-08-31T11:05:00+00:00"})
+            status_history.write_text(yaml.safe_dump({"transitions": transitions}, allow_unicode=True, sort_keys=False), encoding="utf-8")
             control.write_text(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8")
 
             passed = checker.check_harness_control(root, through="H2")

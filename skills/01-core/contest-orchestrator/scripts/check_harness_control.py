@@ -220,7 +220,11 @@ def _validate_status_history(root: Path, control: dict[str, Any], through: str,
         if node_id in ("H0", "H4") or node_id not in node_current:  # H4已并入H5，跳过
             continue
         if node_current.get(node_id) not in ("approved", "frozen"):
-            failures.append(f"status_history: 节点 {node_id} 当前状态为 {node_current.get(node_id)}，未达到 approved/frozen，不能通过 H{through_index}")
+            message = f"status_history: 节点 {node_id} 当前状态为 {node_current.get(node_id)}，未达到 approved/frozen，不能通过 H{through_index}"
+            if node_id == through and node_current[node_id] == "review_pending":
+                missing.append(message)
+            else:
+                failures.append(message)
     return approved_nodes
 
 

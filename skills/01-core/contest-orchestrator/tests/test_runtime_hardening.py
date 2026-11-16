@@ -21,6 +21,24 @@ def load_module(relative_path: str, name: str):
 
 
 class RuntimeHardeningTests(unittest.TestCase):
+    def test_current_pending_review_pauses_but_cannot_advance(self):
+        checker = load_module("scripts/check_harness_control.py", "check_pending_review")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / ".contest").mkdir()
+            history = {"transitions": [
+                {"node_id": "H5", "from_status": "not_started", "to_status": "draft", "timestamp": "2026-01-01T00:00:00Z"},
+                {"node_id": "H5", "from_status": "draft", "to_status": "review_pending", "timestamp": "2026-01-01T00:01:00Z"},
+            ]}
+            (root / ".contest" / "status_history.yaml").write_text(yaml.safe_dump(history), encoding="utf-8")
+            missing, failures = [], []
+            checker._validate_status_history(root, {}, "H5", missing, failures)
+            self.assertTrue(any("H5" in item for item in missing), missing)
+            self.assertEqual(failures, [])
+            missing, failures = [], []
+            checker._validate_status_history(root, {}, "H6", missing, failures)
+            self.assertTrue(any("H5" in item for item in failures), failures)
+
     def test_duplicate_yaml_keys_are_rejected(self):
         checker = load_module("scripts/check_harness_control.py", "check_harness_control_runtime")
         with tempfile.TemporaryDirectory() as raw:
