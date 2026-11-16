@@ -31,11 +31,33 @@ TEMPLATE_DIR = SKILL_ROOT / "templates" / "b_project_template"
 
 
 def init_project(project_dir: Path, name: str | None = None, date: str | None = None) -> dict:
-    """从模板初始化 B 题项目"""
+    """从模板初始化 B 题项目，保留已有输入并拒绝覆盖现有文件。"""
     if not TEMPLATE_DIR.exists():
         raise RuntimeError(f"模板目录不存在: {TEMPLATE_DIR}")
 
     project_dir = project_dir.resolve()
+    if project_dir.exists() and not project_dir.is_dir():
+        raise NotADirectoryError(f"项目路径不是目录: {project_dir}")
+
+    # Check every destination before writing, including directory/file conflicts
+    # and links that would redirect generated files into an existing directory.
+    template_paths = sorted(TEMPLATE_DIR.rglob("*"))
+    conflicts = []
+    for src in template_paths:
+        dst = project_dir / src.relative_to(TEMPLATE_DIR)
+        if dst.is_symlink() or dst.resolve() != dst:
+            conflicts.append(dst.relative_to(project_dir).as_posix())
+        elif dst.exists() and (src.is_file() or not dst.is_dir()):
+            conflicts.append(dst.relative_to(project_dir).as_posix())
+    readme_path = project_dir / "README.md"
+    if readme_path.exists() or readme_path.is_symlink():
+        conflicts.append("README.md")
+    if conflicts:
+        raise FileExistsError(
+            "初始化不会覆盖已有文件或链接目录，请选择新目录或先处理冲突: "
+            + ", ".join(conflicts)
+        )
+
     project_dir.mkdir(parents=True, exist_ok=True)
 
     project_name = name or project_dir.name
@@ -43,15 +65,18 @@ def init_project(project_dir: Path, name: str | None = None, date: str | None = 
 
     # 复制模板文件
     copied = []
-    for src in TEMPLATE_DIR.rglob("*"):
+    for src in template_paths:
         if src.is_file():
             rel = src.relative_to(TEMPLATE_DIR)
             dst = project_dir / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
+            # Exclusive creation also protects a file created after preflight.
+            with src.open("rb") as source, dst.open("xb") as target:
+                shutil.copyfileobj(source, target)
+            shutil.copystat(src, dst)
             copied.append(str(rel))
         elif src.is_dir():
-            # rglob 只产出文件项，空目录需显式创建，否则 paper/ 与 figures/ 会丢失
+            # Preserve empty template directories such as paper/ and figures/.
             (project_dir / src.relative_to(TEMPLATE_DIR)).mkdir(parents=True, exist_ok=True)
 
     # 替换模板中的占位符
@@ -62,14 +87,19 @@ def init_project(project_dir: Path, name: str | None = None, date: str | None = 
     }
 
     replaced = 0
-    for yaml_file in project_dir.rglob("*.yaml"):
+    for relative_path in copied:
+        yaml_file = project_dir / relative_path
+        if yaml_file.suffix.lower() not in {".yaml", ".yml"}:
+            continue
         try:
             text = yaml_file.read_text(encoding="utf-8")
+            original = text
             for old, new in placeholders.items():
                 if old in text:
                     text = text.replace(old, new)
                     replaced += 1
-            yaml_file.write_text(text, encoding="utf-8")
+            if text != original:
+                yaml_file.write_text(text, encoding="utf-8")
         except Exception:
             pass
 
@@ -170,7 +200,8 @@ python scripts/route_problem_profile.py <项目目录>
 
 初始化日期: {project_date}
 """
-    (project_dir / "README.md").write_text(readme, encoding="utf-8")
+    with readme_path.open("x", encoding="utf-8") as target:
+        target.write(readme)
 
     return {
         "project_dir": str(project_dir),

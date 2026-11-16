@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-17 — preserve project inputs during initialization
+
+- Check all B-project template destinations and the generated README before writing; refuse existing files, directory conflicts and redirected template directories instead of overwriting contest records.
+- Replace placeholders only in newly copied templates, leaving pre-existing input files and their modification times unchanged. Keep task-card hash refresh and empty template directories.
+- Add initialization regressions to CI, including repeated runs, existing approval logs and linked directories.
+
 ## 2026-11-17 — Harness recheck compatibility
 
 - Confine both current and legacy targeted recheck cards to H6; subsequent model, evidence and delivery checks retain the complete project scope.
