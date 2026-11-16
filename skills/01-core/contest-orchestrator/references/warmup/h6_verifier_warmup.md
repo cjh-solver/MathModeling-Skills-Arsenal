@@ -18,6 +18,7 @@ python scripts/check_h6_verification_scope.py <scope>
 
 - `initial_review`：H5 结果冻结后执行关键核验和登记的深度抽样。
 - `targeted_recheck`：仅模型、数据、关键结果或结果解释卡变化时执行，且只读受影响证据。在 H6 的 `verification_scope` 登记范围卡路径；使用 `rechecked_subproblems` 列出本次复核的小问，未登记或为空时仍按全量核验。该范围仅用于 H6 定向复核，H7–H9 的全项目证据门禁仍按完整范围执行。
+- 历史 `targeted` / `targeted_review` 范围卡及 `h6_verification_scope` 登记字段仍可读取，但同样只在 H6、范围卡通过触发与证据字段检查且所有复核小问均属于当前项目时限定范围；缺失项目范围或含未知小问时保持全量核验，不修改历史记录。
 - 普通正文、排版、图表美化和附录格式变化不触发 H6；返回 `NOT_APPLICABLE`。
 
 ## 正式任务到达后按需读取

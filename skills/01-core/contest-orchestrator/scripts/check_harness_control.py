@@ -1440,6 +1440,9 @@ def _load_project_mapping(root: Path, raw_path: Any, label: str, missing: list[s
 def _h6_targeted_scope(root: Path, nodes: dict[str, Any],
                        problem_scope: dict[str, Any] | None = None, through: str | None = None) -> set[str] | None:
     """Return the subproblems explicitly rechecked by a targeted H6 run."""
+    # Historical scope modes cannot narrow downstream evidence or delivery gates.
+    if through != "H6":
+        return None
     h6 = nodes.get("H6", {})
     raw_scope = (h6.get("verification_scope") or h6.get("h6_verification_scope")) if isinstance(h6, dict) else None
     path = resolve_project_path(root, raw_scope) if isinstance(raw_scope, str) else None
@@ -1452,27 +1455,23 @@ def _h6_targeted_scope(root: Path, nodes: dict[str, Any],
     mode = str(scope.get("mode", "")).strip().lower()
     if mode not in {"targeted_recheck", "targeted", "targeted_review"}:
         return None
-    if mode == "targeted_recheck":
-        if through != "H6":
+    from check_h6_verification_scope import check_scope
+    try:
+        if not check_scope({**scope, "mode": "targeted_recheck"})["passed"]:
             return None
-        from check_h6_verification_scope import check_scope
-        try:
-            if not check_scope(scope)["passed"]:
-                return None
-        except (TypeError, ValueError):
-            return None
+    except (TypeError, ValueError):
+        return None
     values = scope.get("rechecked_subproblems")
     if not isinstance(values, list) or any(not isinstance(item, str) or not item.strip() for item in values):
         return None
     result = {item.strip() for item in values}
-    if mode == "targeted_recheck":
-        items = problem_scope.get("subproblems", []) if isinstance(problem_scope, dict) else []
-        if not isinstance(items, list):
-            return None
-        known = {item.get("id") if isinstance(item, dict) else item for item in items
-                 if isinstance(item, str) or (isinstance(item, dict) and isinstance(item.get("id"), str))}
-        if not result or not result.issubset(known):
-            return None
+    items = problem_scope.get("subproblems", []) if isinstance(problem_scope, dict) else []
+    if not isinstance(items, list):
+        return None
+    known = {item.get("id") if isinstance(item, dict) else item for item in items
+             if isinstance(item, str) or (isinstance(item, dict) and isinstance(item.get("id"), str))}
+    if not result or not result.issubset(known):
+        return None
     return result or None
 
 

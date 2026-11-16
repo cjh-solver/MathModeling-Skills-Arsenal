@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-17 — Harness recheck compatibility
+
+- Confine both current and legacy targeted recheck cards to H6; subsequent model, evidence and delivery checks retain the complete project scope.
+- Apply the same trigger, evidence-field and registered-subproblem validation before a historical scope can reduce H6 work, while preserving the original records.
+
 ## 2026-11-17 — legacy figure registry migration
 
 - Preserve recorded figure paths, decision cards, QA, custom metadata and registry metadata when preparing a v2 migration candidate; repeated previews retain the original provenance.
