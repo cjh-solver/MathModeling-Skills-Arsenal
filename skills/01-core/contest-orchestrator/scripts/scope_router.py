@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -97,6 +98,7 @@ def classify_evidence(root: Path | None) -> dict:
     evidence = {"problem": [], "data": [], "results": [], "paper": [], "audit": []}
     if root is None or not root.exists():
         return {key: [] for key in evidence}
+    root = root.resolve()
     # The skill installation contains fixtures, replay archives and historical
     # papers. They are not a user project and must never satisfy an input gate.
     if is_inside_skill_root(root):
@@ -104,8 +106,19 @@ def classify_evidence(root: Path | None) -> dict:
     if root.is_file():
         candidates = [root]
     else:
-        candidates = [path for path in root.rglob("*") if path.is_file()
-                      and not any(part.lower() in EXCLUDED_DIRS for part in path.parts)]
+        def project_files():
+            for directory, subdirs, filenames in os.walk(root, followlinks=False):
+                folder = Path(directory)
+                subdirs[:] = [name for name in subdirs
+                              if name.lower() not in EXCLUDED_DIRS and not (folder / name).is_symlink()]
+                for filename in filenames:
+                    path = folder / filename
+                    try:
+                        if path.resolve(strict=True).is_relative_to(root) and path.is_file():
+                            yield path
+                    except (OSError, RuntimeError):
+                        continue
+        candidates = project_files()
     for path in candidates:
         name = path.name.lower()
         rel = str(path.relative_to(root)) if path != root else path.name
