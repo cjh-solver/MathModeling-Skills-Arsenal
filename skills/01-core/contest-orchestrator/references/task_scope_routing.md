@@ -34,6 +34,7 @@ python scripts/scope_router.py --prompt "用户原话" --workspace <项目根> -
 - `PLAN_ONLY` 没有题面或附件时可以继续做抽象计划，但必须标记“未读取真实数据”。
 - `SUBPROBLEM`、`FULL_CONTEST` 需要题面或用户提供的结果文件；缺失时停止求解，列出缺失文件，不得虚构变量、数据或结果。
 - `DELIVERY_AUDIT` 需要 PDF、LaTeX、DOCX 或结果目录中的至少一种证据；没有证据时只能输出审计清单，不能声称已通过检查。
+- 范围路由仅按文件名和类型识别候选；如结果表格可同时列为数据与结果，实际内容、来源和正确性仍需后续核验。
 
 `DELIVERY_AUDIT` 的正式入口是 `python scripts/audit_project.py <项目根> --out audit_report.json`。它把项目复制到隔离临时目录后执行审计，原项目只读；不编译、不重绘、不改论文。
 

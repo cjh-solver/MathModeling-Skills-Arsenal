@@ -113,11 +113,11 @@ def classify_evidence(root: Path | None) -> dict:
             evidence["problem"].append(rel)
         elif path.suffix.lower() in {".xlsx", ".xls", ".csv", ".tsv"}:
             evidence["data"].append(rel)
-        elif path.suffix.lower() in {".json", ".csv", ".xlsx", ".xls", ".parquet"} and any(
-                token in name for token in ("result", "sensitivity", "baseline", "figure_registry")):
-            evidence["results"].append(rel)
         elif path.suffix.lower() in {".tex", ".bib", ".pdf", ".docx"}:
             evidence["paper"].append(rel)
+        if path.suffix.lower() in {".json", ".csv", ".tsv", ".xlsx", ".xls", ".parquet"} and any(
+                token in name for token in ("result", "sensitivity", "baseline", "figure_registry", "结果", "灵敏度", "敏感性", "基线")):
+            evidence["results"].append(rel)
         if any(token in name for token in ("report", "manifest", "audit", "log")):
             evidence["audit"].append(rel)
     return {key: sorted(set(value)) for key, value in evidence.items()}
