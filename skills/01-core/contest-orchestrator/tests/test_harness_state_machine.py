@@ -61,6 +61,15 @@ def _make_node(node_id: str, status: str, **kwargs) -> dict:
 
 
 class StatusTransitionTests(unittest.TestCase):
+    def test_default_control_matches_merged_template_and_is_independent(self):
+        template = yaml.safe_load((ROOT / "templates" / "harness_control.yaml").read_text(encoding="utf-8"))
+        first, second = checker.default_control(), checker.default_control()
+        self.assertEqual(first["nodes"]["H4"], template["nodes"]["H4"])
+        original_model = checker.AGENT_RUNTIME_BY_NODE["H5"]["model"]
+        first["agent_runtime_routes"]["H5"]["model"] = "example-override"
+        self.assertEqual(checker.AGENT_RUNTIME_BY_NODE["H5"]["model"], original_model)
+        self.assertEqual(second["agent_runtime_routes"]["H5"]["model"], original_model)
+
     def test_human_review_gates_exclude_only_the_merged_h4(self):
         self.assertEqual(set(checker.REVIEW_NODES), {"H2", "H3", "H5", "H6", "H7", "H8", "H9"})
 

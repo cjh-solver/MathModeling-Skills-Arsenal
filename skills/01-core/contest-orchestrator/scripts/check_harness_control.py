@@ -530,6 +530,11 @@ def default_control() -> dict[str, Any]:
             "support_agent_policy": "conditional",
             "status": "not_started",
         }
+    nodes["H4"] = {
+        "owner_role": "已并入H5（蓝图设计）", "agent_policy": "merged_into_h5",
+        "support_agent_policy": "conditional", "note": "H4节点已取消，蓝图设计职责并入H5阶段一",
+        "status": "merged",
+    }
     nodes["H1"]["problem_statement"] = None
     nodes["H1"]["unified_problem_package"] = None
     nodes["H3"].update({
@@ -589,7 +594,7 @@ def default_control() -> dict[str, Any]:
             "图表 agent": {"kind": "child"},
             "论文 agent": {"kind": "child"},
         },
-        "agent_runtime_routes": AGENT_RUNTIME_BY_NODE,
+        "agent_runtime_routes": {node: dict(route) for node, route in AGENT_RUNTIME_BY_NODE.items()},
         "problem_scope": {"subproblems": []},
         "solver_instance_id": None,
         "agent_instances": {},
