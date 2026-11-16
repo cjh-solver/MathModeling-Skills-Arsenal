@@ -660,7 +660,7 @@ async function renderDocument(container, path, sheet = '') {
     if (data.type === 'xlsx') {
       container.innerHTML = `<div class="document-toolbar"><label>工作表 <select>${data.sheets.map(name => `<option ${name === data.sheet ? 'selected' : ''} value="${esc(name)}">${esc(name)}</option>`).join('')}</select></label><span>${esc(data.note)}</span></div>${table(data.rows)}`;
       container.querySelector('select').addEventListener('change', event => renderDocument(container, path, event.target.value));
-    } else if (data.type === 'csv') {
+    } else if (data.type === 'csv' || data.type === 'tsv') {
       container.innerHTML = `<div class="document-toolbar"><span>${esc(data.note)}</span></div>${table(data.rows)}`;
     } else {
       const blocks = Array.isArray(data.blocks) ? data.blocks : [...data.paragraphs.map(text => ({type: 'paragraph', text})), ...data.tables.map(rows => ({type: 'table', rows}))];
@@ -699,7 +699,7 @@ async function decodeTextPreview(response) {
 async function renderCatalogPreview(container, path) {
   if (!path) return;
   if (/\.pdf$/i.test(path)) return renderPdf(container, path);
-  if (/\.(docx|xlsx|csv)$/i.test(path)) return renderDocument(container, path);
+  if (/\.(docx|xlsx|csv|tsv)$/i.test(path)) return renderDocument(container, path);
   if (/\.(png|jpe?g)$/i.test(path)) {
     container.replaceChildren(previewImage(path, fileDisplayName(path)));
     return;
@@ -730,7 +730,7 @@ async function openFile(path) {
   prefs.views = Object.fromEntries(recent);
   try { localStorage.setItem(preferenceKey(), JSON.stringify(prefs)); } catch { /* Opening files does not depend on browser storage. */ }
   if (/\.pdf$/i.test(path)) { const viewer = document.createElement('div'); body.append(viewer); renderPdf(viewer, path); }
-  else if (/\.(docx|xlsx|csv)$/i.test(path)) { const viewer = document.createElement('div'); body.append(viewer); renderDocument(viewer, path); }
+  else if (/\.(docx|xlsx|csv|tsv)$/i.test(path)) { const viewer = document.createElement('div'); body.append(viewer); renderDocument(viewer, path); }
   else if (/\.(png|jpe?g)$/i.test(path)) { body.append(previewImage(path, path)); }
   else {
     const pre = document.createElement('pre');

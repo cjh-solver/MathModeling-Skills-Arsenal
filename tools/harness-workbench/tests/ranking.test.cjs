@@ -83,3 +83,8 @@ test('diversification never moves lower priority above pinned or urgent files', 
   const items = ranking.diverse(ranking.build(state, { pins: ['paper.pdf'] }, 'H6'));
   assert.deepEqual(items.slice(0, 3).map(item => item.tier), [5, 4, 3]);
 });
+
+test('TSV tables are categorized as data files', () => {
+  const items = ranking.build({ files: [{ path: 'results.TSV', modified: 1 }] });
+  assert.deepEqual(items[0].categories, ['数据与代码']);
+});

@@ -673,6 +673,16 @@ nodes:
         (self.project / 'sample.csv').write_text('name,value\n"a,b",3\n', encoding='utf-8')
         with urllib.request.urlopen(base + '/api/document?path=sample.csv') as response:
             self.assertEqual(json.load(response)['rows'][1], ['a,b', '3'])
+        tsv = self.project / 'sample.TSV'
+        for encoding in ('utf-8-sig', 'gb18030'):
+            original = '名称\t数值\n"风电\t机组"\t3\n'.encode(encoding)
+            tsv.write_bytes(original)
+            self.assertTrue(next(item for item in app.list_files(self.project)[0] if item['path'] == 'sample.TSV')['previewable'])
+            with urllib.request.urlopen(base + '/api/document?path=sample.TSV') as response:
+                preview = json.load(response)
+                self.assertEqual(preview['type'], 'tsv')
+                self.assertEqual(preview['rows'], [['名称', '数值'], ['风电\t机组', '3']])
+            self.assertEqual(tsv.read_bytes(), original)
         (self.project / 'long.csv').write_text('x' * 150000, encoding='utf-8')
         with urllib.request.urlopen(base + '/api/document?path=long.csv') as response:
             preview = json.load(response)

@@ -64,7 +64,7 @@ HARNESS_SKILLS = [
     ("academic-writing", "学术写作"), ("mathmodel-latex-skill", "论文排版"),
     ("bzd-review-paper", "论文评审"),
 ]
-PREVIEW_EXTENSIONS = {".md", ".txt", ".yaml", ".yml", ".json", ".tex", ".csv", ".pdf", ".png", ".jpg", ".jpeg", ".svg", ".py", ".bib", ".docx", ".xlsx"}
+PREVIEW_EXTENSIONS = {".md", ".txt", ".yaml", ".yml", ".json", ".tex", ".csv", ".tsv", ".pdf", ".png", ".jpg", ".jpeg", ".svg", ".py", ".bib", ".docx", ".xlsx"}
 LIST_EXTENSIONS = PREVIEW_EXTENSIONS | {".docx", ".xlsx", ".xls", ".py", ".ipynb", ".bib", ".zip"}
 LINKS_LOCK = threading.Lock()
 
@@ -786,19 +786,20 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError(f"PDF 读取失败：{error}") from error
             if url.path == "/api/document":
                 target = safe_file(project, params.get("path", [""])[0])
-                if target.suffix.lower() == ".csv":
+                if target.suffix.lower() in {".csv", ".tsv"}:
+                    table_type = target.suffix.lower()[1:]
                     rows = None
                     for encoding in ("utf-8-sig", "gb18030"):
                         try:
                             with target.open(encoding=encoding, newline="") as file:
-                                reader = csv.reader(file)
+                                reader = csv.reader(file, delimiter="\t" if table_type == "tsv" else ",")
                                 rows = [[value[:5000] for value in row[:20]] for _, row in zip(range(30), reader)]
                             break
                         except UnicodeDecodeError:
                             continue
                     if rows is None:
-                        raise ValueError("无法识别 CSV 编码")
-                    return self.respond(200, {"type": "csv", "rows": rows, "note": f"最多显示前 30 行、20 列，每个单元格最多显示 5000 字符；读取编码：{encoding}。"})
+                        raise ValueError(f"无法识别 {table_type.upper()} 编码")
+                    return self.respond(200, {"type": table_type, "rows": rows, "note": f"最多显示前 30 行、20 列，每个单元格最多显示 5000 字符；读取编码：{encoding}。"})
                 if target.suffix.lower() == ".docx":
                     if docx is None:
                         raise ValueError("缺少 python-docx，无法预览 Word 文件")

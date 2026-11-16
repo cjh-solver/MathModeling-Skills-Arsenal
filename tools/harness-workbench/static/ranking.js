@@ -38,7 +38,7 @@ const WorkbenchRanking = (() => {
       const inferred = new Set();
       const path = file.path.toLowerCase();
       if (/\.(png|jpe?g|svg)$/.test(path)) inferred.add('图表');
-      if (/\.(py|ipynb|csv|xlsx?|zip)$/.test(path)) inferred.add('数据与代码');
+      if (/\.(py|ipynb|csv|tsv|xlsx?|zip)$/.test(path)) inferred.add('数据与代码');
       if (/\.(tex|bib)$/.test(path)) inferred.add('论文');
       const cats = ref.categories.size ? [...ref.categories] : inferred.size ? [...inferred] : ['其他'];
       const context = contextNode && ref.nodes.has(contextNode);

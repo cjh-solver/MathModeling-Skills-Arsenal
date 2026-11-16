@@ -324,3 +324,25 @@ test('selecting a question or role preserves the reading position', () => {
     assert.equal(context[name === 'question' ? 'selectedQuestion' : 'selectedRole'], 'choice');
   }
 });
+
+test('TSV files open with the table viewer and render their parsed cells', async () => {
+  const { context, body } = createPreview(async () => { throw new Error('raw-text route used'); });
+  let selected;
+  context.renderDocument = (container, file) => { selected = file; };
+  await context.openFile('results.TSV');
+  assert.equal(selected, 'results.TSV');
+  assert.equal(body.children.length, 1);
+
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('async function renderDocument(');
+  const end = source.indexOf('\nfunction previewImage(', start);
+  const viewer = {
+    state: { project: 'project' }, esc: text => String(text),
+    fetch: async () => ({ ok: true, json: async () => ({ type: 'tsv', rows: [['名称', '数值'], ['风电', '3']], note: 'preview' }) }),
+  };
+  vm.runInNewContext(source.slice(start, end), viewer);
+  const container = {};
+  await viewer.renderDocument(container, 'results.TSV');
+  assert.match(container.innerHTML, /<td>名称<\/td>/);
+  assert.match(container.innerHTML, /<td>风电<\/td><td>3<\/td>/);
+});
