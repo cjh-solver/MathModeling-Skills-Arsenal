@@ -30,6 +30,13 @@ jobs:
       - name: Harness behavior tests
         working-directory: skills/01-core/contest-orchestrator
         run: python -m unittest discover -s tests -p 'test_harness*.py'
+      - name: Scope and incremental validation tests
+        working-directory: skills/01-core/contest-orchestrator
+        run: |
+          python -m unittest discover -s tests -p 'test_mode_router.py'
+          python -m unittest discover -s tests -p 'test_scope_router_results.py'
+          python -m unittest discover -s tests -p 'test_incremental_verification.py'
+          python -m unittest discover -s tests -p 'test_runtime_hardening.py'
       - name: Public experience import tests
         working-directory: skills/01-core/contest-orchestrator
         run: python -m unittest discover -s tests -p 'test_public_jsonl_limitations.py'
