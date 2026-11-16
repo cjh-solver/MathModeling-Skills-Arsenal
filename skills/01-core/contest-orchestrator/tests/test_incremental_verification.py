@@ -218,6 +218,18 @@ class IncrementalValidationTests(unittest.TestCase):
             self.assertIn("change_impact_card 不可读", report["errors"][0])
             self.assertIsNone(report["plan"])
 
+    def test_changed_artifact_hash_is_streamed_for_large_files(self):
+        router = load_module("scripts/validation_router.py", "validation_router_streaming")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            card = self.make_card(root, "L2", "question_data")
+            path = root / card["changed_artifacts"][0]["path"]
+            content = b"a" * (2 * 1024 * 1024 + 17)
+            path.write_bytes(content)
+            card["changed_artifacts"][0]["after_sha256"] = hashlib.sha256(content).hexdigest()
+            with patch.object(Path, "read_bytes", side_effect=AssertionError("whole-file read")):
+                self.assertEqual(router.validate_change_impact(root, card), [])
+
     def test_unreadable_changed_artifact_blocks_plan(self):
         router = load_module("scripts/validation_router.py", "validation_router_unreadable")
         with tempfile.TemporaryDirectory() as raw:

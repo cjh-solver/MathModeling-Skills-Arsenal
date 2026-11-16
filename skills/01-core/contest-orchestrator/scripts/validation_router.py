@@ -66,7 +66,11 @@ L2_KINDS = {"question_model", "question_result", "question_code", "question_data
 
 
 def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _safe_relative_path(root: Path, raw: Any) -> Path | None:
