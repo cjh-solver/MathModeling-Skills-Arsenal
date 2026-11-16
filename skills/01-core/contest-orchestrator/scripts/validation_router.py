@@ -95,10 +95,10 @@ def validate_change_impact(root: Path, card: dict[str, Any]) -> list[str]:
     if card.get("schema_version") != "1.0":
         errors.append("change_impact_card.schema_version 必须为 1.0")
     profile = card.get("profile")
-    if profile not in PROFILE_NAMES:
+    if not isinstance(profile, str) or profile not in PROFILE_NAMES:
         errors.append(f"change_impact_card.profile 无效: {profile}")
     level = card.get("impact_level")
-    if level not in IMPACT_LEVELS:
+    if not isinstance(level, str) or level not in IMPACT_LEVELS:
         errors.append(f"change_impact_card.impact_level 必须为 L0/L1/L2/L3（当前: {level}）")
     if not isinstance(card.get("change_id"), str) or not re.fullmatch(r"chg-[A-Za-z0-9][A-Za-z0-9_.-]{2,63}", card.get("change_id", "")):
         errors.append("change_impact_card.change_id 必须匹配 chg-<unique-id>")
@@ -132,7 +132,7 @@ def validate_change_impact(root: Path, card: dict[str, Any]) -> list[str]:
             elif isinstance(after, str) and before.lower() == after.lower():
                 errors.append(f"{label}.before_sha256 与 after_sha256 不能相同")
         kind = artifact.get("artifact_kind")
-        if kind not in ALLOWED_ARTIFACT_KINDS:
+        if not isinstance(kind, str) or kind not in ALLOWED_ARTIFACT_KINDS:
             errors.append(f"{label}.artifact_kind 无效: {kind}")
         elif isinstance(kind, str):
             artifact_kinds.add(kind)
@@ -230,7 +230,7 @@ def validate_control_validation(root: Path, control: dict[str, Any]) -> tuple[li
     if not isinstance(validation, dict):
         return ["validation 必须为对象"], None
     profile = validation.get("profile", "standard")
-    if profile not in PROFILE_NAMES:
+    if not isinstance(profile, str) or profile not in PROFILE_NAMES:
         errors.append(f"validation.profile 无效: {profile}")
     card_raw = validation.get("change_impact_card")
     nodes = control.get("nodes", {})

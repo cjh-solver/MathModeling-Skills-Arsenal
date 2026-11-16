@@ -179,6 +179,22 @@ class IncrementalValidationTests(unittest.TestCase):
             self.assertTrue(any("change_impact_card 必须为对象" in error for error in errors), errors)
             self.assertIsNone(plan)
 
+    def test_non_scalar_card_fields_are_reported_as_invalid(self):
+        router = load_module("scripts/validation_router.py", "validation_router_nonscalar")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            for field, value in (("profile", []), ("impact_level", {})):
+                with self.subTest(field=field):
+                    card = self.make_card(root, "L0", "paper_prose")
+                    card[field] = value
+                    self.assertTrue(router.validate_change_impact(root, card))
+            card = self.make_card(root, "L0", "paper_prose")
+            card["changed_artifacts"][0]["artifact_kind"] = ["paper_prose"]
+            self.assertTrue(any("artifact_kind" in error for error in router.validate_change_impact(root, card)))
+            errors, plan = router.validate_control_validation(root, {"validation": {"profile": []}, "nodes": {}})
+            self.assertTrue(any("validation.profile" in error for error in errors))
+            self.assertIsNone(plan)
+
     def test_h9_remains_mandatory_in_every_profile_plan(self):
         router = load_module("scripts/validation_router.py", "validation_router_h9")
         with tempfile.TemporaryDirectory() as raw:
