@@ -353,6 +353,25 @@ def node_evidence(project, raw, node_id):
             "next_node": review.get("proposed_next_node")}
 
 
+def question_profile_details(profile):
+    """Project current subproblem records and legacy question maps for display."""
+    legacy = profile.get("questions")
+    details = dict(legacy) if isinstance(legacy, dict) else {}
+    current = profile.get("subproblems")
+    if isinstance(current, dict):
+        entries = current.items()
+    elif isinstance(current, list):
+        entries = ((item.get("id"), item) for item in current if isinstance(item, dict))
+    else:
+        entries = []
+    for question, item in entries:
+        if not isinstance(question, str) or not isinstance(item, dict):
+            continue
+        previous = details.get(question)
+        details[question] = {**(previous if isinstance(previous, dict) else {}), **item}
+    return details
+
+
 def question_associations(project, question, nodes, dispatch_records, figure_cards, model_cards, result_cards, model_path, figure_path):
     """Resolve recorded coverage and references without attributing file authorship."""
     materials, stages, role_assignments = [], [], []
@@ -375,13 +394,17 @@ def question_associations(project, question, nodes, dispatch_records, figure_car
         add_material(model_path, model_path, "模型卡明确登记小问；文件包含其他小问")
     for card in result_cards:
         if isinstance(card, dict) and card.get("subproblem_id") == question:
-            add_material(ref_path(card.get("evidence")), "结果解释卡", "结果卡明确登记的证据")
+            references = card.get("evidence_refs", card.get("evidence"))
+            for reference in references if isinstance(references, list) else [references]:
+                add_material(ref_path(reference), "结果解释卡", "结果卡明确登记的证据")
     for figure in figure_cards:
         if not isinstance(figure, dict):
             continue
-        explicit = figure.get("subproblem_id") == question
+        declared = [figure[field] for field in ("subproblem_id", "subproblem")
+                    if figure.get(field) not in (None, "")]
+        explicit = bool(declared) and all(value == question for value in declared)
         figure_id = figure.get("figure_id")
-        candidate = isinstance(figure_id, str) and re.fullmatch(r"H\d+-" + re.escape(question), figure_id, re.IGNORECASE)
+        candidate = not declared and isinstance(figure_id, str) and re.fullmatch(r"H\d+-" + re.escape(question), figure_id, re.IGNORECASE)
         if explicit or candidate:
             relation = "图表记录明确关联小问" if explicit else "可能相关：图表编号包含小问编号"
             for value in (figure.get("png"), figure.get("svg")):
@@ -584,7 +607,11 @@ def build_state(project, links_path=LINKS_PATH):
              for item in approvals_list):
         approval_error = approval_error or "批准记录包含格式错误的条目"
     scope = control.get("problem_scope") if isinstance(control.get("problem_scope"), dict) else {}
-    subproblems = scope.get("subproblems", [])
+    subproblems = []
+    for item in scope.get("subproblems", []) if isinstance(scope.get("subproblems"), list) else []:
+        question = item.get("id") if isinstance(item, dict) else item
+        if isinstance(question, str) and question.strip() and question not in subproblems:
+            subproblems.append(question)
     h7 = nodes.get("H7") if isinstance(nodes.get("H7"), dict) else {}
     preparation = h7.get("writer_preparation") if isinstance(h7.get("writer_preparation"), dict) else {}
     plan_ref = preparation.get("writing_plan") if isinstance(preparation.get("writing_plan"), dict) else {}
@@ -663,7 +690,7 @@ def build_state(project, links_path=LINKS_PATH):
     models, models_error = read_project_yaml(project, model_path)
     interpretations, interpretations_error = read_project_yaml(project, result_path)
     figures, figures_error = read_project_yaml(project, figure_path)
-    question_details = profile.get("questions") if isinstance(profile.get("questions"), dict) else {}
+    question_details = question_profile_details(profile)
     model_cards = models.get("cards") if isinstance(models.get("cards"), list) else []
     result_cards = interpretations.get("cards") if isinstance(interpretations.get("cards"), list) else []
     figure_cards = figures.get("figures") if isinstance(figures.get("figures"), list) else []
@@ -674,10 +701,18 @@ def build_state(project, links_path=LINKS_PATH):
         detail = question_details.get(question) if isinstance(question_details.get(question), dict) else {}
         objectives = profile.get("objectives") if isinstance(profile.get("objectives"), dict) else {}
         question_views.append({
-            "id": question, "objective": objectives.get(question), "inputs": detail.get("inputs"),
+            "id": question, "objective": detail.get("objective", objectives.get(question)), "inputs": detail.get("inputs"),
             "outputs": detail.get("outputs"), "interface": detail.get("cross_question_interface"),
-            "models": [{"id": str(card.get("card_id") or "未命名"), "result": card.get("result"), "solver_interface": card.get("solver_interface")} for card in model_cards if isinstance(card, dict) and card.get("subproblem_id") == question],
-            "interpretations": [{"id": card.get("id"), "fact": card.get("fact"), "meaning": card.get("meaning"), "boundary": card.get("boundary"), "evidence": card.get("evidence"), "verification": card.get("verification")} for card in result_cards if isinstance(card, dict) and card.get("subproblem_id") == question],
+            "models": [{"id": str(card.get("card_id") or "未命名"), "purpose": card.get("purpose"),
+                        "formulation": card.get("final_formulation"), "result": card.get("result"),
+                        "solver_interface": card.get("solver_interface")}
+                       for card in model_cards if isinstance(card, dict) and card.get("subproblem_id") == question],
+            "interpretations": [{"id": card.get("card_id", card.get("id")),
+                                 "fact": card.get("result_statement", card.get("fact")), "meaning": card.get("meaning"),
+                                 "boundary": card.get("supported_scope", card.get("boundary")),
+                                 "evidence": card.get("evidence_refs", card.get("evidence")),
+                                 "verification": card.get("verification", interpretations.get("status"))}
+                                for card in result_cards if isinstance(card, dict) and card.get("subproblem_id") == question],
             "associations": question_associations(project, question, nodes, records, figure_cards, model_cards, result_cards, model_path, figure_path),
         })
     figure_views = []

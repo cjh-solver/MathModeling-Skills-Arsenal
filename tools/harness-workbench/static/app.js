@@ -31,7 +31,7 @@ const iconPaths = {
 };
 const icon = (name) => `<svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name] || iconPaths.file}</svg>`;
 const sectionIcons = { '需要关注': 'alert', '小问进度': 'layers', '角色会话': 'users', '论文与图表': 'file', '最近成果': 'layers', '成果中心': 'layers' };
-const statusNames = { approved: '记录为已批准', completed: '记录为已完成', frozen: '记录为已冻结', review_pending: '待审查', evidence_gap: '证据缺口', stale: '记录已过期', not_started: '未开始', pending: '待处理', paused: '已暂停', pause: '已暂停', blocked: '已阻塞', failed: '失败', draft: '草稿', unknown: '未知', merged: '已合并' };
+const statusNames = { approved: '记录为已批准', completed: '记录为已完成', frozen: '记录为已冻结', review_pending: '待审查', evidence_gap: '证据缺口', stale: '记录已过期', not_started: '未开始', pending: '待处理', paused: '已暂停', pause: '已暂停', blocked: '已阻塞', failed: '失败', draft: '草稿', verified: '记录为已核验', rejected: '记录为未通过', unknown: '未知', merged: '已合并' };
 let state = null;
 let current = 'overview';
 let resultTab = 'recommended';
@@ -381,8 +381,17 @@ function questionPage() {
   const models = selected.models || [];
   const interpretations = selected.interpretations || [];
   const block = (title, iconName, content) => `<section class="question-section"><h3>${icon(iconName)}${title}</h3>${content}</section>`;
-  const modelsContent = models.length ? models.map(model => `<div class="question-item"><span class="question-item-icon">${icon('solve')}</span><div><strong>${esc(QuestionLabels.model(model.id))}</strong><p>结果：${esc(display(QuestionLabels.result(model.result)))}</p></div></div>`).join('') : '<p class="question-empty">尚未登记模型</p>';
-  const results = interpretations.length ? interpretations.map(item => `<div class="question-item"><span class="question-item-icon">${icon('chart')}</span><div><strong>${esc(display(item.fact))}</strong><p>含义：${esc(display(item.meaning))}</p><p>边界：${esc(display(item.boundary))}</p><p>验证记录：${esc(display(item.verification))}</p></div></div>`).join('') : '<p class="question-empty">尚未登记结果解释</p>';
+  const present = value => value !== undefined && value !== null && value !== '';
+  const modelsContent = models.length ? models.map(model => {
+    const expression = model.formulation?.expression;
+    const method = model.solver_interface?.method;
+    const details = present(expression) || present(method) ? `<details class="question-original"><summary>模型与求解接口</summary>${present(expression) ? `<p>最终模型</p><pre>${esc(display(expression))}</pre>` : ''}${present(method) ? `<p>求解方法：${esc(display(method))}</p>` : ''}</details>` : '';
+    return `<div class="question-item"><span class="question-item-icon">${icon('solve')}</span><div><strong>${esc(QuestionLabels.model(model.id))}</strong>${present(model.purpose) ? `<p>${esc(display(QuestionLabels.text(model.purpose)))}</p>` : ''}${present(model.result) ? `<p>结果：${esc(display(QuestionLabels.result(model.result)))}</p>` : ''}${details}</div></div>`;
+  }).join('') : '<p class="question-empty">尚未登记模型</p>';
+  const results = interpretations.length ? interpretations.map(item => {
+    const verification = typeof item.verification === 'string' && Object.hasOwn(statusNames, item.verification) ? statusNames[item.verification] : item.verification;
+    return `<div class="question-item"><span class="question-item-icon">${icon('chart')}</span><div><strong>${esc(display(item.fact))}</strong>${present(item.meaning) ? `<p>含义：${esc(display(item.meaning))}</p>` : ''}${present(item.boundary) ? `<p>边界：${esc(display(item.boundary))}</p>` : ''}${present(verification) ? `<p>状态：${esc(display(verification))}</p>` : ''}</div></div>`;
+  }).join('') : '<p class="question-empty">尚未登记结果解释</p>';
   const materials = associations.materials || [];
   const material = materials.length ? materials.map(item => `<div class="question-item">${fileIcon(item.path)}<div class="question-item-copy"><strong>${esc(fileDisplayName(item.path))}</strong><p>${esc(item.relation)}</p><p>来源：${esc(item.source || '未登记')} · ${esc(item.path)}</p></div>${item.previewable ? fileLink(item.path) : `<button class="row-action" data-copy-path="${esc(item.path)}">复制路径</button>`}</div>`).join('') : '<p class="question-empty">未识别到已登记的关联材料</p>';
   const stages = (associations.stages || []).map(stage => `<div class="question-item"><span class="question-item-icon">${icon('flag')}</span><div class="question-item-copy"><strong>${esc(stage.id)} · ${esc(stage.name)}</strong><p>覆盖小问 · 来源：${esc(stage.source)}</p></div><button class="row-action" data-node="${esc(stage.id)}">查看</button></div>`).join('') || '<p class="question-empty">未识别阶段与小问的关联</p>';

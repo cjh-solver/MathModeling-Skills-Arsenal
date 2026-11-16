@@ -30,6 +30,17 @@ Windows 也可以双击 `start_workbench.bat`。使用期间保持终端窗口�
 py -3.13 app.py --project "C:\path\to\contest-project" --open
 ```
 
+## 小问信息如何同步
+
+工作台按控制记录登记的小问读取对应资料，兼容历史字段与现行 Harness 模板，不需要额外的 agent 维护：
+
+- 小问范围：读取 `problem_scope.subproblems`，支持 `Q1` 这样的编号以及 `{id: Q1}`；资料中出现的其他编号不会自动加入范围。
+- 题目详情：读取 H1 登记文件的 `subproblems` 映射或列表，包括目标、输入、输出和跨问接口；兼容历史 `questions` 与 `objectives`。
+- 模型与结果：读取 H5 登记的模型卡与结果解释卡，显示模型用途、可展开的模型表达式与求解方法，以及 `result_statement`、`supported_scope` 和 `evidence_refs`。没有数值结果的模型卡不会显示虚构结果。
+- 关联材料：只连接项目内实际存在的登记文件；图件的 `subproblem` 或 `subproblem_id` 明确归属优先于编号线索。角色关联仍须有任务卡与派发记录对应，不按文件名猜测作者。
+
+这些字段随已有的本地刷新机制更新。草稿、核验与批准保持各自的记录含义，页面读取不会生成审批或改写历史项目。
+
 ## 边界与隐私
 
 CSV 与 TSV 文件可直接以表格预览，支持 UTF-8（含 BOM）及 GB18030 编码；TSV 按制表符分列。

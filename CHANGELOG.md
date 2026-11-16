@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-17 — current Harness question records in the workbench
+
+- Read structured subproblem IDs and current H1 question profiles alongside legacy records, without expanding the registered contest scope.
+- Display current H5 model purpose, formulation, solver method and result interpretations; keep numeric results absent when they were not recorded and retain explicit draft status.
+- Link recorded result evidence and canonical figure bindings to the correct question. Explicit bindings take precedence over figure-name hints, and missing or external files remain excluded.
+- Cover current skill templates, legacy compatibility, read-only inputs and escaped frontend content with regression tests; apply the same scoped fix to the local prototype.
+
 ## 2026-11-17 — test environment dependencies
 
 - Install `pypdf` before the figure-registry CI checks import the delivery module, and align the documented local test setup with CI.

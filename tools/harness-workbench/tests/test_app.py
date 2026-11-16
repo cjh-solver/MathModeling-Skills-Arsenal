@@ -391,6 +391,73 @@ dispatch_records:
         ], [], [], None, 'figures.yaml')
         self.assertEqual(result['materials'], [])
 
+    def test_structured_scope_and_current_question_profiles_are_displayed(self):
+        self.write_control('active_mode: full-contest-harness\nproblem_scope: {subproblems: [{id: Q1}, Q2]}\nnodes:\n  H1: {unified_problem_package: profile.yaml}\n')
+        details = {'objective': '降低成本', 'inputs': ['负荷.csv'], 'outputs': ['方案.csv'], 'cross_question_interface': 'Q1 输出供 Q2 使用'}
+        for subproblems in ({'Q1': details}, [{'id': 'Q1', **details}]):
+            with self.subTest(subproblems=subproblems):
+                (self.project / 'profile.yaml').write_text(app.yaml.safe_dump({'subproblems': subproblems}, allow_unicode=True), encoding='utf-8')
+                state = app.build_state(self.project, self.links)
+                self.assertEqual(state['subproblems'], ['Q1', 'Q2'])
+                self.assertEqual([question['id'] for question in state['question_views']], ['Q1', 'Q2'])
+                question = state['question_views'][0]
+                self.assertEqual(question['objective'], details['objective'])
+                self.assertEqual(question['inputs'], details['inputs'])
+                self.assertEqual(question['outputs'], details['outputs'])
+                self.assertEqual(question['interface'], details['cross_question_interface'])
+
+    def test_current_skill_cards_display_results_models_and_evidence_without_rewriting(self):
+        templates = Path(__file__).resolve().parents[3] / 'skills/01-core/contest-orchestrator/templates'
+        models = app.yaml.safe_load((templates / 'model_summary_cards.yaml').read_text(encoding='utf-8'))
+        results = app.yaml.safe_load((templates / 'result_interpretation_cards.yaml').read_text(encoding='utf-8'))
+        models['cards'][0].update(card_id='Q1-final-model', subproblem_id='Q1', purpose='满足需求并降低成本')
+        models['cards'][0]['final_formulation'] = {'kind': 'optimization', 'expression': 'min c*x'}
+        results['cards'][0].update(card_id='Q1-result', subproblem_id='Q1', result_statement='合成结果为 42', supported_scope='测试范围', evidence_refs=[{'path': 'results.csv', 'sha256': 'a' * 64}])
+        self.write_control('active_mode: full-contest-harness\nproblem_scope: {subproblems: [Q1]}\nnodes:\n  H5: {model_summary_cards: models.yaml, result_interpretation_cards: results.yaml}\n')
+        for name, data in (('models.yaml', models), ('results.yaml', results)):
+            (self.project / name).write_text(app.yaml.safe_dump(data, allow_unicode=True), encoding='utf-8')
+        (self.project / 'results.csv').write_text('value\n42\n', encoding='utf-8')
+        before = {path: (path.read_bytes(), path.stat().st_mtime_ns) for path in self.project.rglob('*') if path.is_file()}
+
+        question = app.build_state(self.project, self.links)['question_views'][0]
+
+        self.assertEqual(question['models'][0]['purpose'], '满足需求并降低成本')
+        self.assertEqual(question['models'][0]['formulation']['expression'], 'min c*x')
+        self.assertIsNone(question['models'][0]['result'])
+        interpretation = question['interpretations'][0]
+        self.assertEqual(interpretation['id'], 'Q1-result')
+        self.assertEqual(interpretation['fact'], '合成结果为 42')
+        self.assertEqual(interpretation['boundary'], '测试范围')
+        self.assertEqual(interpretation['verification'], 'draft')
+        self.assertIn('results.csv', [item['path'] for item in question['associations']['materials']])
+        self.assertEqual({path: (path.read_bytes(), path.stat().st_mtime_ns) for path in before}, before)
+
+    def test_current_result_and_figure_associations_keep_question_boundaries(self):
+        for name in ('result.csv', 'chart.svg', 'wrong.svg', 'ambiguous.svg'):
+            (self.project / name).write_text('synthetic', encoding='utf-8')
+        (self.base / 'outside.csv').write_text('private', encoding='utf-8')
+        results = [{'subproblem_id': 'Q1', 'evidence_refs': [{'path': 'result.csv'}, {'path': '../outside.csv'}, {'path': 'missing.csv'}]}]
+        figures = [
+            {'figure_id': 'plot', 'subproblem': 'Q1', 'svg': 'chart.svg'},
+            {'figure_id': 'H7-Q1', 'subproblem_id': 'Q2', 'svg': 'wrong.svg'},
+            {'figure_id': 'H7-Q1', 'subproblem_id': 'Q1', 'subproblem': 'Q2', 'svg': 'ambiguous.svg'},
+        ]
+
+        association = app.question_associations(self.project, 'Q1', {}, [], figures, [], results, None, 'figures.yaml')
+
+        self.assertEqual({item['path'] for item in association['materials']}, {'result.csv', 'chart.svg'})
+
+    def test_unregistered_question_details_do_not_create_questions(self):
+        self.write_control('active_mode: full-contest-harness\nproblem_scope: {subproblems: [Q1]}\nnodes:\n  H1: {unified_problem_package: profile.yaml}\n  H5: {result_interpretation_cards: results.yaml}\n')
+        (self.project / 'profile.yaml').write_text('subproblems: {Q99: {objective: unrelated}}', encoding='utf-8')
+        (self.project / 'results.yaml').write_text('cards: [{subproblem_id: Q99, result_statement: unrelated}]', encoding='utf-8')
+
+        state = app.build_state(self.project, self.links)
+
+        self.assertEqual([question['id'] for question in state['question_views']], ['Q1'])
+        self.assertIsNone(state['question_views'][0]['objective'])
+        self.assertEqual(state['question_views'][0]['interpretations'], [])
+
     def test_recorded_timestamp_requires_valid_timezone(self):
         self.assertEqual(app.recorded_timestamp('2026-11-14T13:00:00Z'), '2026-11-14T13:00:00+00:00')
         self.assertIsNone(app.recorded_timestamp('2026-11-14T13:00:00'))
