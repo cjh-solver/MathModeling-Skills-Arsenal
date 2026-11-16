@@ -88,8 +88,10 @@ python -m unittest discover -s tests -p "test_harness_writer_preparation.py"
 
 ## 本地复现
 
+以下依赖与仓库 CI 的基础测试环境一致。`pypdf` 用于交付检查模块，图件登记测试也会导入该模块，因此仅安装 PyYAML 不足以运行这些测试。
+
 ```bash
-python -m pip install pyyaml
+python -m pip install pyyaml pypdf pymupdf python-docx openpyxl
 python scripts/check_repository.py
 python examples/chapter-parallel/calculate.py
 cd skills/01-core/contest-orchestrator

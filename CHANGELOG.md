@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-17 — test environment dependencies
+
+- Install `pypdf` before the figure-registry CI checks import the delivery module, and align the documented local test setup with CI.
+- Recheck the figure-registry suite after the dependency fix; no contest records or delivery checks are bypassed.
+
 ## 2026-11-17 — reuse question-scoped sensitivity evidence
 
 - Let one sensitivity report serve H5 traceability and multiple questions by binding each result row to its subproblem; retain single-question header compatibility.
