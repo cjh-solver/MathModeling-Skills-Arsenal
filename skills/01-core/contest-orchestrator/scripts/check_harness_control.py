@@ -3464,12 +3464,12 @@ def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool
     if control.get("visual_workflow") in {"writer_first_draft", "chapter_parallel"} and "H7" in checked_nodes:
         _validate_writer_preparation(root, control, log, missing, failures)
     for node_id in checked_nodes:
+        # H4 is retained only for historical records; H5 now owns its work.
+        if node_id == "H4":
+            continue
         node = nodes.get(node_id)
         if not isinstance(node, dict):
             failures.append(f"{node_id}: 节点记录缺失")
-            continue
-        # H4 节点已取消（v4.19 起并入 H5 阶段一），跳过其独立检查
-        if node_id == "H4":
             continue
         node_status = node.get("status")
         if node_status not in NODE_STATUSES:

@@ -92,6 +92,22 @@ class StatusTransitionTests(unittest.TestCase):
 
 
 class ThroughRuleTests(unittest.TestCase):
+    def test_merged_h4_record_is_optional_but_h5_is_still_required(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            contest = root / ".contest"
+            contest.mkdir()
+            control = checker.default_control()
+            control["nodes"].pop("H4")
+            control_path = contest / "harness_control.yaml"
+            control_path.write_text(yaml.safe_dump(control, allow_unicode=True), encoding="utf-8")
+            report = checker.check_harness_control(root, through="H5")
+            self.assertFalse(any("H4: 节点记录缺失" in item for item in report["failures"]), report)
+            control["nodes"].pop("H5")
+            control_path.write_text(yaml.safe_dump(control, allow_unicode=True), encoding="utf-8")
+            report = checker.check_harness_control(root, through="H5")
+            self.assertTrue(any("H5: 节点记录缺失" in item for item in report["failures"]), report)
+
     def test_rejects_through_ahead_of_approval(self):
         """H5 at review_pending without review packet blocks through=H6."""
         with tempfile.TemporaryDirectory() as raw:
