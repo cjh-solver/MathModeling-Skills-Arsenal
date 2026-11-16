@@ -21,6 +21,32 @@ def load_module(relative_path: str, name: str):
 
 
 class RuntimeHardeningTests(unittest.TestCase):
+    def test_status_history_orders_offsets_by_actual_time(self):
+        checker = load_module("scripts/check_harness_control.py", "check_status_timezones")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / ".contest").mkdir()
+            records = [
+                {"node_id": "H5", "from_status": "not_started", "to_status": "draft", "timestamp": "2026-11-16T08:00:00+08:00"},
+                {"node_id": "H5", "from_status": "draft", "to_status": "review_pending", "timestamp": "2026-11-16T00:01:00Z"},
+                {"node_id": "H5", "from_status": "review_pending", "to_status": "approved", "timestamp": "2026-11-16T00:02:00Z"},
+            ]
+            path = root / ".contest" / "status_history.yaml"
+            path.write_text(yaml.safe_dump({"transitions": records}), encoding="utf-8")
+            missing, failures = [], []
+            checker._validate_status_history(root, {}, "H5", missing, failures)
+            self.assertEqual((missing, failures), ([], []))
+            records[1]["timestamp"] = "2026-11-15T23:59:00Z"
+            path.write_text(yaml.safe_dump({"transitions": records}), encoding="utf-8")
+            missing, failures = [], []
+            checker._validate_status_history(root, {}, "H5", missing, failures)
+            self.assertTrue(failures, "Out-of-order transitions must remain blocked")
+            records[1]["timestamp"] = "2026-11-16T00:01:00"
+            path.write_text(yaml.safe_dump({"transitions": records}), encoding="utf-8")
+            missing, failures = [], []
+            checker._validate_status_history(root, {}, "H5", missing, failures)
+            self.assertTrue(any("时区" in item for item in failures), failures)
+
     def test_current_pending_review_pauses_but_cannot_advance(self):
         checker = load_module("scripts/check_harness_control.py", "check_pending_review")
         with tempfile.TemporaryDirectory() as raw:
@@ -71,6 +97,24 @@ class RuntimeHardeningTests(unittest.TestCase):
             checker.validate_dispatch_order(root, control, "H5", missing, failures)
 
         self.assertTrue(any("H5" in item and "H3" in item for item in failures))  # H4已并入H5，H5前驱是H3
+
+    def test_mixed_timezone_dispatch_is_blocked_without_exception(self):
+        checker = load_module("scripts/check_harness_control.py", "check_dispatch_timezones")
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / ".contest").mkdir()
+            history = {"transitions": [{"node_id": "H3", "to_status": "approved", "timestamp": "2026-01-01T00:00:00Z"}]}
+            path = root / ".contest" / "status_history.yaml"
+            path.write_text(yaml.safe_dump(history), encoding="utf-8")
+            control = {"dispatch_records": [{"node_id": "H5", "dispatched_at": "2026-01-01T08:01:00"}]}
+            missing, failures = [], []
+            checker.validate_dispatch_order(root, control, "H5", missing, failures)
+            self.assertTrue(any("时区" in item for item in failures), failures)
+            history["transitions"].append({"node_id": "H3", "to_status": "frozen", "timestamp": "2026-01-01T08:00:00"})
+            path.write_text(yaml.safe_dump(history), encoding="utf-8")
+            missing, failures = [], []
+            checker.validate_dispatch_order(root, control, "H5", missing, failures)
+            self.assertTrue(any("批准时间" in item for item in failures), failures)
 
     def test_literature_sources_are_required_before_model_route(self):
         checker = load_module("scripts/check_harness_control.py", "check_harness_control_literature")

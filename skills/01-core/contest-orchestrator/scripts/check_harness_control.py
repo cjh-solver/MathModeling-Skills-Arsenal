@@ -169,13 +169,15 @@ def _validate_status_history(root: Path, control: dict[str, Any], through: str,
     if not isinstance(records, list) or not records:
         failures.append("status_history 必须含非空 transitions 列表")
         return approved_nodes
-    # 按时间排序
-    def _sort_key(rec: dict) -> str:
-        return str(rec.get("timestamp", ""))
-    try:
-        records_sorted = sorted(records, key=_sort_key)
-    except Exception:
-        records_sorted = records
+    # ISO strings with different offsets are not ordered by their text.
+    times = [_parse_timestamp(rec.get("timestamp")) if isinstance(rec, dict) else None for rec in records]
+    records_sorted = records
+    if all(value is not None for value in times):
+        has_timezone = {value.utcoffset() is not None for value in times}
+        if len(has_timezone) > 1:
+            failures.append("status_history: 不能混用带时区和不带时区的时间戳")
+        else:
+            records_sorted = [record for _, record in sorted(zip(times, records), key=lambda item: item[0])]
     # 跟踪每个节点的当前状态
     node_current: dict[str, str] = {}
     for idx, rec in enumerate(records_sorted):
@@ -256,7 +258,11 @@ def validate_dispatch_order(root: Path, control: dict[str, Any], through: str,
         timestamp = _parse_timestamp(item.get("timestamp"))
         node_id = item.get("node_id")
         if timestamp is not None and isinstance(node_id, str):
-            approved_at[node_id] = max(timestamp, approved_at.get(node_id, timestamp))
+            previous = approved_at.get(node_id)
+            if previous is not None and (previous.utcoffset() is None) != (timestamp.utcoffset() is None):
+                failures.append(f"status_history: {node_id} 的批准时间不能混用带时区和不带时区的时间戳")
+                continue
+            approved_at[node_id] = max(timestamp, previous or timestamp)
 
     records = control.get("dispatch_records", [])
     if not isinstance(records, list):
@@ -280,6 +286,8 @@ def validate_dispatch_order(root: Path, control: dict[str, Any], through: str,
             predecessor_time = approved_at.get(predecessor)
             if predecessor_time is None:
                 missing.append(f"dispatch_records[{index}]: {node_id} 缺少前置节点 {predecessor} 的 approved/frozen 记录")
+            elif (dispatched_at.utcoffset() is None) != (predecessor_time.utcoffset() is None):
+                failures.append(f"dispatch_records[{index}]: {node_id} 派发时间与 {predecessor} 批准时间的时区信息不一致")
             elif dispatched_at < predecessor_time:
                 failures.append(
                     f"dispatch_records[{index}]: {node_id} 在前置节点 {predecessor} 获批前派发，"
