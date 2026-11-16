@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-17 — compact document previews and prototype reconciliation
+
+- Remove empty trailing rows within the spreadsheet preview range while preserving internal gaps, formulas, zero and boolean values; retain row, column and cell-size limits despite inaccurate workbook dimensions.
+- Explain empty table previews and size file dialogs to their content, with bounded scrolling for long text and PDF pages.
+- Reconcile the local prototype's missing worksheet-request ordering, XLSX-column and TSV-preview fixes using scoped functions and routes, preserving its unrelated defaults and caches.
+- Add HTTP regressions with actual XLSX/CSV/TSV fixtures and verify document interactions and compact dialogs in isolated browser sessions.
+
 ## 2026-11-17 — index registered Harness handoff evidence
 
 - Prefer registered Harness source paths, including Chinese names and nested folders, over conventional filenames; expose missing or invalid registrations without borrowing historical copies.

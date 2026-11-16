@@ -175,6 +175,23 @@ test('Word preview preserves the order of paragraphs and tables', async () => {
   assert.ok(container.innerHTML.indexOf('table value') < container.innerHTML.indexOf('last paragraph'));
 });
 
+test('empty table previews explain the absence of data', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
+  const start = source.indexOf('async function renderDocument(');
+  const end = source.indexOf('\nfunction previewImage(', start);
+  for (const type of ['xlsx', 'csv', 'tsv']) {
+    const context = {
+      state: { project: 'project' }, esc: value => String(value),
+      fetch: async () => ({ ok: true, json: async () => ({ type, rows: [], sheets: ['Sheet'], sheet: 'Sheet', note: '' }) }),
+    };
+    vm.runInNewContext(source.slice(start, end), context);
+    const container = { querySelector: () => ({ addEventListener() {} }) };
+    await context.renderDocument(container, 'empty.' + type);
+    assert.match(container.innerHTML, /当前范围内没有可预览的数据/);
+    assert.doesNotMatch(container.innerHTML, /<table>/);
+  }
+});
+
 test('a delayed spreadsheet response cannot replace the selected sheet', async () => {
   const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
   const start = source.indexOf('async function renderDocument(');

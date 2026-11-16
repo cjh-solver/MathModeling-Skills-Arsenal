@@ -665,7 +665,7 @@ async function renderDocument(container, path, sheet = '') {
     const data = await response.json();
     if (container.documentPreviewRequest !== request) return;
     if (!response.ok) throw new Error(data.error);
-    const table = (rows) => `<div class="table-scroll"><table>${rows.map(row => `<tr>${row.map(cell => `<td>${esc(cell)}</td>`).join('')}</tr>`).join('')}</table></div>`;
+    const table = (rows) => rows.length ? `<div class="table-scroll"><table>${rows.map(row => `<tr>${row.map(cell => `<td>${esc(cell)}</td>`).join('')}</tr>`).join('')}</table></div>` : '<p class="empty">当前范围内没有可预览的数据。</p>';
     if (data.type === 'xlsx') {
       container.innerHTML = `<div class="document-toolbar"><label>工作表 <select>${data.sheets.map(name => `<option ${name === data.sheet ? 'selected' : ''} value="${esc(name)}">${esc(name)}</option>`).join('')}</select></label><span>${esc(data.note)}</span></div>${table(data.rows)}`;
       container.querySelector('select').addEventListener('change', event => renderDocument(container, path, event.target.value));
