@@ -28,6 +28,16 @@ budget remains one plan.
 
 ## Execution semantics
 
+- For Harness projects, prefer source paths explicitly registered in the control
+  record over conventional filenames. A missing or invalid registered source is
+  a visible gap, not permission to substitute a historical copy. With no
+  registration, retain conventional discovery for existing projects.
+- Index current H5 YAML traceability manifests and H7 YAML figure registries as
+  well as legacy captured JSON runs. Preserve each source's recorded status;
+  an H5 `verified` traceability record is not a newly executed run or an approval.
+- Include existing model and result cards as compact derived summaries, retaining
+  their question IDs and source paths instead of duplicating scientific content.
+  Index output must not overwrite a source record or the Harness control file.
 - At `blueprint`, validate the declared plan and capacity before writing.
 - At `solution`, require a generated evidence index and completed per-question
   evidence; missing source artifacts route back to modeling or execution.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-17 — index registered Harness handoff evidence
+
+- Prefer registered Harness source paths, including Chinese names and nested folders, over conventional filenames; expose missing or invalid registrations without borrowing historical copies.
+- Index current H5 YAML traceability manifests, H7 YAML figure registries and compact model/result-card summaries alongside legacy JSON captures. Preserve recorded statuses and distinguish an H5 verified record from a completed captured run.
+- Keep discovered sources inside the project and prevent index output from overwriting source or control records, including hardlink aliases.
+- Cover discovery, schema compatibility, source preservation and repeated builds in CI. The derived index remains a locator and report; it does not approve evidence or replace scientific checks.
+
 ## 2026-11-17 — remove merged H5 entry self-dependencies
 
 - Require upstream problem and literature records at H5 entry; stop requiring method-transfer, blueprint and model-contract files as frozen inputs before the same solver creates them.
