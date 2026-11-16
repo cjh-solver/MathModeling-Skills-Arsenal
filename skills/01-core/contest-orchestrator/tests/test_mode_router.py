@@ -43,6 +43,8 @@ class ModeRouterTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertEqual(payload["status"], "READY")
         self.assertEqual(payload["active_mode"], "full-contest-harness")
+        self.assertIn("开发快照", payload["descriptions"]["full-contest-harness"])
+        self.assertIn("H4 已并入 H5", payload["descriptions"]["full-contest-harness"])
         self.assertEqual(
             payload["read_files"],
             ["references/modes/full-contest-harness.md"],

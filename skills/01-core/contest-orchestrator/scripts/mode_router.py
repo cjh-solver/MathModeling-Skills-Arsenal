@@ -28,7 +28,7 @@ DESCRIPTIONS = {
     "full-contest": "全流程竞赛模式；必须继续选择一种全流程子模式。",
     "full-contest-legacy": "兼容旧流程：按既有 A–G 阶段执行，不启用新增节点。",
     "full-contest-4-18": "已确认的 4.18 稳定节点流程：使用既定 G0–G6 协作门。",
-    "full-contest-harness": "Harness 半自动流程：使用 H0–H9；4.18 稳定版，含绑定契约与节点暂停点。",
+    "full-contest-harness": "Harness 半自动流程：使用 H0–H9，H4 已并入 H5；当前为开发快照，含绑定契约与人工批准门。",
     "full-contest-mathorcup": "MathorCup 大数据竞赛：M1–M5 数据与实验主线、固定角色和逐节点人工确认。",
     "subproblem": "只处理指定小问及直接依赖，不自动扩展为全文交付。",
     "paper": "只处理论文内容、结构、排版或论文审阅，不重新建模。",
