@@ -6,6 +6,28 @@
 
 `examples/chapter-parallel` 使用可复算的合成线性数据，其误差为零源于数据构造方式。示例中的正文、交接提示词不构成真实比赛记录或自动生成质量评测。
 
+## 2026-11-17 安装副本核对
+
+核对发现，版本号相同并不代表安装副本已包含仓库里的全部修复。此次补齐维护环境安装副本中遗漏的 5 个回归用例及对应实现：增量复核不得跳过更早的失效节点，非法变更卡须返回错误，论文草稿准入在控制记录或批准日志缺失时须保持阻塞。对齐后，`validation_router.py` 和 `check_harness_control.py` 的 Python 语法树与公开版一致；用户数据和项目批准记录未参与同步。
+
+以下差异需按用途处理，不能用测试总数或整目录覆盖代替核对：
+
+| 差异 | 处理方式 |
+|---|---|
+| `test_public_experience_optional.py` | 公开包专用：验证私有经验库缺失时的冷启动行为；未安装此用例不等于运行时修复遗漏 |
+| `test_figure_registry.py` | 安装副本与公开版分别包含退役生成器拒绝、现行 TikZ 来源正反例；需要结合各自的历史兼容政策判断 |
+| `check_core_execution.py`、`delivery_gate.py`、`figure_registry.py` | 历史图表兼容规则仍有差异；当前 Harness 的现行图表要求不能由历史兼容入口替代 |
+| `public_sync.py`、`skill_health_check.py` | 公开化路径适配不同，不能把公开版示例占位符直接覆盖到安装副本 |
+
+在仓库技能目录和安装副本目录分别运行以下用例，可复核本次对齐的行为：
+
+```text
+python -m unittest discover -s tests -p "test_incremental_verification.py"
+python -m unittest discover -s tests -p "test_harness_writer_preparation.py"
+```
+
+维护更新时，先比较受影响函数、模板与回归用例，再将缺失修复合入安装副本并在该副本运行相同的相关测试。公共 CI 通过只证明公开仓库对应提交；本机版本标识、较少的测试数量、换行符或 BOM 差异均不能单独证明安装副本是否完整。
+
 ## 2026-11-15 维护检查
 
 公开版 CUMCM 排版适配器已在本机用 XeLaTeX 编译三个模板及布局冒烟样例，并用合成 SVG 验证 Inkscape 转换链路。设置环境变量 `CUMCM_RUN_LATEX_TESTS=1` 可启用额外的 XeLaTeX 路径兼容测试；CI 默认只检查源码契约。这些检查不代表真实论文或特定比赛规则已通过交付审核。
