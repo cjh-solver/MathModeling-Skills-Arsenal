@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-17 — resolve nested abstract sources as XeLaTeX does
+
+- Resolve nested `input` and `include` paths from the paper compilation directory and ignore TeX comments, so the strict abstract report does not bind a different same-named file.
+- Accept a project-relative explicit source path, retain escaped percentages in numeric provenance, and correct the synthetic replay's TeX and matching evidence anchor.
+- Recheck older snapshots if their selected source or comment handling changes; complex TeX macro expansion is not inferred and human review remains required.
+
 ## 2026-11-17 — bind abstract closure to the registered paper
 
 - Apply the existing paper-source precedence consistently to abstract snapshots and closure, including sources registered in the claim-coverage record.

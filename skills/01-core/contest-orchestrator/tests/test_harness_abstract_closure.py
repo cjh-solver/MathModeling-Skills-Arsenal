@@ -123,7 +123,7 @@ class AbstractClosureTests(unittest.TestCase):
         text = (paper / "paper.tex").read_text(encoding="utf-8")
         (paper / "sections").mkdir()
         (paper / "sections/abstract.tex").write_text(text, encoding="utf-8")
-        (paper / "sections/container.tex").write_text(r"\input{abstract}", encoding="utf-8")
+        (paper / "sections/container.tex").write_text(r"\input{sections/abstract}", encoding="utf-8")
         entry = paper / "custom.tex"
         entry.write_text(r"\input{sections/container}", encoding="utf-8")
         report = abstract_checker.check(paper, self.root, strict=True, source_path=entry)
@@ -133,8 +133,62 @@ class AbstractClosureTests(unittest.TestCase):
         self.node["paper_source"] = "paper/custom.tex"
         self.assertEqual(self.check(), ([], []))
         (paper / "sections/copy.tex").write_text(text, encoding="utf-8")
-        (paper / "sections/container.tex").write_text(r"\input{copy}", encoding="utf-8")
+        (paper / "sections/container.tex").write_text(r"\input{sections/copy}", encoding="utf-8")
         self.assertTrue(any("实际摘要来源已变化" in item for item in self.check()[1]))
+
+    def test_nested_inputs_use_compilation_directory_not_child_directory(self):
+        paper = self.root / "paper"
+        source = (paper / "paper.tex").read_text(encoding="utf-8")
+        (paper / "sections/sections").mkdir(parents=True)
+        (paper / "sections/abstract.tex").write_text(source, encoding="utf-8")
+        (paper / "sections/sections/abstract.tex").write_text(
+            r"\begin{abstract}Wrong source.\end{abstract}", encoding="utf-8")
+        (paper / "sections/container.tex").write_text(r"\input{sections/abstract}", encoding="utf-8")
+        entry = paper / "custom.tex"
+        entry.write_text(r"\input{sections/container}", encoding="utf-8")
+        report = abstract_checker.check(paper, self.root, strict=True, source_path=entry)
+        self.assertTrue(report["passed"], report)
+        self.assertEqual(report["content_snapshot"]["abstract_source"], "paper/sections/abstract.tex")
+        self.save_report(report)
+        self.node["paper_source"] = "paper/custom.tex"
+        self.assertEqual(self.check(), ([], []))
+        (paper / "sections/abstract.tex").write_text(r"\begin{abstract}Changed.\end{abstract}", encoding="utf-8")
+        self.assertTrue(any("摘要或关键词已变化" in item for item in self.check()[1]))
+
+    def test_commented_inputs_and_abstracts_are_not_selected(self):
+        paper = self.root / "paper"
+        source = (paper / "paper.tex").read_text(encoding="utf-8")
+        (paper / "real.tex").write_text(source, encoding="utf-8")
+        (paper / "decoy.tex").write_text(r"\begin{abstract}Decoy.\end{abstract}", encoding="utf-8")
+        entry = paper / "custom.tex"
+        entry.write_text("% " + r"\input{decoy}" + "\n" + r"\input{real} % \input{decoy}" + "\n", encoding="utf-8")
+        report = abstract_checker.check(paper, self.root, strict=True, source_path=entry)
+        self.assertTrue(report["passed"], report)
+        self.assertEqual(report["content_snapshot"]["abstract_source"], "paper/real.tex")
+        entry.write_text("% " + r"\begin{abstract}Decoy.\end{abstract}" + "\n" + source, encoding="utf-8")
+        report = abstract_checker.check(paper, self.root, strict=True, source_path=entry)
+        self.assertTrue(report["passed"], report)
+        self.assertEqual(report["content_snapshot"]["abstract_source"], "paper/custom.tex")
+
+    def test_tex_comments_do_not_change_snapshot_and_escaped_percent_is_a_number(self):
+        source = self.root / "paper/paper.tex"
+        source.write_text(source.read_text(encoding="utf-8").replace(
+            "\\begin{abstract}\n", "\\begin{abstract}% original comment\n"), encoding="utf-8")
+        report = self.report(strict=True)
+        self.assertTrue(any(row["token"] == "12.5%" for row in report["numeric_values"]), report)
+        source.write_text(source.read_text(encoding="utf-8").replace(
+            "% original comment", "% revised comment"), encoding="utf-8")
+        self.assertEqual(self.check(), ([], []))
+
+    def test_source_cli_accepts_project_relative_path_from_elsewhere(self):
+        paper = self.root / "paper"
+        (paper / "custom.tex").write_bytes((paper / "paper.tex").read_bytes())
+        result = subprocess.run([sys.executable, "-X", "utf8", str(ROOT / "scripts/check_abstract_contract.py"),
+                                 str(paper), "--project-root", str(self.root), "--strict",
+                                 "--source", "paper/custom.tex", "--out", str(self.root / "report.json")],
+                                cwd=ROOT, capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(json.loads(result.stdout)["content_snapshot"]["entry_source"], "paper/custom.tex")
 
     def test_report_cannot_substitute_an_identical_registered_main_source(self):
         self.report(strict=True)

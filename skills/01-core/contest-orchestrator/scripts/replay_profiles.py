@@ -95,7 +95,7 @@ unresolved_conditions: []
         "数据来源、变量定义、参数边界和求解步骤均记录在结果文件中，避免将示例数值误写成真实结果。"
         "摘要中的方法描述与正文模型建立章节逐项对应，先说明问题条件，再给出模型选择、算法流程和结果解释。"
         "对于不同子任务，分别说明输入数据、输出指标、参数范围和验证方式，使读者能够根据摘要定位正文证据。\n\n"
-        f"问题一采用{cfg['body']}问题二采用对照模型，主要结果为准确率 0.85、误差 3.2、提升 12.5%，"
+        f"问题一采用{cfg['body']}问题二采用对照模型，主要结果为准确率 0.85、误差 3.2、提升 12.5\\%，"
         "结果来源于 results/q1_results.json。为便于复核，摘要只保留与表格一致的关键数值，并明确每个数值的含义和单位。\n\n"
         "通过项目敏感性计划声明的参数扰动、误差分析和稳定性检验确认结论边界。综合来看，该模型可用于题目场景下的方案比较和决策支持，"
         "但在数据分布超出当前范围时需要重新校准，适用价值由实际结果而不是空泛评价决定。该结论仅适用于题目给定的数据范围，"
@@ -231,7 +231,7 @@ source_inputs:
             {"id": "claim:error", "value": 3.2, "source_file": "results/q1_results.json",
              "json_pointer": "/error", "text_anchor": "误差 3.2"},
             {"id": "claim:improvement", "value": 12.5, "source_file": "results/q1_results.json",
-             "json_pointer": "/improvement_percent", "text_anchor": "提升 12.5%"}
+             "json_pointer": "/improvement_percent", "text_anchor": "提升 12.5\\%"}
         ]
     }, ensure_ascii=False, indent=2), encoding="utf-8")
     manifest_spec = {

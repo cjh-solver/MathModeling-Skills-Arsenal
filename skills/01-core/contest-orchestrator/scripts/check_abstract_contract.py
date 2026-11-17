@@ -60,6 +60,11 @@ def _locate_pdf(target: Path) -> Path:
     raise FileNotFoundError(f"未找到论文 PDF: {target}")
 
 
+def _strip_tex_comments(text: str) -> str:
+    """Remove TeX comments while preserving escaped percent signs."""
+    return re.sub(r"(?<!\\)((?:\\\\)*)%[^\r\n]*", r"\1", text)
+
+
 def _source_selection(paper_dir: Path, explicit: Path | None = None,
                       project_root: Path | None = None) -> tuple[Path | None, Path | None]:
     candidates = [explicit] if explicit is not None else [paper_dir / "paper.tex", paper_dir / "paper_pandoc.tex", *sorted(paper_dir.glob("*.tex"))]
@@ -74,14 +79,14 @@ def _source_selection(paper_dir: Path, explicit: Path | None = None,
         if path in seen or not path.is_file():
             return None
         seen.add(path)
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = _strip_tex_comments(path.read_text(encoding="utf-8", errors="replace"))
         if ABSTRACT_RE.search(text):
             return path
         for raw in re.findall(r"\\(?:input|include)\{([^{}]+)\}", text):
             child = Path(raw.strip())
             if child.suffix == "":
                 child = child.with_suffix(".tex")
-            child = (path.parent / child).resolve()
+            child = (paper_dir / child).resolve()
             found = visit(child, seen)
             if found is not None:
                 return found
@@ -110,7 +115,7 @@ def _pdf_text(pdf: Path) -> str:
 
 def _abstract_text(source: Path | None, pdf_text: str) -> tuple[str, str]:
     if source is not None:
-        text = source.read_text(encoding="utf-8", errors="replace")
+        text = _strip_tex_comments(source.read_text(encoding="utf-8", errors="replace"))
         match = ABSTRACT_RE.search(text)
         if match:
             return match.group(1), "tex"
@@ -124,6 +129,7 @@ def _clean(text: str) -> str:
     # Keep percentage values such as ``12.5%``; only strip a standalone
     # TeX comment marker that is not preceded by a digit.
     text = re.sub(r"(?m)(?<![\\\d])%[^\n]*$", "", text)
+    text = text.replace(r"\%", "%")
     text = re.sub(r"\\[a-zA-Z]+(?:\[[^]]*\]|\{[^}]*\})?", " ", text)
     return re.sub(r"\s+", "", text)
 
@@ -170,7 +176,7 @@ def validate_content_snapshot(report: dict, project_root: Path,
             if not expected.is_relative_to(root) or expected != (pdf if expected.suffix.lower() == ".pdf" else entry):
                 raise ValueError("摘要报告与登记的 paper_source 不一致")
         _, source = _source_selection(pdf.parent, explicit=entry, project_root=root)
-        source_text = source.read_text(encoding="utf-8", errors="replace") if source is not None else None
+        source_text = _strip_tex_comments(source.read_text(encoding="utf-8", errors="replace")) if source is not None else None
         pdf_text = "" if source_text and ABSTRACT_RE.search(source_text) else _pdf_text(pdf)
         abstract, kind = _abstract_text(source, pdf_text)
         actual_source = source if kind == "tex" else pdf
@@ -199,7 +205,7 @@ def validate_content_snapshot(report: dict, project_root: Path,
 
 
 def _numeric_tokens(text: str) -> list[str]:
-    return list(dict.fromkeys(NUM_RE.findall(text)))
+    return list(dict.fromkeys(NUM_RE.findall(text.replace(r"\%", "%"))))
 
 
 def _numeric_keys(token: str) -> set[Decimal]:
@@ -358,6 +364,8 @@ def check(target: Path, project_root: Path | None = None, strict: bool = False,
     pdf = _locate_pdf(target)
     paper_dir = pdf.parent
     root = (project_root or paper_dir.parent).resolve()
+    if source_path is not None and not source_path.is_absolute() and (root / source_path).is_file():
+        source_path = root / source_path
     card_candidates = (root / "abstract_argument_card.yaml", paper_dir / "abstract_argument_card.yaml")
     abstract_card_path = next((candidate for candidate in card_candidates if candidate.is_file()), None)
     abstract_card_hash = (
@@ -366,7 +374,7 @@ def check(target: Path, project_root: Path | None = None, strict: bool = False,
     )
     pdf_text = _pdf_text(pdf)
     entry, source = _source_selection(paper_dir, explicit=source_path, project_root=root)
-    source_text = source.read_text(encoding="utf-8", errors="replace") if source else None
+    source_text = _strip_tex_comments(source.read_text(encoding="utf-8", errors="replace")) if source else None
     abstract, source_kind = _abstract_text(source, pdf_text)
     compact = _clean(abstract)
     keywords = _keywords(pdf_text, source_text)
@@ -475,7 +483,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("paper", help="PDF 文件或含 paper.pdf 的论文目录")
     parser.add_argument("--project-root", default=None)
-    parser.add_argument("--source", type=Path, default=None, help="明确指定 LaTeX 主文件，用于多文件项目的摘要来源绑定")
+    parser.add_argument("--source", type=Path, default=None, help="明确指定 LaTeX 主文件；相对路径优先从项目根目录查找")
     parser.add_argument("--strict", action="store_true")
     parser.add_argument("--capabilities", default=None,
                         help="逗号分隔的能力列表（如 optimization,robustness）；优先使用此参数，否则自动从 model_contract.yaml 读取")
