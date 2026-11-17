@@ -815,6 +815,30 @@ def _validate_h8c_task(root: Path, node: dict[str, Any], card: dict[str, Any],
     references = [("已批准写作计划", chapter_plan),
                   ("已选择图件登记", chapter_plan.get("figure_registry"))]
     references.extend((f"已批准章节 {item.get('chapter_id')}", item) for item in chapters)
+    expected_ids = [item.get("chapter_id") for item in chapters]
+    if any(not isinstance(item, str) or not item.strip() for item in expected_ids):
+        failures.append("H8C: 已批准章节必须包含有效 chapter_id")
+        return
+    registered_cards = node.get("chapter_writing_cards")
+    if not isinstance(registered_cards, list):
+        registered_cards = []
+    covered: set[str] = set()
+    for raw in registered_cards:
+        path, chapter_card = _load_project_mapping(root, raw, "H8C: 章节写作卡", missing, failures)
+        if path is None or chapter_card is None:
+            continue
+        chapter_id = chapter_card.get("chapter_id")
+        if chapter_id not in expected_ids:
+            continue
+        if chapter_id in covered:
+            failures.append(f"H8C: 章节写作卡重复 {chapter_id}")
+        covered.add(chapter_id)
+        matches = [item for item in inputs if isinstance(item, dict) and resolve_project_path(root, item.get("path")) == path]
+        if not any(_reference_is_fresh(root, item)[0] for item in matches):
+            failures.append(f"H8C: 任务输入缺少当前章节写作卡 {chapter_id}")
+    for chapter_id in expected_ids:
+        if chapter_id not in covered:
+            missing.append(f"H8C: 未登记获批章节的写作卡 {chapter_id}")
     for field, protocol_field in (("paper_author_brief", "author_brief"),
                                   ("abstract_argument_card", "abstract_argument_card"),
                                   ("model_summary_cards", "model_summary_cards"),

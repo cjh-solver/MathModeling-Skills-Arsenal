@@ -40,6 +40,17 @@ class H8IntegrationTests(unittest.TestCase):
         refs = [self.proof, self.proof["figure_registry"], *self.proof["approved_chapters"]]
         for ref in refs:
             self.card["inputs"].append({"path": ref["path"], "sha256": ref["sha256"]})
+        self.node["chapter_writing_cards"] = []
+        for chapter in self.proof["approved_chapters"]:
+            chapter_id = chapter["chapter_id"]
+            ref = self.fixture.put(f"paper/cards/{chapter_id}.yaml", {
+                "chapter_id": chapter_id, "abstract_contribution": {
+                    "method": "synthetic method", "result": "synthetic result",
+                    "meaning": "synthetic meaning", "evidence_refs": [chapter],
+                },
+            })
+            self.node["chapter_writing_cards"].append(ref["path"])
+            self.card["inputs"].append(ref)
         self.save_card()
 
     def save_card(self):
@@ -71,6 +82,66 @@ class H8IntegrationTests(unittest.TestCase):
                 self.card["inputs"] = [item for item in original if item["path"] != chapter["path"]]
                 self.save_card()
                 self.assertTrue(any("已批准章节" in item for item in self.check()[1]))
+
+    def test_each_approved_chapter_needs_its_registered_writing_card(self):
+        original = list(self.node["chapter_writing_cards"])
+        for path in original:
+            with self.subTest(path=path):
+                self.node["chapter_writing_cards"] = [item for item in original if item != path]
+                self.assertTrue(any("未登记获批章节的写作卡" in item for item in self.check()[0]))
+
+    def test_registered_writing_cards_must_be_h8c_inputs(self):
+        original = copy.deepcopy(self.card["inputs"])
+        for path in self.node["chapter_writing_cards"]:
+            with self.subTest(path=path):
+                self.card["inputs"] = [item for item in original if item["path"] != path]
+                self.save_card()
+                self.assertTrue(any("任务输入缺少当前章节写作卡" in item for item in self.check()[1]))
+
+    def test_changed_writing_card_cannot_use_a_stale_h8c_input(self):
+        path = self.root / self.node["chapter_writing_cards"][0]
+        path.write_bytes(path.read_bytes() + b"\n# changed")
+        self.assertTrue(any("任务输入缺少当前章节写作卡" in item for item in self.check()[1]))
+
+    def test_identical_copy_cannot_replace_the_registered_writing_card(self):
+        path = self.node["chapter_writing_cards"][0]
+        clone = self.fixture.put("paper/copied-card.yaml", (self.root / path).read_text(encoding="utf-8"))
+        self.card["inputs"] = [clone if item["path"] == path else item for item in self.card["inputs"]]
+        self.save_card()
+        self.assertTrue(any("任务输入缺少当前章节写作卡" in item for item in self.check()[1]))
+
+    def test_duplicate_or_wrong_chapter_card_does_not_cover_all_chapters(self):
+        self.node["chapter_writing_cards"][1] = self.node["chapter_writing_cards"][0]
+        missing, failures = self.check()
+        self.assertTrue(any("未登记获批章节的写作卡" in item for item in missing))
+        self.assertTrue(any("章节写作卡重复" in item for item in failures))
+
+    def test_no_registered_chapter_cards_do_not_authorize_h8c(self):
+        self.node["chapter_writing_cards"] = []
+        self.assertEqual(sum("未登记获批章节的写作卡" in item for item in self.check()[0]), 2)
+
+    def test_main_checker_still_requires_each_card_to_contain_abstract_evidence(self):
+        brief = self.fixture.put("paper_author_brief.yaml", {
+            "chapters": [{"section_id": "analysis"}, {"section_id": "Q1"}],
+        })
+        first = self.node["chapter_writing_cards"][0]
+        changed = self.fixture.put(first, {"chapter_id": "analysis", "status": "ready"})
+        for item in self.card["inputs"]:
+            if item["path"] == brief["path"]:
+                item["sha256"] = brief["sha256"]
+            if item["path"] == first:
+                item["sha256"] = changed["sha256"]
+        self.node["active_chapter_card"] = first
+        self.save_card()
+        control = checker.default_control()
+        control.update({key: copy.deepcopy(value) for key, value in self.control.items() if key != "nodes"})
+        for node_id, node in self.control["nodes"].items():
+            control["nodes"][node_id].update(node)
+        self.fixture.put(".contest/harness_control.yaml", control)
+        self.fixture.put(".contest/approval_log.yaml", self.fixture.log)
+        report = checker.check_harness_control(self.root, through="H8")
+        self.assertTrue(any("abstract_contribution" in item for item in report["failures"]), report)
+        self.assertNotEqual(report["status"], "PASS")
 
     def test_copied_chapter_with_same_contents_does_not_replace_original(self):
         original = self.proof["approved_chapters"][0]

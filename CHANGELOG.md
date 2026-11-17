@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-17 — carry chapter abstract evidence into H8C
+
+- Require the H8C task to bind each approved chapter's registered writing card by its actual path and current SHA-256, so the author can access that chapter's abstract contribution.
+- Reuse the existing H8 card registry and content checks; preserve H8B behavior and all existing human approvals. Report missing, changed or misidentified cards without rewriting historical records.
+- Cover per-chapter input omissions, stale and copied cards, duplicate registrations and the real main checker with isolated synthetic cases.
+
 ## 2026-11-17 — preserve writing order in H8C continuity
 
 - Check completed chapters against the validated, approved writing order when the registered H8C task reuses the last chapter's continuity context; retain the paper spine as the reader order.

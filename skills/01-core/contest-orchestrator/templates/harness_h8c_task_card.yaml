@@ -20,6 +20,8 @@ inputs:
   - {path: <selected figure registry path>, sha256: <approved sha256>}
   # Add each approved non-abstract chapter's original path and SHA-256 in final chapter order.
   - {path: <approved chapter path>, sha256: <approved sha256>}
+  # Add each registered chapter-writing card, including its abstract_contribution.
+  - {path: <registered chapter-writing card path>, sha256: <current sha256>}
 scope: 全文整合、选定图件及摘要；保留经批准章节原件。
 authoring_protocol:
   stage: H8C

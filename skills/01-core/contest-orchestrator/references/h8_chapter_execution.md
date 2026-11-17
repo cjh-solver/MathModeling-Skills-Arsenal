@@ -32,6 +32,8 @@ Harness 控制记录启用 `visual_workflow: chapter_parallel` 时，先按 [逐
 
 `chapter_parallel` 的正式 H8 整合派发使用同一已登记论文角色，任务卡可明确标注 `authoring_protocol.stage: H8C`。输入按最终 `chapter_order` 绑定已批准的逐章正文原路径和 SHA-256、原写作计划及最终图件登记；这些引用取自已通过当前逐章闭合检查的现有记录，不复制正文或补造批准。另绑定当前作者简报、摘要论证卡、模型卡和视觉计划。H8C 仍须符合完整 H6/H7、H8 审查及 H9 门禁；历史 H8B 任务卡按原规则读取。
 
+为保留各章的 `abstract_contribution`，逐章写作时应保留独立章节卡，并在既有 `nodes.H8.chapter_writing_cards` 登记。正式 H8C 的 `inputs` 引用每个获批非摘要章节对应的登记卡原路径和当前 SHA-256；如某章材料缺失，返回缺口，不根据其他章节补造。既有章节卡内容与证据检查仍然执行，这些引用不构成额外的人为批准。
+
 当前完整闭合检查通过时，Harness 检查报告的 `h8c_handoff` 给出原计划、最终图件登记以及按阅读顺序排列的获批章节路径与哈希，可据此填充整合任务卡。该字段仅描述逐章交接证据，不代表整个 Harness 检查通过，也不替代 H8/H9 的人工批准或交付检查。
 
 H8C 延用最后一章的写作连续性包时，`completed_chapters` 按已批准计划的 `writing_order` 判断先后；`paper_spine.chapter_order` 仍用于最终读者顺序与章节衔接。只有本次完整逐章闭合返回的原计划可用于此判断；历史 H8B 和其他流程保留原规则。
