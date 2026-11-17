@@ -126,6 +126,9 @@ def init_project(project_dir: Path, name: str | None = None, date: str | None = 
         except Exception:
             pass
 
+    # Generate copyable PowerShell commands without expanding path contents.
+    script_argument = (SKILL_ROOT / "scripts").as_posix().replace("'", "''")
+    project_argument = project_dir.as_posix().replace("'", "''")
     # 生成 README
     readme = f"""# {project_name}
 
@@ -173,30 +176,38 @@ B 题（优化决策类）数学建模项目，基于 contest-orchestrator skill
 
 ## 快速开始
 
-1. **题意理解（H1）**：填写 problem_statement.md，运行 check_problem_coverage.py
-2. **建模与求解（H2-H5，H4已并入H5）**：阶段一填写 model_blueprint.yaml、model_contract.yaml、chart_requirements.yaml；阶段二-四运行 pyomo 或 heuristic-algorithms，生成 run_manifest.yaml 与 sensitivity_report.yaml，并运行 check_h5_result_traceability.py --strict
-3. **验证（H6）**：填写 h6_verification_scope.yaml、validation_contract.yaml、global_interface_check.yaml，并核验 visual_evidence_packet.yaml；普通正文、排版和图表美化不派发 H6
-4. **图表（H7）**：读取经 H6 核验的 visual_evidence_packet.yaml；由 H7 图表 agent 生成带 figure_intent、template_id、visible_element_map 和 canvas_profile 的 visual_argument_plan.yaml，提交 H7_visual_plan_review_packet.yaml 并取得 approval_log.yaml 中 H7_VISUAL_PLAN 的用户批准；流程图/TikZ 图必须从 contest starter catalog 选择并复制 starter，登记 starter_source、template_sha256、template_fixture 和 visual_qa；数据结果图登记 ModelViz 的实际模板 ID 与源哈希；最后写入 figure_registry.yaml
-5. **论文（H8）**：由 academic-writing 生成论证蓝图、作者简报和问题引入/双小节结构；论文 agent 读取经 H6 核验的 model_summary_cards.yaml，依据 chapter_writing_card.yaml 和 paper_continuity_context.yaml 逐章写作
-6. **交付（H9）**：运行 check_harness_control.py --through H9
+新项目默认使用 `visual_workflow: chapter_parallel`。由已登记的主控与角色完成实际任务，按当前证据取得用户批准；这些步骤不是自动批准授权。
+
+1. **题意与规格（H1-H3）**：从真实题面确定全部小问、数据和约束，完成规格及文献需求确认；文献由用户提供或按约定收集，不补造来源。
+2. **建模与求解（H5）**：H4 已并入 H5。唯一主解题实例先形成模型蓝图、契约和快速基线，再按实际问题选工具、求解、优化及冻结结果；记录 run_manifest.yaml、结果卡、模型卡和适用的灵敏度报告。设计材料是首次 H5 任务的产物，不先补造它们作为固定输入。
+3. **独立核验（H6）**：用户批准 H5 后，由独立验证角色核验模型、结果和跨问接口，保留冻结原件并登记 global_interface_check.yaml。用户批准 H6 后才进入写作准备；普通正文或排版修改按实际影响处理。
+4. **逐章写作准备（H8 角色）**：同一论文角色准备作者简报、摘要论证卡与全篇计划，经用户审查后按 writing_order 先写依赖满足的建模与求解章节。每次提交完整章节并由用户批准，才派发下一章；保留每章写作卡、冻结证据和真实任务记录。最终 chapter_order 是读者顺序，摘要最后写。
+5. **图表并行（H7）**：章节批准后，论文角色才生成该章图表提示词，由用户亲自转交图表角色；图件制作与返修可和后续章节写作并行。图表按批准计划、专业路由和 QA 登记，保留各版提示词与选定图件。没有图件需求的章节明确记录即可。
+6. **全文整合（H8C）**：全部章节批准且最终 H7 图件闭合后，同一登记论文角色按 chapter_order 整合原正文与选定图件，最后写摘要。复用原计划、各章写作卡和当前哈希，运行严格摘要检查并记录内容快照；旧报告或缺口不能替代当前证据。用户终审全文。
+7. **完整交付（H9）**：运行 delivery_all.py --strict 完成完整交付检查，再按真实审查结果登记 H9 并取得用户最终批准。Harness 状态检查不能代替完整交付命令。
 
 ## 检查命令
 
-```bash
-# 全流程检查
-python scripts/check_harness_control.py <项目目录> --through H9
+以下 PowerShell 命令引用初始化时的实际技能目录和项目根，可在新项目目录运行。技能移动后按实际安装位置调整脚本路径。
+
+```powershell
+# 首次查看题意阶段的登记与缺口，后续按进度调整 --through
+python '{script_argument}/check_harness_control.py' '{project_argument}' --through H1
 
 # 题目条件覆盖检查
-python scripts/check_problem_coverage.py <项目目录>
+python '{script_argument}/check_problem_coverage.py' '{project_argument}'
 
 # 题型画像路由
-python scripts/route_problem_profile.py <项目目录>
+python '{script_argument}/route_problem_profile.py' '{project_argument}'
+
+# 仅在最终交付时运行完整检查
+python '{script_argument}/delivery_all.py' '{project_argument}' --strict
 ```
 
 ## 注意事项
 
 - 所有 YAML 文件中的 SHA256 哈希需要在文件创建后重新计算
-- user_approval 需要在每个节点审查包修改后重新获得用户批准
+- 人工批准绑定真实审查包及文件哈希；受影响证据改变时按现有回流规则重新审查，不刷新历史批准冒充通过
 - B 题（优化决策类）必须包含灵敏度/鲁棒性报告（P0-02 硬门禁）
 - 详细配置说明见 contest-orchestrator/references/b_project_gotchas.md
 

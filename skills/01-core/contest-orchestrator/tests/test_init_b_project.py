@@ -183,6 +183,27 @@ class BProjectInitializationTests(unittest.TestCase):
             self.assertEqual(record[field], [], name)
         self.assertFalse((self.project / ".contest/reviews/H4_review_packet.yaml").exists())
 
+    def test_generated_commands_resolve_real_scripts_from_the_new_project_directory(self):
+        self.template_patch.stop()
+        project = self.root / "题目 O'Brien $value"
+        init_b_project.init_project(project)
+        text = (project / "README.md").read_text(encoding="utf-8")
+        commands = re.findall(r"^python '((?:[^']|'')*)' '((?:[^']|'')*)'([^\n]*)$", text, re.M)
+        self.assertEqual(len(commands), 4)
+        names = set()
+        for raw_script, raw_project, _ in commands:
+            script = Path(raw_script.replace("''", "'"))
+            target = Path(raw_project.replace("''", "'"))
+            self.assertEqual(target, project)
+            self.assertTrue(script.is_file(), script)
+            names.add(script.name)
+            result = subprocess.run([sys.executable, "-X", "utf8", str(script), "--help"], cwd=project,
+                                    capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("delivery_all.py", names)
+        control = yaml.safe_load((project / ".contest/harness_control.yaml").read_text(encoding="utf-8"))
+        self.assertIn(control["visual_workflow"], text)
+
     def test_shipped_scaffolds_do_not_claim_completed_scientific_work(self):
         self.template_patch.stop()
         init_b_project.init_project(self.project)

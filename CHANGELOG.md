@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-17 — align new-project guidance with the actual workflow
+
+- Guide initialized optimization projects through H6 approval, chapter-first writing, parallel figures, H8C integration and the complete H9 delivery command.
+- Generate PowerShell commands using the actual skill scripts and project root, with literal path quoting, so they work from a new project without a local scripts directory.
+- Verify the shipped initializer, preserved source materials and command resolution with Chinese, apostrophe and dollar-sign paths; retain all approval gates and initialization conflict protection.
+
 ## 2026-11-17 — bind abstract reports to the checked content
 
 - Record a portable content snapshot of the actual abstract, keywords, selected source and numeric evidence; reject stale snapshots at H8 without repeating the full abstract analysis.
