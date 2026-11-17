@@ -5,14 +5,14 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { QuestionLabels } = require('../static/ranking.js');
 
-function renderQuestion(question) {
+function renderQuestion(question, questionSources = {}) {
   const source = fs.readFileSync(path.join(__dirname, '../static/app.js'), 'utf8');
   const start = source.indexOf('function questionPage()');
   const end = source.indexOf('\nfunction ', start + 20);
   assert.ok(start >= 0 && end > start);
   const statusNames = source.split('\n').find(line => line.startsWith('const statusNames ='));
   const context = {
-    state: { question_views: [{ id: 'Q1', ...question }] }, selectedQuestion: null, questionQuery: '',
+    state: { question_views: [{ id: 'Q1', ...question }], question_sources: questionSources }, selectedQuestion: null, questionQuery: '',
     QuestionLabels, icon: () => '', empty: value => value, fileIcon: () => '', fileDisplayName: value => value,
     fileLink: value => value, display: value => value == null ? '未登记' : typeof value === 'string' ? value : JSON.stringify(value),
     esc: value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;'),
@@ -47,4 +47,19 @@ test('question records escape file content and retain a real zero result', () =>
   assert.match(html, /&lt;b&gt;42&lt;\/b&gt;/);
   assert.match(html, /记录为已核验/);
   assert.doesNotMatch(html, /<script>|<img src=x|<b>42<\/b>/);
+});
+
+test('detached verification remains a source record without promoting a draft', () => {
+  const html = renderQuestion({ interpretations: [{ fact: '合成结果', verification: 'draft' }] },
+    { verification: '核验/H6.yaml' });
+  assert.match(html, /H6 核验记录：核验\/H6.yaml/);
+  assert.match(html, /状态：草稿/);
+  assert.doesNotMatch(html, /记录为已核验/);
+});
+
+test('verification source errors are escaped and absent records add no empty row', () => {
+  assert.doesNotMatch(renderQuestion({}), /H6 核验记录：/);
+  const html = renderQuestion({}, { verification: 'H6.yaml', verification_error: '<unreadable>' });
+  assert.match(html, /&lt;unreadable&gt;/);
+  assert.doesNotMatch(html, /<unreadable>/);
 });

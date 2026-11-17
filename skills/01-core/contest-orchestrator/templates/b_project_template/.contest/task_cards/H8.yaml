@@ -10,6 +10,8 @@ inputs:
     sha256: <sha256>
   - path: result_interpretation_cards.yaml
     sha256: <sha256>
+  - path: global_interface_check.yaml
+    sha256: <sha256>
   - path: paper_material_readiness.yaml
     sha256: <sha256>
   - path: paper_claim_coverage.yaml

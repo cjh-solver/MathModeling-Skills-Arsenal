@@ -1204,6 +1204,40 @@ def validate_visual_argument_plan(
     }
 
 
+def _h6_packet_view(packet: dict[str, Any], path: Path, root: Path, errors: list[str]) -> dict[str, Any]:
+    """Reuse the Harness verifier for detached records in the standalone visual check."""
+    control_path = root / ".contest" / "harness_control.yaml"
+    if not control_path.is_file():
+        return packet
+    # Import lazily: the Harness checker uses this module's pure validators.
+    try:
+        from . import check_harness_control as harness
+    except ImportError:  # Direct CLI execution.
+        import check_harness_control as harness
+    control = harness.load_mapping(control_path)
+    if control.get("active_mode") != "full-contest-harness":
+        return packet
+    nodes = control.get("nodes")
+    if not isinstance(nodes, dict) or not isinstance(nodes.get("H6"), dict):
+        return packet
+    report_path = harness.resolve_project_path(root, nodes["H6"].get("global_interface_check"))
+    if report_path is None or not report_path.is_file():
+        return packet
+    report = harness.load_mapping(report_path)
+    bindings = report.get("verified_artifacts")
+    if bindings is None or bindings == {}:
+        return packet
+    missing, failures = [], []
+    verification = harness._validate_h6_interface(
+        root, nodes, control.get("problem_scope", {}), missing, failures, through="H7",
+    )
+    packet = harness._h6_verified_document(
+        root, path, packet, "visual_evidence_packet", verification, failures,
+    )
+    errors.extend(f"H6 核验记录: {item}" for item in missing + failures)
+    return packet
+
+
 def check(plan: dict[str, Any], root: Path, stage: str, tex: Path | None) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -1270,6 +1304,8 @@ def check(plan: dict[str, Any], root: Path, stage: str, tex: Path | None) -> dic
             registry_payload = load(registry_path) if registry_path and stage != "blueprint" else None
             if visual_packet_path is not None:
                 visual_packet = load(visual_packet_path)
+                if stage != "blueprint":
+                    visual_packet = _h6_packet_view(visual_packet, visual_packet_path, root, errors)
             expected_ids = [str(item.get("id")) for item in subproblems if isinstance(item, dict) and str(item.get("id", "")).strip()]
             visual_plan_report = validate_visual_argument_plan(
                 visual_plan,

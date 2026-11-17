@@ -5,6 +5,8 @@ verified_by: null
 verification_agent_instance_id: null
 task_card_path: .contest/task_cards/H6.yaml
 task_card_sha256: <H6 task card sha256>
+# 实际核验后按 H6 验证协议填写四项原文件路径和哈希；不回写 H5 文件。
+verified_artifacts: {}
 checks:
   shared_symbols: null
   units: null

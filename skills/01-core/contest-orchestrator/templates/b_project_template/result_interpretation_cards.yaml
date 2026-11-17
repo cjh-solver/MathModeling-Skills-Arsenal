@@ -1,5 +1,5 @@
 # 结果解释卡（result_interpretation_cards.yaml）
-# H5 从冻结结果产生；H6 核验数值、依据和适用范围后置 verified。
+# H5 从冻结结果产生；H6 只在独立报告绑定原卡路径和哈希，不改写冻结卡。
 # 它只陈述证据支持的解释，禁止把未验证推测写成结论。
 schema_version: "1.0"
 reader_evidence_version: "1.0"  # 启用读者证据契约；旧项目可省略以保持兼容

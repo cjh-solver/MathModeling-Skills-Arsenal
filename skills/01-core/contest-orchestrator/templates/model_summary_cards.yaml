@@ -1,10 +1,10 @@
 # 每个建模小问一张最终求解模型卡；H5 生成，H6 核验，H8 写作时读取。
 schema_version: "1.0"
 reader_evidence_version: "1.0"  # 启用读者证据契约；旧项目可省略以保持兼容
-status: draft                 # draft | verified
+status: draft                 # 冻结原文状态；H6 核验读取独立报告，历史 verified 兼容。
 created_by: H5
-verified_by: H6
-verification_agent_instance_id: <H6 agent_instance_id>
+verified_by: null  # 新任务保持原文件不变，H6 核验绑定写入 global_interface_check.yaml。
+verification_agent_instance_id: null
 model_contract_sha256: <model_contract.yaml sha256>
 cards:
   - card_id: <subproblem-id>-final-model

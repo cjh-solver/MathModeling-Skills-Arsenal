@@ -692,13 +692,16 @@ def build_state(project, links_path=LINKS_PATH):
     h1 = nodes.get("H1") if isinstance(nodes.get("H1"), dict) else {}
     h3 = nodes.get("H3") if isinstance(nodes.get("H3"), dict) else {}
     h5 = nodes.get("H5") if isinstance(nodes.get("H5"), dict) else {}
+    h6 = nodes.get("H6") if isinstance(nodes.get("H6"), dict) else {}
     profile_path = ref_path(h1.get("unified_problem_package"))
     model_path = ref_path(h5.get("model_summary_cards"))
     result_path = ref_path(h5.get("result_interpretation_cards"))
+    verification_path = ref_path(h6.get("global_interface_check"))
     figure_path = ref_path(h7.get("figure_registry"))
     profile, profile_error = read_project_yaml(project, profile_path)
     models, models_error = read_project_yaml(project, model_path)
     interpretations, interpretations_error = read_project_yaml(project, result_path)
+    _, verification_error = read_project_yaml(project, verification_path)
     figures, figures_error = read_project_yaml(project, figure_path)
     question_details = question_profile_details(profile)
     model_cards = models.get("cards") if isinstance(models.get("cards"), list) else []
@@ -754,7 +757,8 @@ def build_state(project, links_path=LINKS_PATH):
         "question_views": question_views,
         "question_sources": {"profile": profile_path, "profile_error": profile_error,
                              "models": model_path, "models_error": models_error,
-                             "results": result_path, "results_error": interpretations_error},
+                             "results": result_path, "results_error": interpretations_error,
+                             "verification": verification_path, "verification_error": verification_error},
         "figures": figure_views, "figure_source": figure_path, "figure_error": figures_error,
         "skills": skills, "capabilities": {"pdf_preview": fitz is not None, "docx_preview": docx is not None, "xlsx_preview": openpyxl is not None},
         "approvals": [

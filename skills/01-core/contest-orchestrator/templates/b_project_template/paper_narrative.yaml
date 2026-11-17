@@ -1,6 +1,6 @@
 # 叙事蓝图（paper_narrative.yaml）
 # 论文主线的事实来源：方法、创新、解决问题、关键结果。
-# 由 H5 阶段一以决策视角创建（method/innovation/problem_solved，原H4职责已并入H5），H5 阶段二-四解题完成后回填 key_result，H6 核验后置 verified。
+# 由 H5 阶段一创建，阶段二-四回填 key_result 并置 results_filled；H6 核验结论写入独立报告，不回写冻结叙事。
 # 驱动摘要、问题分析、结论与各 6.x 小节的目标段；写作时禁止用公式堆砌替代叙事。
 schema_version: "1.0"
 status: draft                # draft(H5阶段一创建) | results_filled(H5阶段二-四回填) | verified(H6核验)

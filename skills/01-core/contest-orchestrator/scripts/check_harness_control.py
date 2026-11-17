@@ -364,6 +364,9 @@ CLAIM_EVIDENCE = {
     "citation_use": {"literature_use"},
 }
 QUESTION_NUMBERED_SECTIONS = ("模型建立", "模型求解与结果分析")
+H6_VERIFIED_ARTIFACTS = (
+    "validation_contract", "model_summary_cards", "result_interpretation_cards", "visual_evidence_packet",
+)
 PAPER_SPINE_LIST_FIELDS = ("core_chapters", "support_chapters", "chapter_order")
 CHAPTER_RELATION_FIELDS = ("chapter_role", "reads_from", "feeds_to", "new_claims_allowed", "handoff_question")
 
@@ -1306,7 +1309,8 @@ def _validate_h7_generation_binding(root: Path, control: dict[str, Any], node: d
 
 
 def _validate_h7_visual_argument_plan(root: Path, node: dict[str, Any], control: dict[str, Any],
-                                      log: dict[str, Any], missing: list[str], failures: list[str]) -> None:
+                                      log: dict[str, Any], missing: list[str], failures: list[str],
+                                      verification: dict[str, Any] | None = None) -> None:
     """Require H7's reader-first coverage plan before H7 can pass."""
     raw = node.get("visual_argument_plan")
     if not isinstance(raw, str) or not raw.strip():
@@ -1349,6 +1353,9 @@ def _validate_h7_visual_argument_plan(root: Path, node: dict[str, Any], control:
     if packet_path is not None and packet_path.is_file():
         try:
             packet = load_mapping(packet_path)
+            packet = _h6_verified_document(
+                root, packet_path, packet, "visual_evidence_packet", verification, failures,
+            )
         except (OSError, ValueError, yaml.YAMLError) as exc:
             failures.append(f"H7: visual_evidence_packet 不可读: {exc}")
 
@@ -1563,6 +1570,99 @@ def _reference_is_fresh(root: Path, reference: Any) -> tuple[bool, tuple[str, st
         return False, None
     actual = digest(path)
     return same_digest(expected, actual), (as_relative(root, path), actual)
+
+
+def _validate_h6_artifact_bindings(root: Path, nodes: dict[str, Any], report_path: Path,
+                                   report: dict[str, Any], missing: list[str],
+                                   failures: list[str]) -> dict[str, Any]:
+    """Bind detached verification to the unchanged inputs of this H6 task."""
+    bindings = report.get("verified_artifacts")
+    if bindings is None or bindings == {}:
+        return {}
+    if not isinstance(bindings, dict):
+        failures.append("H6: verified_artifacts 必须为对象")
+        return {}
+    before = (len(missing), len(failures))
+    if report.get("schema_version") != "1.0":
+        failures.append("H6: 独立核验绑定要求 schema_version=1.0")
+    unknown = set(bindings) - set(H6_VERIFIED_ARTIFACTS)
+    if unknown:
+        failures.append(f"H6: verified_artifacts 含不支持的类型: {','.join(sorted(map(str, unknown)))}")
+    h5, h6 = nodes.get("H5", {}), nodes.get("H6", {})
+    verifier = h6.get("agent_instance_id")
+    solver = h5.get("agent_instance_id") or h5.get("solver_instance_id")
+    if (not isinstance(verifier, str) or not verifier.strip()
+            or verifier != report.get("verification_agent_instance_id")
+            or not isinstance(solver, str) or not solver.strip() or solver == verifier):
+        failures.append("H6: 独立核验绑定必须来自当前且不同于 H5 的 H6 实例")
+    task_path, task = _load_project_mapping(
+        root, h6.get("task_card"), "H6 verified_artifacts: task_card", missing, failures,
+    )
+    if task_path is None or task is None:
+        return {}
+    if task.get("node_id") != "H6" or task.get("owner_role") != ROLE_BY_NODE["H6"]:
+        failures.append("H6: 独立核验绑定必须引用 H6 验证任务卡")
+    inputs = task.get("inputs")
+    inputs = inputs if isinstance(inputs, list) else []
+    for item in inputs:
+        fresh, _ = _reference_is_fresh(root, item)
+        if not fresh:
+            failures.append("H6: 独立核验绑定的任务输入缺失或哈希已变化")
+    verified: dict[str, Any] = {}
+    for kind in H6_VERIFIED_ARTIFACTS:
+        reference = bindings.get(kind)
+        if not isinstance(reference, dict):
+            missing.append(f"H6: verified_artifacts 缺少 {kind} 的路径与哈希")
+            continue
+        raw_path = reference.get("path")
+        path = resolve_project_path(root, raw_path)
+        expected_path = resolve_project_path(root, h5.get(kind))
+        if (not isinstance(raw_path, str) or Path(raw_path).is_absolute()
+                or path is None or expected_path is None or path != expected_path):
+            failures.append(f"H6: verified_artifacts.{kind} 必须绑定 H5 登记的项目相对路径")
+            continue
+        fresh, _ = _reference_is_fresh(root, reference)
+        if not fresh:
+            failures.append(f"H6: verified_artifacts.{kind} 来源缺失或哈希不匹配")
+            continue
+        if not any(
+            isinstance(item, dict) and resolve_project_path(root, item.get("path")) == path
+            and same_digest(item.get("sha256"), reference.get("sha256"))
+            for item in inputs
+        ):
+            failures.append(f"H6: verified_artifacts.{kind} 未绑定本次任务的冻结输入")
+            continue
+        verified[kind] = {
+            "path": as_relative(root, path), "sha256": reference["sha256"],
+            "verification_agent_instance_id": verifier,
+            "report": as_relative(root, report_path), "report_sha256": digest(report_path),
+            "task_card": as_relative(root, task_path), "task_card_sha256": digest(task_path),
+        }
+    return verified if before == (len(missing), len(failures)) else {}
+
+
+def _h6_verified_document(root: Path, path: Path, document: dict[str, Any], kind: str,
+                           verification: dict[str, Any] | None, failures: list[str]) -> dict[str, Any]:
+    """Expose verified metadata without changing the approved source document."""
+    reference = (verification or {}).get(kind)
+    if reference is None:
+        return document
+    for source in ("report", "task_card"):
+        fresh, _ = _reference_is_fresh(
+            root, {"path": reference.get(source), "sha256": reference.get(source + "_sha256")},
+        )
+        if not fresh:
+            failures.append(f"H6: {kind} 的独立核验依据 {source} 已变化")
+            return document
+    fresh, _ = _reference_is_fresh(root, reference)
+    if resolve_project_path(root, reference.get("path")) != path or not fresh:
+        failures.append(f"H6: {kind} 在核验绑定读取后发生变化")
+        return document
+    if document.get("status") not in {"draft", "verified"}:
+        failures.append(f"H6: {kind} 的源状态不允许独立核验放行")
+        return document
+    return {**document, "status": "verified", "verified_by": "H6",
+            "verification_agent_instance_id": reference["verification_agent_instance_id"]}
 
 
 def _validate_abstract_argument_card(root: Path, node: dict[str, Any],
@@ -1780,7 +1880,8 @@ def _validate_narrative(root: Path, nodes: dict[str, Any], through: str,
 
 def _validate_result_interpretation_cards(root: Path, nodes: dict[str, Any], through: str,
                                           missing: list[str], failures: list[str],
-                                          control: dict[str, Any] | None = None) -> None:
+                                          control: dict[str, Any] | None = None,
+                                          verification: dict[str, Any] | None = None) -> None:
     """Require H5 results to carry verified meaning and scope before H8."""
     if NODES.index(through) < NODES.index("H6"):
         return
@@ -1790,6 +1891,9 @@ def _validate_result_interpretation_cards(root: Path, nodes: dict[str, Any], thr
     )
     if path is None or cards_doc is None:
         return
+    cards_doc = _h6_verified_document(
+        root, path, cards_doc, "result_interpretation_cards", verification, failures,
+    )
     reader_protocol_enabled = _reader_protocol_state(
         control, cards_doc, "result_interpretation_cards", failures,
     )
@@ -1850,7 +1954,8 @@ def _validate_result_interpretation_cards(root: Path, nodes: dict[str, Any], thr
 
 
 def _validate_visual_evidence_packet(root: Path, nodes: dict[str, Any], problem_scope: dict[str, Any],
-                                     through: str, missing: list[str], failures: list[str]) -> None:
+                                     through: str, missing: list[str], failures: list[str],
+                                     verification: dict[str, Any] | None = None) -> None:
     """Bind the compact H5 visual evidence packet to H6 verification and H7 input."""
     if NODES.index(through) < NODES.index("H5"):
         return
@@ -1883,6 +1988,10 @@ def _validate_visual_evidence_packet(root: Path, nodes: dict[str, Any], problem_
     )
     if packet_path is None or packet is None:
         return
+    if stage in {"h6", "h7"}:
+        packet = _h6_verified_document(
+            root, packet_path, packet, "visual_evidence_packet", verification, failures,
+        )
     expected_ids = _scope_subproblem_ids(problem_scope)
     targeted_subproblems = _h6_targeted_scope(root, nodes, problem_scope, through)
     if targeted_subproblems is not None:
@@ -2128,7 +2237,8 @@ def _validate_question_structure(label: str, chapter: dict[str, Any], failures: 
 
 def _validate_model_summary_cards(root: Path, nodes: dict[str, Any], problem_scope: dict[str, Any],
                                   missing: list[str], failures: list[str], through: str | None = None,
-                                  control: dict[str, Any] | None = None) -> None:
+                                  control: dict[str, Any] | None = None,
+                                  verification: dict[str, Any] | None = None) -> None:
     """Bind H6/H8 to one verified, solvable model summary per subproblem."""
     h8 = nodes.get("H8", {})
     h8_writing = isinstance(h8, dict) and h8.get("writing_started") is True
@@ -2163,6 +2273,9 @@ def _validate_model_summary_cards(root: Path, nodes: dict[str, Any], problem_sco
     )
     if summary_path is None or summary is None:
         return
+    summary = _h6_verified_document(
+        root, summary_path, summary, "model_summary_cards", verification, failures,
+    )
     reader_protocol_enabled = _reader_protocol_state(
         control, summary, "model_summary_cards", failures,
     )
@@ -2471,7 +2584,8 @@ def _validate_chapter_writing_cards(root: Path, node: dict[str, Any],
 
 
 def _validate_validation_contract(root: Path, nodes: dict[str, Any], through: str,
-                                  missing: list[str], failures: list[str]) -> None:
+                                  missing: list[str], failures: list[str],
+                                  verification: dict[str, Any] | None = None) -> None:
     """验证契约校验：H5 产出关键结论/接口值/符号/自验声明，H6 依据契约核对。"""
     if NODES.index(through) < NODES.index("H6"):
         return
@@ -2480,6 +2594,9 @@ def _validate_validation_contract(root: Path, nodes: dict[str, Any], through: st
                                            "H5: validation_contract", missing, failures)
     if path is None or contract is None:
         return
+    contract = _h6_verified_document(
+        root, path, contract, "validation_contract", verification, failures,
+    )
     status = contract.get("status")
     if status not in {"draft", "verified", "rejected"}:
         failures.append("validation_contract: status 必须为 draft/verified/rejected")
@@ -2728,7 +2845,8 @@ def _validate_h1_problem_statement(root: Path, node: dict[str, Any],
 
 
 def _validate_h6_interface(root: Path, nodes: dict[str, Any], problem_scope: dict[str, Any],
-                            missing: list[str], failures: list[str], through: str | None = None) -> None:
+                            missing: list[str], failures: list[str], through: str | None = None) -> dict[str, Any] | None:
+    before = (len(missing), len(failures))
     path, report = _load_project_mapping(root, nodes.get("H6", {}).get("global_interface_check"),
                                          "H6: global_interface_check", missing, failures)
     if path is None or report is None:
@@ -2847,6 +2965,9 @@ def _validate_h6_interface(root: Path, nodes: dict[str, Any], problem_scope: dic
             missing_subs = expected_subs - actual_subs
             if missing_subs:
                 failures.append(f"H6: per_subproblem 未覆盖全部小问，缺少 {','.join(sorted(missing_subs))}")
+    if before == (len(missing), len(failures)):
+        return _validate_h6_artifact_bindings(root, nodes, path, report, missing, failures)
+    return {}
 
 
 def _validate_h5_result_traceability_registration(root: Path, node: dict[str, Any],
@@ -3589,7 +3710,6 @@ def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool
             if not h7_plan_only:
                 _validate_review(root, node_id, node, log, missing, failures)
         if node_id == "H7":
-            _validate_h7_visual_argument_plan(root, node, control, log, missing, failures)
             h7_plan_only = (
                 node_status == "draft"
                 and not str(node.get("figure_registry") or "").strip()
@@ -3615,18 +3735,29 @@ def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool
         _validate_h7_generation_binding(root, control, nodes.get("H7", {}), log, missing, failures)
     _validate_agent_instances(root, control, through, agent_ids_by_role, missing, failures)
     _validate_narrative(root, nodes, through, missing, failures)
-    _validate_validation_contract(root, nodes, through, missing, failures)
-    _validate_result_interpretation_cards(root, nodes, through, missing, failures, control=control)
+    h6_verification = {}
+    if "H6" in checked_nodes:
+        h6_verification = _validate_h6_interface(
+            root, nodes, control.get("problem_scope", {}), missing, failures, through,
+        ) or {}
+    if "H7" in checked_nodes and isinstance(nodes.get("H7"), dict):
+        _validate_h7_visual_argument_plan(
+            root, nodes["H7"], control, log, missing, failures, verification=h6_verification,
+        )
+    _validate_validation_contract(root, nodes, through, missing, failures, verification=h6_verification)
+    _validate_result_interpretation_cards(
+        root, nodes, through, missing, failures, control=control, verification=h6_verification,
+    )
     paper_material_status = None
     if "H6" in checked_nodes:
-        _validate_h6_interface(root, nodes, control.get("problem_scope", {}), missing, failures, through)
         _validate_model_summary_cards(
             root, nodes, control.get("problem_scope", {}), missing, failures,
-            through=through, control=control,
+            through=through, control=control, verification=h6_verification,
         )
     if NODES.index(through) >= NODES.index("H5"):
         _validate_visual_evidence_packet(
             root, nodes, control.get("problem_scope", {}), through, missing, failures,
+            verification=h6_verification,
         )
     if "H8" in checked_nodes:
         admitted, readiness_path, material_refs, readiness = _validate_paper_materials(root, nodes, control.get("problem_scope", {}), missing, failures)
@@ -3650,6 +3781,10 @@ def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool
         "failures": failures, "missing": missing,
         "evidence_gaps": evidence_gaps, "return_nodes": return_nodes,
         "paper_material_status": paper_material_status,
+        "verified_artifacts": {
+            kind: {"path": reference["path"], "sha256": reference["sha256"]}
+            for kind, reference in h6_verification.items()
+        },
         "validation_plan": validation_plan,
         "control_path": str(control_path), "approval_log": str(log_path),
     }

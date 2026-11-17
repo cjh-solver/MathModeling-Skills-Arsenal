@@ -22,6 +22,7 @@ inputs:
   # 连续性包只提供压缩后的读者路径；authoring_protocol 还必须绑定
   # writer-first、model-summary 与 abstract_argument_card 协议，不得把全套质量门禁写入作者任务。
   # H6 节点：必须包含 h6_verification_scope.yaml；普通正文、排版、图表美化和附录格式变化禁止派发 H6。
+  # 新 H6 任务只在 global_interface_check.yaml.verified_artifacts 中登记核验绑定，不回写 H5 冻结输入。
   - path: <项目内权威输入相对路径>
     sha256: <输入文件SHA-256>
 scope: <允许处理的题目、小问和文件范围>

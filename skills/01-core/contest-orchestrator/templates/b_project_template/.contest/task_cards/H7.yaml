@@ -12,6 +12,8 @@ inputs:
   sha256: <sha256>
 - path: visual_evidence_packet.yaml
   sha256: <sha256>
+- path: global_interface_check.yaml
+  sha256: <sha256>
 scope:
   phase: H7_generate
   description: 受控范围

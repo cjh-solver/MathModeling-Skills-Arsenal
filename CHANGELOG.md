@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-17 — H6 verification preserves frozen H5 evidence
+
+- Record independent H6 verification in the existing interface report, binding the validation contract, model cards, result interpretations and visual evidence packet to their unchanged source hashes.
+- Match every binding to the registered H5 source and frozen H6 input; check the current independent verifier, task, report and interface evidence before providing a verified view. Keep scientific-content checks, human approvals and complete downstream scope intact.
+- Share the verified view with final H7 visual planning and the standalone solution/paper visual check; include the existing H6 report in fresh downstream task inputs without changing historical cards.
+- Update fresh task cards, templates and role instructions so verification does not rewrite approved inputs or refresh historical approvals. Preserve legacy signatures without migration.
+- Link the registered H6 report inside the workbench's folded question-source details while retaining the original file status and read-only behavior.
+- Add synthetic handoff, integrity, scope and approval regressions, plus workbench source-reading and rendering coverage; synchronize scoped changes with the installed skill and local prototype.
+
 ## 2026-11-17 — method review follows the chosen route
 
 - Let a retained simple baseline provide the common problem and method rationale without inventing failure points or a complex-method target.

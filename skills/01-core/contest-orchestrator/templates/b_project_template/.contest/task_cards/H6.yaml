@@ -18,14 +18,14 @@ inputs:
   sha256: <sha256>
 scope: 受控范围
 required_outputs:
-- 节点产物
-- model_summary_cards.yaml（核验后 status=verified）
-- visual_evidence_packet.yaml（核验后 status=verified，并登记当前 H6 实例）
+- 独立验证报告
+- global_interface_check.yaml（verified_artifacts 绑定四份 H5 冻结输入及哈希）
 verification:
 - 节点检查
 - python scripts/check_h6_verification_scope.py h6_verification_scope.yaml
 prohibited_actions:
 - 越权
+- 改写 H5 冻结材料、原任务卡输入或既有批准记录
 evidence_handoff:
 - 回流记录
 model: gpt-5.6-sol

@@ -1,6 +1,6 @@
 # H5→H6→H7 的轻量视觉证据包；只登记可追溯的信息单元，不嵌入全文、代码或对话。
 schema_version: "1.0"
-status: draft                    # H5: draft/evidence_gap；H6/H7: verified
+status: draft                    # H5 原文状态；H6/H7 核验读取独立报告，历史签名兼容。
 package_mode: indexed_minimal
 source_node: H5
 created_by: H5
