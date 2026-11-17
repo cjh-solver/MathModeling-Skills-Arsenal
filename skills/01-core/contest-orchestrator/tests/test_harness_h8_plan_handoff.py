@@ -40,7 +40,7 @@ class H8PlanHandoffTests(unittest.TestCase):
                   for path in self.root.rglob("*") if path.is_file()}
         original_control, original_log = copy.deepcopy(self.control), copy.deepcopy(self.log)
         source, missing, failures = self.source()
-        self.assertEqual(source, self.fixture.plan)
+        self.assertEqual({key: source[key] for key in ("path", "sha256")}, self.fixture.plan)
         self.assertEqual((missing, failures), ([], []))
         self.assertEqual(self.check(source), ([], []))
         self.assertEqual(self.control, original_control)

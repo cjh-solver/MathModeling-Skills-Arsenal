@@ -1,0 +1,37 @@
+# Formal H8 integration. Populate from the current approved chapter and H7 records.
+task_id: <actual H8 integration task ID>
+node_id: H8
+owner_role: 论文 agent
+objective: 按最终目录整合已批准章节及选定图件，完成全文通读和摘要。
+inputs:
+  - {path: problem_statement.md, sha256: <sha256>}
+  - {path: paper_narrative.yaml, sha256: <sha256>}
+  - {path: result_interpretation_cards.yaml, sha256: <sha256>}
+  - {path: global_interface_check.yaml, sha256: <sha256>}
+  - {path: paper_material_readiness.yaml, sha256: <sha256>}
+  - {path: paper_claim_coverage.yaml, sha256: <sha256>}
+  - {path: abstract_argument_card.yaml, sha256: <sha256>}
+  - {path: chart_requirements.yaml, sha256: <sha256>}
+  - {path: visual_argument_plan.yaml, sha256: <sha256>}
+  - {path: paper_argument_blueprint.yaml, sha256: <sha256>}
+  - {path: paper_author_brief.yaml, sha256: <sha256>}
+  - {path: model_summary_cards.yaml, sha256: <sha256>}
+  - {path: <approved writing plan path>, sha256: <approved sha256>}
+  - {path: <selected figure registry path>, sha256: <approved sha256>}
+  # Add each approved non-abstract chapter's original path and SHA-256 in final chapter order.
+  - {path: <approved chapter path>, sha256: <approved sha256>}
+scope: 全文整合、选定图件及摘要；保留经批准章节原件。
+authoring_protocol:
+  stage: H8C
+  author_brief: paper_author_brief.yaml
+  abstract_argument_card: abstract_argument_card.yaml
+  visual_argument_plan: visual_argument_plan.yaml
+  writer_first_protocol: contest-orchestrator/references/h8_writer_first_protocol.md
+  model_summary_cards: model_summary_cards.yaml
+  model_summary_protocol: contest-orchestrator/references/model_summary_protocol.md
+required_outputs: [完整整合稿, 摘要与证据定位, 全文审查记录]
+verification: [逐章批准与图件选择, 摘要证据与数字, 全文连续性]
+prohibited_actions: [改写获批原件, 编造批准, 增加未经证据支持的结论]
+evidence_handoff: [整合稿与证据定位]
+model: gpt-5.6-sol
+reasoning_effort: high

@@ -791,8 +791,57 @@ def _approval_for(log: dict[str, Any], node_id: str) -> dict[str, Any] | None:
     return matches[-1] if matches else None
 
 
+def _validate_h8c_task(root: Path, node: dict[str, Any], card: dict[str, Any],
+                       control: dict[str, Any] | None, chapter_plan: dict[str, Any] | None,
+                       missing: list[str], failures: list[str]) -> None:
+    """Bind integration inputs to the already-validated, approved chapter snapshots."""
+    if (control or {}).get("visual_workflow") != "chapter_parallel":
+        failures.append("H8C: 全文整合任务仅适用于 chapter_parallel")
+        return
+    chapters = chapter_plan.get("approved_chapters") if isinstance(chapter_plan, dict) else None
+    if not isinstance(chapters, list) or not chapters or any(not isinstance(item, dict) for item in chapters):
+        missing.append("H8C: 需要通过完整逐章审批及图件闭合的当前记录")
+        return
+    inputs = card.get("inputs") if isinstance(card.get("inputs"), list) else []
+    protocol = card.get("authoring_protocol", {})
+    if protocol.get("active_chapter_only") is True:
+        failures.append("H8C: 全文整合任务不能声明 active_chapter_only=true")
+    for field, expected in (
+        ("writer_first_protocol", "contest-orchestrator/references/h8_writer_first_protocol.md"),
+        ("model_summary_protocol", "contest-orchestrator/references/model_summary_protocol.md"),
+    ):
+        if protocol.get(field) != expected:
+            missing.append(f"H8C: 缺少 {field}")
+    references = [("已批准写作计划", chapter_plan),
+                  ("已选择图件登记", chapter_plan.get("figure_registry"))]
+    references.extend((f"已批准章节 {item.get('chapter_id')}", item) for item in chapters)
+    for field, protocol_field in (("paper_author_brief", "author_brief"),
+                                  ("abstract_argument_card", "abstract_argument_card"),
+                                  ("model_summary_cards", "model_summary_cards"),
+                                  ("visual_argument_plan", "visual_argument_plan")):
+        raw = node.get(field)
+        if not isinstance(raw, str) or not raw.strip() or protocol.get(protocol_field) != raw:
+            missing.append(f"H8C: 必须绑定节点登记的 {field}")
+            continue
+        path = resolve_project_path(root, raw)
+        matches = [item for item in inputs if isinstance(item, dict) and resolve_project_path(root, item.get("path")) == path]
+        if path is None or not matches or not any(_reference_is_fresh(root, item)[0] for item in matches):
+            missing.append(f"H8C: 任务输入缺少当前 {field}")
+    for label, reference in references:
+        if not isinstance(reference, dict):
+            missing.append(f"H8C: 缺少{label}记录")
+            continue
+        path = resolve_project_path(root, reference.get("path"))
+        fresh, _ = _reference_is_fresh(root, reference)
+        matched = any(isinstance(item, dict) and resolve_project_path(root, item.get("path")) == path
+                      and same_digest(item.get("sha256"), reference.get("sha256")) for item in inputs)
+        if path is None or not fresh or not matched:
+            failures.append(f"H8C: {label}未绑定当前获批路径和哈希")
+
+
 def _validate_task_card(root: Path, node_id: str, node: dict[str, Any], runtime: dict[str, Any], task_ids: set[str],
-                        missing: list[str], failures: list[str]) -> None:
+                        missing: list[str], failures: list[str],
+                        control: dict[str, Any] | None = None, chapter_plan: dict[str, Any] | None = None) -> None:
     card_path = resolve_project_path(root, node.get("task_card"))
     if card_path is None or not card_path.is_file():
         missing.append(f"{node_id}: 缺少任务卡")
@@ -865,6 +914,9 @@ def _validate_task_card(root: Path, node_id: str, node: dict[str, Any], runtime:
             if not isinstance(protocol, dict):
                 missing.append("H8: 开始写作的任务卡必须包含 authoring_protocol")
             else:
+                if protocol.get("stage") == "H8C":
+                    _validate_h8c_task(root, node, card, control, chapter_plan, missing, failures)
+                    return
                 if protocol.get("stage") != "H8B":
                     failures.append("H8: 正文写作任务卡 authoring_protocol.stage 必须为 H8B")
                 card_ref = protocol.get("chapter_writing_card")
@@ -3708,7 +3760,8 @@ def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool
         if node.get("support_agent_policy") not in ("none", "conditional"):
             failures.append(f"{node_id}: support_agent_policy 只能为 none 或 conditional")
         if node_id in AGENT_NODES:
-            _validate_task_card(root, node_id, node, runtime_routes.get(node_id, {}), task_ids, missing, failures)
+            _validate_task_card(root, node_id, node, runtime_routes.get(node_id, {}), task_ids, missing, failures,
+                                control=control, chapter_plan=chapter_plan)
         if node_id in SKILL_BINDING_BY_NODE:
             _validate_skill_invocations(root, node_id, node, missing, failures)
         if node_id == "H1":
@@ -3798,6 +3851,7 @@ def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool
         "failures": failures, "missing": missing,
         "evidence_gaps": evidence_gaps, "return_nodes": return_nodes,
         "paper_material_status": paper_material_status,
+        "h8c_handoff": chapter_plan,
         "verified_artifacts": {
             kind: {"path": reference["path"], "sha256": reference["sha256"]}
             for kind, reference in h6_verification.items()

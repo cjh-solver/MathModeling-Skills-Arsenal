@@ -349,4 +349,10 @@ def validate(root, control, log, missing, failures, admission_only=False):
         if selected is None or any(at is None or at >= selected for at in generated_times):
             failures.append("H7 closure: selected versions must follow figure work")
     if closing and before == (len(missing), len(failures)):
-        return {"path": plan_path.relative_to(root).as_posix(), "sha256": digest(plan_path)}
+        drafts = {item["chapter_id"]: item["draft"] for item in chapters if item.get("task_id")}
+        return {"path": plan_path.relative_to(root).as_posix(), "sha256": digest(plan_path),
+                "approved_chapters": [{"chapter_id": chapter_id, "path": drafts[chapter_id]["path"],
+                                       "sha256": drafts[chapter_id]["sha256"]}
+                                      for chapter_id in print_order if chapter_id in drafts],
+                "figure_registry": {"path": registry_path.relative_to(root).as_posix(),
+                                    "sha256": digest(registry_path)}}

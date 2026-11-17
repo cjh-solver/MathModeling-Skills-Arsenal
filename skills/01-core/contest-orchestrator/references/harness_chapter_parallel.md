@@ -29,6 +29,8 @@ H7 仍负责把被转交的提示词落到已批准视觉计划、正确生成�
 
 正式 H8 只整合经 H7 选定的图件版本，完成必要的图前引入、图后解释、图注、排版和跨章连续性编辑，不从头重写已批准正文。随后在全文正文与附录稳定后写最终摘要，并保持原有 H8 审查与批准。H9 仍运行完整交付审计；逐章批准和图件选择不能替代 H9。
 
+正式全文整合可使用 [H8C 任务卡](../templates/harness_h8c_task_card.yaml)，从现有逐章记录按最终阅读顺序绑定每个已批准正文的原路径及哈希，并绑定原写作计划与最终选定图件登记。复用当前检查中已经确认的批准证据；任何缺失或变化仍阻断。该任务由同一登记论文角色及既有 `academic-writing` 能力承担，不新增角色或人工批准门。
+
 ## 记录边界
 
 `writing_plan` 可从 `templates/harness_chapter_writing_plan.yaml` 初始化。`nodes.H7.writer_preparation` 保留 `writing_plan: {path, sha256}`、`plan_review_packet`（`H7_WRITING_PLAN`）和 `chapters`。章节条目示例：

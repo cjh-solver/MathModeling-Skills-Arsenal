@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-17 — bind H8C integration to approved chapters
+
+- Expose the original approved chapter snapshots, final reading order and selected figure registry in the existing H7 closure handoff; retain the original plan reference and approval history.
+- Allow the registered H8 writer to use a distinct H8C integration task card bound to the current plan, approved chapters, selected figures and authoring evidence. Preserve existing H8B cards and the remaining review and delivery requirements.
+- Add a reusable integration task template and 16 isolated regressions covering stale or missing evidence, missing approvals, graphic revisions, the main Harness entrypoint and read-only source files.
+
 ## 2026-11-17 — read registered chapters before the final PDF
 
 - Build the paper workspace's navigation from the bound reader order while retaining planned empty chapters, unlisted records and duplicate-registration conflicts. Display explicit Chinese titles and known aliases without rewriting identifiers.

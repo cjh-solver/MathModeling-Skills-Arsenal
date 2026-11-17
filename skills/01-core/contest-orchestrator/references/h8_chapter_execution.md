@@ -30,6 +30,10 @@ Harness 控制记录启用 `visual_workflow: chapter_parallel` 时，先按 [逐
 
 ## H8C：独立编辑
 
+`chapter_parallel` 的正式 H8 整合派发使用同一已登记论文角色，任务卡可明确标注 `authoring_protocol.stage: H8C`。输入按最终 `chapter_order` 绑定已批准的逐章正文原路径和 SHA-256、原写作计划及最终图件登记；这些引用取自已通过当前逐章闭合检查的现有记录，不复制正文或补造批准。另绑定当前作者简报、摘要论证卡、模型卡和视觉计划。H8C 仍须符合完整 H6/H7、H8 审查及 H9 门禁；历史 H8B 任务卡按原规则读取。
+
+当前完整闭合检查通过时，Harness 检查报告的 `h8c_handoff` 给出原计划、最终图件登记以及按阅读顺序排列的获批章节路径与哈希，可据此填充整合任务卡。该字段仅描述逐章交接证据，不代表整个 Harness 检查通过，也不替代 H8/H9 的人工批准或交付检查。
+
 `chapter_parallel` 进入正式 H8 时，计划路径及哈希复用已批准的逐章原计划，人工批准登记保持真实。检查器消费本次完整逐章检查返回的来源，原计划及历史批准不回写；不要求另造旧格式的 `sections` 或页数配额。未完成图件闭合、来源变化或批准缺失时仍阻断；旧格式计划继续按原规则校验，实际页数限制留在正式交付检查中。
 
 `academic-writing` 在正文与附录定稿、H7 最终图件闭合后先按 `chapter_order` 通读全文，整合已选图件，检查章节递进、过渡、主张回收和结论力度，再独立核验“作者简报—已批准正文—冻结证据”的对应关系。它只做图前图后解释、图注、排版与必要局部编辑，不从头重写已批准正文。随后依据 `abstract_argument_card.yaml` 汇总各章节的 `abstract_contribution`，最后写摘要；摘要必须运行 `scripts/check_abstract_contract.py --strict`，并登记 `abstract_contract_report` 及当前摘要论证卡 SHA-256。报告未通过或未绑定当前摘要论证卡时，H8C 不得完成。
