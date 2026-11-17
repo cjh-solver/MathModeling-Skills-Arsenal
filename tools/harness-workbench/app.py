@@ -307,6 +307,16 @@ def project_file_exists(project, relative):
         return False
 
 
+def project_file_previewable(project, relative):
+    if not project_file_exists(project, relative):
+        return False
+    try:
+        safe_file(project, relative)
+        return True
+    except (OSError, TypeError, ValueError):
+        return False
+
+
 def node_evidence(project, raw, node_id):
     """Read only explicitly recorded task inputs, requested outputs and review evidence."""
     task_path = ref_path(raw.get("task_card"))
@@ -628,8 +638,11 @@ def build_state(project, links_path=LINKS_PATH):
     plan_path = plan_ref.get("path")
     plan, plan_error = read_project_yaml(project, plan_path)
     plan_hash = digest_status(project, {plan_path: plan_ref.get("sha256")}) if isinstance(plan_path, str) else {"status": "unrecorded", "files": []}
+    definitions = plan.get("chapters") if isinstance(plan.get("chapters"), list) else []
     writing_plan = {"path": plan_path, "review_packet": ref_path(preparation.get("plan_review_packet")), "error": plan_error, "hash": plan_hash["status"],
                     "chapter_order": plan.get("chapter_order"), "writing_order": plan.get("writing_order"),
+                    "chapters": [{"id": entry.get("chapter_id"), "title": entry.get("title")}
+                                 for entry in definitions if isinstance(entry, dict)],
                     "central_thesis": plan.get("central_thesis"), "reader_journey": plan.get("reader_journey")}
     chapter_items = preparation.get("chapters", [])
     chapters = []
@@ -669,7 +682,6 @@ def build_state(project, links_path=LINKS_PATH):
             quality_path = quality.get("path")
             quality_hash = digest_status(project, {quality_path: quality.get("sha256")}) if isinstance(quality_path, str) else {"status": "unrecorded"}
             quality_data, quality_error = read_project_yaml(project, quality_path)
-            definitions = plan.get("chapters") if isinstance(plan.get("chapters"), list) else []
             matching_definitions = [entry for entry in definitions if isinstance(entry, dict) and entry.get("chapter_id") == item.get("chapter_id")]
             kind = matching_definitions[0].get("kind") if len(matching_definitions) == 1 else None
             checks = quality_data.get("checks")
@@ -685,6 +697,8 @@ def build_state(project, links_path=LINKS_PATH):
                 ) and (kind != "modeling" or checks.get("model_and_derivation") == "PASS")
             )
             chapters.append({"id": str(item.get("chapter_id") or "未命名章节"), "draft": draft_path, "draft_hash": draft_hash["status"],
+                             "draft_available": project_file_exists(project, draft_path),
+                             "draft_previewable": project_file_previewable(project, draft_path),
                              "draft_completed_at": recorded_timestamp(item.get("draft_completed_at")),
                              "quality_review": quality_path, "quality_hash": quality_hash["status"], "quality_ready": quality_ready,
                              "review_packet": ref_path(item.get("review_packet")), "visuals_required": item.get("visuals_required"),
@@ -752,6 +766,8 @@ def build_state(project, links_path=LINKS_PATH):
         "authorization_mode": approvals.get("authorization_mode"),
         "visual_workflow": control.get("visual_workflow") or "未记录（历史流程）",
         "chapters": chapters, "writing_plan": writing_plan, "paper_source": paper_source, "paper_pdf": paper_pdf, "reports": reports,
+        "paper_source_available": project_file_exists(project, paper_source),
+        "paper_source_previewable": project_file_previewable(project, paper_source),
         "nodes": result_nodes, "roles": roles, "registry_error": registry_error, "role_links_error": links_error,
         "literature": literature, "subproblems": subproblems if isinstance(subproblems, list) else [],
         "question_views": question_views,

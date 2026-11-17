@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-17 — read registered chapters before the final PDF
+
+- Build the paper workspace's navigation from the bound reader order while retaining planned empty chapters, unlisted records and duplicate-registration conflicts. Display explicit Chinese titles and known aliases without rewriting identifiers.
+- Preview registered chapter sources inline before a complete PDF exists, keep PDF as the initial default when available, and reuse the existing read-only file viewers.
+- Preserve the chosen chapter and directory scroll during refresh; reset selection on project switches. Keep registration, file presence, preview limits and approval separate.
+- Add isolated source and UI regressions, verify desktop and narrow layouts with synthetic projects, and include an actual synthetic screenshot in the workbench guide. Synchronize the scoped implementation with the local prototype without replacing unrelated differences.
+
 ## 2026-11-17 — reuse the approved chapter plan in formal H8
 
 - Let the existing complete chapter-workflow check return the unchanged plan reference after scientific sources, dispatches, chapter approvals and final graphic closure pass.

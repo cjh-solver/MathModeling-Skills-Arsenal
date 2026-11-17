@@ -44,6 +44,7 @@ let selectedLibraryFile = null;
 let selectedArtifact = null;
 let selectedSkill = null;
 let selectedDeliveryFile = null;
+let selectedPaperItem = null;
 let artifactStage = '全部';
 let libraryDirectory = '全部';
 let catalogQuery = '';
@@ -444,12 +445,47 @@ function deliveryPage() {
   return `<div class="delivery-layout"><div class="stack delivery-main"><section class="delivery-overview"><span class="delivery-status-icon">${icon('shield')}</span><div><span>H9 交付节点记录</span><h2>${esc(h9 ? status(h9.status) : '未登记')}</h2></div><div class="delivery-overview-source"><strong>项目记录</strong><p>${esc(state.name)}</p><p>状态取自控制记录，不代表最终交付通过。</p></div></section><section class="card delivery-list"><div class="catalog-heading"><h2>${icon('checklist')}交付材料与历史报告</h2></div>${list}<details class="catalog-note"><summary>查看全部交付与审查材料</summary>${filePage('交付与审查材料', path => /delivery|交付|h9|审查/.test(path), '只展示项目中已有材料。')}</details></section></div>${selected ? catalogDetail(selected.file, null) : `<aside class="card catalog-detail"><div class="catalog-heading"><h2>证据查看</h2></div>${empty('没有可查看的已登记文件。')}</aside>`}</div>`;
 }
 
+function paperOutline(snapshot) {
+  const records = (Array.isArray(snapshot.chapters) ? snapshot.chapters : []).filter(item => item && typeof item.id === 'string' && item.id.trim());
+  const plan = snapshot.writing_plan || {};
+  const order = plan.chapter_order;
+  const validOrder = Array.isArray(order) && order.length > 0 && order.every(id => typeof id === 'string' && id.trim()) && new Set(order).size === order.length;
+  const usePlan = snapshot.visual_workflow === 'chapter_parallel' && plan.hash === 'matches' && !plan.error && validOrder;
+  const planned = usePlan ? order : [];
+  const warning = usePlan ? '' : plan.path && (plan.error || plan.hash !== 'matches') ? '目录文件变化或无法核对，暂按章节登记顺序展示。' : '最终目录未登记或格式待核，暂按章节登记顺序展示。';
+  const aliases = { abstract: '摘要', analysis: '问题分析', problem_analysis: '问题分析', assumptions: '模型假设', symbols: '符号说明', validation: '模型验证', evaluation: '模型评价', conclusion: '结论', appendix: '附录', front_matter: '前置说明' };
+  const ids = [...new Set([...planned, ...records.map(item => item.id)])];
+  return { warning, items: ids.map(id => {
+    const matching = records.filter(item => item.id === id);
+    const record = matching.length === 1 ? matching[0] : {};
+    const definitions = usePlan && Array.isArray(plan.chapters) ? plan.chapters.filter(item => item?.id === id) : [];
+    const modeling = /^modeling_q([1-9]\d*)$/i.exec(id);
+    const fallbackTitle = Object.hasOwn(aliases, id) ? aliases[id] : modeling ? '问题 ' + modeling[1] + ' · 建模与求解' : id;
+    const title = definitions.length === 1 && typeof definitions[0].title === 'string' && definitions[0].title.trim() ? definitions[0].title : fallbackTitle;
+    const draft = typeof record.draft === 'string' && record.draft ? record.draft : null;
+    const available = !!draft && (typeof record.draft_available === 'boolean' ? record.draft_available : (snapshot.files || []).some(file => file.path === draft));
+    const previewable = typeof record.draft_previewable === 'boolean' ? record.draft_previewable : (snapshot.files || []).find(file => file.path === draft)?.previewable;
+    const ambiguous = matching.length > 1;
+    const inPlan = usePlan ? planned.includes(id) : null;
+    const label = ambiguous ? '登记冲突' : !draft ? '未登记' : !available ? '文件缺失' : record.draft_hash === 'issues' ? '文件待核' : inPlan === false ? '计划外' : '已登记';
+    return { key: 'chapter:' + id, id, title, path: draft, available, previewable, ambiguous, inPlan, label };
+  }) };
+}
+
 function paperPage() {
-  const pdf = state.files.find(file => file.path === state.paper_pdf);
   const source = state.files.find(file => file.path === state.paper_source);
-  const chapters = state.chapters || [];
-  const chapterList = chapters.length ? chapters.map(chapter => `<div class="paper-list-row"><span class="paper-list-icon">${icon('file')}</span><div class="paper-list-copy"><strong>${esc(chapter.id)}</strong><span>${chapter.draft ? esc(chapter.draft) : '正文文件未登记'}</span></div>${chapter.draft ? fileLink(chapter.draft) : ''}</div>`).join('') : '<p class="paper-empty">项目中未登记逐章写作记录。</p>';
-  const paperFiles = [source, pdf].filter(Boolean).map(file => `<div class="paper-list-row">${fileIcon(file.path)}<div class="paper-list-copy"><strong>${esc(fileDisplayName(file.path))}</strong><span>${esc(file.path)}</span></div>${fileLink(file.path)}</div>`).join('');
+  const outline = paperOutline(state);
+  const registeredFiles = [...new Set([state.paper_pdf, state.paper_source].filter(path => typeof path === 'string' && path))].flatMap(path => {
+    const file = state.files.find(item => item.path === path);
+    const previewable = file?.previewable ?? (path === state.paper_source ? state.paper_source_previewable : undefined);
+    return file || path === state.paper_pdf || state.paper_source_available === true ? [{ ...(file || {}), key: 'file:' + path, path, title: fileDisplayName(path), available: true, previewable }] : [];
+  });
+  const items = [...outline.items, ...registeredFiles];
+  const selected = items.find(item => item.key === selectedPaperItem) || registeredFiles.find(item => item.path === state.paper_pdf) || outline.items.find(item => item.available) || registeredFiles[0] || outline.items[0];
+  selectedPaperItem = selected?.key || null;
+  const selectRow = (item, chapter = false) => `<button class="paper-select${item.key === selectedPaperItem ? ' active' : ''}" data-paper-select="${esc(item.key)}" aria-pressed="${item.key === selectedPaperItem}" title="${esc(item.path || item.id || item.title)}">${fileIcon(item.path || '')}<span class="paper-select-title">${esc(item.title)}</span>${chapter ? `<span class="paper-chapter-state">${esc(item.label)}</span>` : ''}</button>`;
+  const chapterList = outline.items.length ? outline.items.map(item => selectRow(item, true)).join('') : '<p class="paper-empty">项目中未登记目录或章节。</p>';
+  const paperFiles = registeredFiles.map(item => selectRow(item)).join('');
   const figures = (state.figures || []).filter(figure => figure.png && state.files.some(file => file.path === figure.png));
   const figureList = figures.length ? `<div class="paper-figure-grid">${figures.map(figure => `<button class="paper-figure" data-file="${esc(figure.png)}"><img loading="lazy" src="${fileUrl(figure.png)}" alt="${esc(figure.id)}"><span>${esc(figure.id)}</span></button>`).join('')}</div>` : '<p class="paper-empty">项目未登记可预览的图表。</p>';
   const reports = state.reports || [];
@@ -457,8 +493,11 @@ function paperPage() {
   const literature = (state.literature || []).filter(item => typeof item.path === 'string');
   const sources = literature.length ? literature.map(item => `<div class="paper-list-row"><span class="paper-list-icon">${icon('book')}</span><div class="paper-list-copy"><strong>${esc(item.name)}</strong><span>${esc(item.path)}</span></div>${fileLink(item.path)}</div>`).join('') : '<p class="paper-empty">项目未登记文献交接资料。</p>';
   const details = state.visual_workflow === 'chapter_parallel' ? `<details class="card paper-extra"><summary>逐章写作记录</summary>${writingPlan()}${chapterRows()}</details>` : '';
-  const viewer = pdf ? `<div class="paper-viewer-heading"><div class="paper-viewer-title">${fileIcon(pdf.path)}<div><h2>论文 PDF 预览</h2><span>${esc(pdf.path)}</span></div></div><span class="paper-readonly">只读</span></div><div id="paper-pdf"></div><details class="paper-viewer-note"><summary>预览说明与源文件</summary><p>PDF 与已登记论文源文件的内容一致性尚未由工作台核验，不代表已通过最终审查。</p><div class="paper-viewer-actions">${fileLink(pdf.path, '打开 PDF')}${source ? fileLink(source.path, '查看 LaTeX 源文件') : ''}</div></details>` : `<div class="paper-viewer-heading"><h2>论文 PDF 预览</h2><span class="paper-readonly">只读</span></div>${empty('未找到已登记论文源文件的同名 PDF。')}`;
-  return `<div class="stack paper-workspace"><div class="paper-columns"><aside class="card paper-nav"><div class="paper-panel-heading"><h2>${icon('book')}论文目录与章节</h2></div>${chapterList}<div class="paper-panel-heading paper-subheading"><h2>${icon('file')}论文文件</h2></div>${paperFiles || '<p class="paper-empty">论文源文件和 PDF 未登记或未找到。</p>'}</aside><section class="card paper-viewer">${viewer}</section><aside class="paper-side"><section class="card"><div class="paper-panel-heading"><h2>${icon('chart')}项目登记图表</h2><span>${figures.length} 张</span></div>${figureList}</section><section class="card"><div class="paper-panel-heading"><h2>${icon('shield')}历史检查报告</h2></div>${reportList}<p class="paper-footnote">报告为历史记录，不表示已执行新的检查。</p></section><section class="card"><div class="paper-panel-heading"><h2>${icon('book')}文献交接资料</h2></div>${sources}</section></aside></div>${details}<details class="paper-all-files"><summary>查看全部论文文件</summary>${filePage('论文文件', p => /(^|\/)(paper|论文)(\/|_|\.)/.test(p) || /chapter|appendix/.test(p), '可预览已有 PDF 和论文源文件；当前不提供编辑或编译。')}</details></div>`;
+  const isMainPdf = selected?.path && selected.path === state.paper_pdf;
+  const viewerTitle = isMainPdf ? '论文 PDF 预览' : selected?.id ? selected.title + ' · 源文件' : '论文源文件预览';
+  const content = selected?.available ? selected.previewable === false ? empty('文件类型或大小不支持预览，可复制原始路径后打开。') : isMainPdf ? '<div id="paper-pdf"></div>' : `<div id="paper-chapter-preview" data-preview-path="${esc(selected.path)}">正在加载章节…</div>` : empty(selected?.ambiguous ? '同一章节存在多份登记，请在逐章写作记录中核对。' : selected?.path ? '已登记的正文文件缺失或不在当前项目内。' : selected?.id ? '尚未登记本章正文。' : '尚未登记可阅读的论文或章节文件。');
+  const viewer = `<div class="paper-viewer-heading"><div class="paper-viewer-title">${fileIcon(selected?.path || '')}<div><h2>${esc(viewerTitle)}</h2>${selected?.path ? `<span>${esc(selected.path)}</span>` : ''}</div></div><span class="paper-readonly">只读</span></div>${content}<details class="paper-viewer-note"><summary>文件来源与说明</summary>${outline.warning ? `<p>${esc(outline.warning)}</p>` : ''}${selected?.inPlan === false ? '<p>此章节已登记，但尚未列入当前目录。</p>' : ''}<p>预览读取现有文件，不执行编译。文件存在或目录登记不表示已获批准；正文与 PDF 的一致性以项目审查记录为准。</p><div class="paper-viewer-actions">${selected?.available ? selected.previewable === false ? `<button class="row-action" data-copy-path="${esc(selected.path)}">复制原始路径</button>` : fileLink(selected.path, '独立打开') : ''}${isMainPdf && source ? fileLink(source.path, '查看论文源文件') : ''}</div></details>`;
+  return `<div class="stack paper-workspace"><div class="paper-columns"><aside class="card paper-nav"><div class="paper-panel-heading"><h2>${icon('book')}论文目录与章节</h2></div><div class="paper-chapter-list" data-project="${esc(state.project || '')}">${chapterList}</div><div class="paper-panel-heading paper-subheading"><h2>${icon('file')}论文文件</h2></div>${paperFiles || '<p class="paper-empty">论文源文件和 PDF 未登记或未找到。</p>'}</aside><section class="card paper-viewer">${viewer}</section><aside class="paper-side"><section class="card"><div class="paper-panel-heading"><h2>${icon('chart')}项目登记图表</h2><span>${figures.length} 张</span></div>${figureList}</section><section class="card"><div class="paper-panel-heading"><h2>${icon('shield')}历史检查报告</h2></div>${reportList}<p class="paper-footnote">报告为历史记录，不表示已执行新的检查。</p></section><section class="card"><div class="paper-panel-heading"><h2>${icon('book')}文献交接资料</h2></div>${sources}</section></aside></div>${details}<details class="paper-all-files"><summary>查看全部论文文件</summary>${filePage('论文文件', p => /(^|\/)(paper|论文)(\/|_|\.)/.test(p) || /chapter|appendix/.test(p), '可预览已有 PDF 和论文源文件；当前不提供编辑或编译。')}</details></div>`;
 }
 
 function literaturePage() {
@@ -522,8 +561,17 @@ function render() {
     skills: skillsPage,
     delivery: deliveryPage,
   };
+  const previousPaperList = $('.paper-chapter-list');
+  const paperListScroll = previousPaperList && previousPaperList.dataset?.project === state.project ? previousPaperList.scrollTop : null;
   $('#content').innerHTML = views[current]();
+  const paperList = $('.paper-chapter-list');
+  if (paperList) {
+    const active = paperList.querySelector('.active');
+    paperList.scrollTop = paperListScroll !== null ? paperListScroll : active ? Math.max(0, active.offsetTop - (paperList.clientHeight - active.offsetHeight) / 2) : 0;
+  }
   if (current === 'paper' && $('#paper-pdf')) renderPdf($('#paper-pdf'), state.paper_pdf);
+  const chapterPreview = $('#paper-chapter-preview');
+  if (chapterPreview) renderCatalogPreview(chapterPreview, chapterPreview.dataset.previewPath);
   const catalogPreview = $('#catalog-preview');
   if (catalogPreview) {
     const file = state.files.find(item => item.path === catalogPreview.dataset.previewPath);
@@ -539,7 +587,7 @@ async function refresh() {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error);
     if (generation !== syncGeneration) return;
-    if (state?.project && state.project !== result.project) { contextNode = null; resultExpanded = false; resultCategory = '全部'; artifactStage = '全部'; selectedQuestion = null; selectedRole = null; selectedSkill = null; selectedDeliveryFile = null; selectedLibraryFile = null; selectedArtifact = null; libraryDirectory = '全部'; catalogQuery = ''; questionQuery = ''; }
+    if (state?.project && state.project !== result.project) { contextNode = null; resultExpanded = false; resultCategory = '全部'; artifactStage = '全部'; selectedQuestion = null; selectedRole = null; selectedSkill = null; selectedDeliveryFile = null; selectedPaperItem = null; selectedLibraryFile = null; selectedArtifact = null; libraryDirectory = '全部'; catalogQuery = ''; questionQuery = ''; }
     state = result; loadedSelection = selected; refreshFailed = false;
     syncSnapshot = JSON.stringify(result); syncCandidate = ''; $('#error').hidden = true; render();
     syncStatus('已同步');
@@ -811,6 +859,7 @@ document.addEventListener('click', (event) => {
   const directorySelection = event.target.closest('[data-library-directory]');
   const skillSelection = event.target.closest('[data-select-skill]');
   const deliverySelection = event.target.closest('[data-delivery-file]');
+  const paperSelection = event.target.closest('[data-paper-select]');
   if (page) { if (current !== page.dataset.page) catalogQuery = ''; current = page.dataset.page; closeMobileNav(); render(); }
   if (node) openNode(node.dataset.node);
   if (question) { const y = window.scrollY; selectedQuestion = question.dataset.question; render(); [...document.querySelectorAll('[data-question]')].find(item => item.dataset.question === selectedQuestion)?.focus({preventScroll: true}); window.scrollTo(0, y); }
@@ -819,6 +868,7 @@ document.addEventListener('click', (event) => {
   if (directorySelection) { libraryDirectory = directorySelection.dataset.libraryDirectory; catalogQuery = ''; selectedLibraryFile = null; render(); }
   if (skillSelection) { const y = window.scrollY; selectedSkill = skillSelection.dataset.selectSkill; render(); [...document.querySelectorAll('[data-select-skill]')].find(item => item.dataset.selectSkill === selectedSkill)?.focus({preventScroll: true}); window.scrollTo(0, y); }
   if (deliverySelection) { const y = window.scrollY; selectedDeliveryFile = deliverySelection.dataset.deliveryFile; render(); [...document.querySelectorAll('[data-delivery-file]')].find(item => item.dataset.deliveryFile === selectedDeliveryFile)?.focus({preventScroll: true}); window.scrollTo(0, y); }
+  if (paperSelection) { const y = window.scrollY; selectedPaperItem = paperSelection.dataset.paperSelect; render(); [...document.querySelectorAll('[data-paper-select]')].find(item => item.dataset.paperSelect === selectedPaperItem)?.focus({preventScroll: true}); window.scrollTo(0, y); }
   if (resultTabButton) { resultTab = resultTabButton.dataset.resultTab; resultExpanded = false; render(); document.querySelector(`[data-result-tab="${resultTab}"]`)?.focus(); }
   if (pin) { const prefs = resultPreferences(); const path = pin.dataset.resultPin; prefs.pins = prefs.pins.includes(path) ? prefs.pins.filter(item => item !== path) : [...prefs.pins, path]; if (saveResultPreferences(prefs)) { render(); [...document.querySelectorAll('[data-result-pin]')].find(item => item.dataset.resultPin === path)?.focus(); } }
   if (event.target.closest('[data-result-expand]')) { resultExpanded = true; render(); }
