@@ -3,6 +3,7 @@ task_id: <H8 实际任务 ID>
 node_id: H8
 owner_role: 论文 agent
 objective: 依据当前章节写作卡，以冻结证据完成一个连贯、可审查的论文章节。
+# 正式整合时同时读取 H7 已批准的原 writing_plan，沿用其登记路径和哈希，不另造旧版 sections 计划。
 inputs:
   - path: problem_statement.md
     sha256: <sha256>

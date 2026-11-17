@@ -57,4 +57,6 @@ visual_prompts:
 
 连续性包应区别“已完成的写作单元”和“正式整合进度”：准备阶段按 `writing_order` 记录已批章节、术语和承接，正式 H8 按最终 `chapter_order` 整合。最终目录的早晚不能反过来阻止先写模型章节。既有 H8 成稿连续性检查仍用于正式整合，不把已存在的正文重新当作待创作全文。
 
+正式 H8 的 `writing_plan` 沿用 `writer_preparation.writing_plan` 的原路径和 SHA-256，计划审查及 `plan_approved` 按真实人工批准登记。只有同次完整逐章检查确认计划批准、科学来源、真实派发、各章批准和最终图件闭合后，H8 才消费该原计划；不得向它补写 `status`、旧版 `sections` 或逐节页数来改变已批准哈希。历史 `sections` 计划仍按原契约读取。作者简报、章节证据、摘要、正式 H7/H8 批准和 H9 实际页数及完整交付检查不变。
+
 在 `nodes.H7.writer_preparation` 下保存经批准的 `writing_plan`、计划审查包、章节条目、章节审查包和 `visual_prompts`。各实际派发仍进入全局 `dispatch_records`，使用注册的 H8 身份、模型、推理强度、任务卡哈希和真实回执。不得补填回执、用图件状态伪造章节批准，或用待修图件阻塞一个已批准章节之后的写作。

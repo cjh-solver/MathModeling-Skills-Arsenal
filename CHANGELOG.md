@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-17 — reuse the approved chapter plan in formal H8
+
+- Let the existing complete chapter-workflow check return the unchanged plan reference after scientific sources, dispatches, chapter approvals and final graphic closure pass.
+- Consume that same path and SHA-256 in formal H8 without adding legacy sections, approval labels or planning-page quotas to an already approved plan. Retain actual H8 plan approval registration and review records.
+- Reject copied or changed plans, incomplete closure, missing approvals and invalid dispatch evidence. Keep legacy sections plans and all other H8/H9 obligations unchanged.
+- Add 18 synthetic handoff and boundary regressions, including the real Harness entrypoint and read-only file checks; synchronize only the affected implementation, protocol, templates and tests with the installed copy.
+
 ## 2026-11-17 — H6 verification preserves frozen H5 evidence
 
 - Record independent H6 verification in the existing interface report, binding the validation contract, model cards, result interpretations and visual evidence packet to their unchanged source hashes.

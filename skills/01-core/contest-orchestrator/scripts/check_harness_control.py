@@ -3206,12 +3206,14 @@ def _validate_gap_matrix(root: Path, node: dict[str, Any], readiness_path: Path,
 
 
 def _validate_h8_writing_plan(root: Path, node: dict[str, Any],
-                               missing: list[str], failures: list[str]) -> None:
+                               missing: list[str], failures: list[str],
+                               control: dict[str, Any] | None = None,
+                               chapter_plan: dict[str, Any] | None = None) -> None:
     """Validate H8 writing plan structure and approval status.
 
     Called only when writing_started=true.  Checks the plan file exists,
-    has status=approved, contains non-empty sections, and the declared
-    sha256 matches the actual file.
+    checks the current source hash and legacy sections, or consumes the same
+    immutable chapter plan after the existing complete chapter workflow passed.
     """
     plan_raw = node.get("writing_plan")
     if not isinstance(plan_raw, str) or not plan_raw.strip():
@@ -3236,6 +3238,18 @@ def _validate_h8_writing_plan(root: Path, node: dict[str, Any],
         return
     if not isinstance(plan, dict):
         failures.append("H8: writing_plan 必须为对象")
+        return
+    if ((control or {}).get("visual_workflow") == "chapter_parallel"
+            and ("chapters" in plan or "writing_order" in plan)):
+        if (not isinstance(chapter_plan, dict)
+                or resolve_project_path(root, chapter_plan.get("path")) != plan_path
+                or not same_digest(chapter_plan.get("sha256"), digest(plan_path))):
+            failures.append("H8: writing_plan 必须复用已通过完整逐章检查的原计划及当前哈希")
+        if node.get("plan_approved") is not True:
+            failures.append("H8: 写作计划仍须按实际用户批准登记 plan_approved=true")
+        packet_path = resolve_project_path(root, node.get("plan_review_packet"))
+        if packet_path is None or not packet_path.is_file():
+            failures.append("H8: 复用逐章计划仍须登记真实 plan_review_packet")
         return
     if plan.get("status") != "approved":
         failures.append(f"H8: writing_plan.status 必须为 approved（当前: {plan.get('status')}）")
@@ -3455,11 +3469,11 @@ def _validate_claim_coverage(root: Path, node: dict[str, Any], readiness_path: P
 
 
 def _validate_writer_preparation(root: Path, control: dict[str, Any], log: dict[str, Any],
-                                  missing: list[str], failures: list[str], admission_only: bool = False) -> None:
+                                  missing: list[str], failures: list[str],
+                                  admission_only: bool = False) -> dict[str, Any] | None:
     if control.get("visual_workflow") == "chapter_parallel":
         from harness_chapter_workflow import validate
-        validate(root, control, log, missing, failures, admission_only=admission_only)
-        return
+        return validate(root, control, log, missing, failures, admission_only=admission_only)
     h7 = control.get("nodes", {}).get("H7", {})
     prep = h7.get("writer_preparation")
     if not isinstance(prep, dict):
@@ -3670,8 +3684,9 @@ def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool
         log = {"approvals": []}
     task_ids: set[str] = set()
     checked_nodes = NODES[:NODES.index(through) + 1]
+    chapter_plan = None
     if control.get("visual_workflow") in {"writer_first_draft", "chapter_parallel"} and "H7" in checked_nodes:
-        _validate_writer_preparation(root, control, log, missing, failures)
+        chapter_plan = _validate_writer_preparation(root, control, log, missing, failures)
     for node_id in checked_nodes:
         # H4 is retained only for historical records; H5 now owns its work.
         if node_id == "H4":
@@ -3774,7 +3789,9 @@ def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool
             _validate_paper_author_brief(root, h8_node, missing, failures, control=control)
             _validate_chapter_writing_cards(root, h8_node, missing, failures, control=control)
             _validate_paper_continuity_context(root, h8_node, missing, failures)
-            _validate_h8_writing_plan(root, h8_node, missing, failures)
+            _validate_h8_writing_plan(
+                root, h8_node, missing, failures, control=control, chapter_plan=chapter_plan,
+            )
     status = "BLOCK" if failures else "PAUSE" if missing or evidence_gaps else "PASS"
     return {
         "schema_version": "1.0", "status": status, "through": through,

@@ -13,6 +13,7 @@ QUALITY = {"problem_answer", "model_and_derivation", "result_comparison", "inter
 
 def validate(root, control, log, missing, failures, admission_only=False):
     root = Path(root).resolve()
+    before = (len(missing), len(failures))
 
     def time(value):
         try:
@@ -347,3 +348,5 @@ def validate(root, control, log, missing, failures, admission_only=False):
         generated_times = [time(r.get("dispatched_at")) for r in records if isinstance(r, dict) and r.get("node_id") == "H7"]
         if selected is None or any(at is None or at >= selected for at in generated_times):
             failures.append("H7 closure: selected versions must follow figure work")
+    if closing and before == (len(missing), len(failures)):
+        return {"path": plan_path.relative_to(root).as_posix(), "sha256": digest(plan_path)}

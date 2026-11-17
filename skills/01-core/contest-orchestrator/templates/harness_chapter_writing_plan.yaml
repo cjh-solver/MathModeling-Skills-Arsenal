@@ -1,5 +1,7 @@
 # `chapter_order` is final reader/print order; `writing_order` is actual creation order.
 # Keep every chapter complete and evidence-bound. Do not use fixed paragraph counts or length quotas.
+# Formal H8 reuses this same approved path/hash after complete chapter closure.
+# Keep human approval records; do not add legacy sections or approval labels to this frozen file.
 central_thesis: <one evidence-bounded whole-paper claim>
 reader_journey:
   - <how a reader moves from problem to supported conclusion>
