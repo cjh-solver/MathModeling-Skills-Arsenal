@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-17 — expose verified chapter-card handoffs
+
+- Reuse each actual chapter-writing task's frozen inputs and the existing H8 card registration to expose matching chapter-card paths and hashes in the H8C handoff.
+- Mark absent or ambiguous source relationships as unverified without changing historical chapter closure or treating the reference as an approval. Retain all formal H8 and H9 checks.
+- Cover source matching, identical copies, cross-chapter inputs, duplicate and missing registrations, legacy closure, real CLI output and read-only behavior using synthetic records.
+
 ## 2026-11-17 — keep chapter-card inputs frozen during writing
 
 - Populate each chapter's abstract contribution from frozen evidence before the H8B task is dispatched; return its consistency check without rewriting the hashed chapter-card input.

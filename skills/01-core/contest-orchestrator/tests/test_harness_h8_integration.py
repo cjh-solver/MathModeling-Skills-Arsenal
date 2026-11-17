@@ -1,4 +1,7 @@
 import copy
+import json
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -77,6 +80,70 @@ class H8IntegrationTests(unittest.TestCase):
     def test_approved_chapters_are_in_final_reading_order_and_h8c_accepts_them(self):
         self.assertEqual([item["chapter_id"] for item in self.proof["approved_chapters"]], ["analysis", "Q1"])
         self.assertEqual(self.check(), ([], []))
+
+    def test_handoff_reports_each_registered_card_only_when_bound_to_its_draft_task(self):
+        self.assertEqual([item["chapter_id"] for item in self.proof["chapter_cards"]], ["analysis", "Q1"])
+        self.assertEqual(self.proof["unverified_chapter_card_ids"], [])
+        for item in self.proof["chapter_cards"]:
+            self.assertIn(item["path"], self.node["chapter_writing_cards"])
+            self.assertEqual(item["sha256"], checker.digest(self.root / item["path"]))
+
+    def test_handoff_marks_legacy_unregistered_cards_unverified_without_blocking_closure(self):
+        self.node.pop("chapter_writing_cards")
+        missing, failures = [], []
+        proof = checker._validate_writer_preparation(self.root, self.control, self.fixture.log, missing, failures)
+        self.assertEqual((missing, failures), ([], []))
+        self.assertEqual(proof["chapter_cards"], [])
+        self.assertEqual(proof["unverified_chapter_card_ids"], ["analysis", "Q1"])
+
+    def test_handoff_does_not_treat_an_identical_replacement_as_the_draft_input(self):
+        original = self.node["chapter_writing_cards"][0]
+        copied = self.fixture.put("paper/cards/copy.yaml", (self.root / original).read_text(encoding="utf-8"))
+        self.assertEqual(copied["sha256"], checker.digest(self.root / original))
+        self.node["chapter_writing_cards"][0] = copied["path"]
+        missing, failures = [], []
+        proof = checker._validate_writer_preparation(self.root, self.control, self.fixture.log, missing, failures)
+        self.assertEqual((missing, failures), ([], []))
+        copied_id = yaml.safe_load((self.root / original).read_text(encoding="utf-8"))["chapter_id"]
+        self.assertIn(copied_id, proof["unverified_chapter_card_ids"])
+        self.assertNotIn(copied["path"], [item["path"] for item in proof["chapter_cards"]])
+
+    def test_handoff_marks_duplicate_card_registrations_unverified(self):
+        self.node["chapter_writing_cards"].append(self.node["chapter_writing_cards"][0])
+        missing, failures = [], []
+        proof = checker._validate_writer_preparation(self.root, self.control, self.fixture.log, missing, failures)
+        self.assertEqual((missing, failures), ([], []))
+        self.assertIn("analysis", proof["unverified_chapter_card_ids"])
+        self.assertEqual([item["chapter_id"] for item in proof["chapter_cards"]], ["Q1"])
+
+    def test_handoff_marks_unreadable_registration_unverified_without_changing_closure(self):
+        self.node["chapter_writing_cards"][0] = "paper/cards/missing.yaml"
+        missing, failures = [], []
+        proof = checker._validate_writer_preparation(self.root, self.control, self.fixture.log, missing, failures)
+        self.assertEqual((missing, failures), ([], []))
+        self.assertIn("analysis", proof["unverified_chapter_card_ids"])
+        self.assertEqual([item["chapter_id"] for item in proof["chapter_cards"]], ["Q1"])
+
+    def test_handoff_does_not_promote_a_card_bound_only_to_another_chapter(self):
+        path = self.node["chapter_writing_cards"][0]
+        record = next(item for item in self.control["dispatch_records"] if item.get("task_id") == "draft-analysis")
+        task = yaml.safe_load((self.root / record["task_card_path"]).read_text(encoding="utf-8"))
+        ref = next(item for item in task["inputs"] if item.get("path") == path)
+        task["inputs"] = [item for item in task["inputs"] if item.get("path") != path]
+        updated = self.fixture.put(record["task_card_path"], task)
+        record["task_card_sha256"] = updated["sha256"]
+        record["spawn_receipt"]["task_card_sha256"] = updated["sha256"]
+        other = next(item for item in self.control["dispatch_records"] if item.get("task_id") == "draft-Q1")
+        other_task = yaml.safe_load((self.root / other["task_card_path"]).read_text(encoding="utf-8"))
+        other_task["inputs"].append(ref)
+        updated = self.fixture.put(other["task_card_path"], other_task)
+        other["task_card_sha256"] = updated["sha256"]
+        other["spawn_receipt"]["task_card_sha256"] = updated["sha256"]
+        missing, failures = [], []
+        proof = checker._validate_writer_preparation(self.root, self.control, self.fixture.log, missing, failures)
+        self.assertEqual((missing, failures), ([], []))
+        self.assertIn("analysis", proof["unverified_chapter_card_ids"])
+        self.assertEqual([item["chapter_id"] for item in proof["chapter_cards"]], ["Q1"])
 
     def test_h8c_checks_without_mutating_project_files_or_approval_history(self):
         before = {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in self.root.rglob("*") if p.is_file()}
@@ -228,6 +295,22 @@ class H8IntegrationTests(unittest.TestCase):
         errors = [item for item in report["missing"] + report["failures"] if item.startswith("H8C:")]
         self.assertEqual(errors, [], report)
         self.assertEqual([item["chapter_id"] for item in report["h8c_handoff"]["approved_chapters"]], ["analysis", "Q1"])
+        self.assertEqual(report["h8c_handoff"]["chapter_cards"], self.proof["chapter_cards"])
+        self.assertEqual(report["h8c_handoff"]["unverified_chapter_card_ids"], [])
+        self.assertNotEqual(report["status"], "PASS")
+
+    def test_cli_emits_bound_cards_without_claiming_other_gates_passed(self):
+        control = checker.default_control()
+        control.update({key: copy.deepcopy(value) for key, value in self.control.items() if key != "nodes"})
+        for node_id, node in self.control["nodes"].items():
+            control["nodes"][node_id].update(node)
+        self.fixture.put(".contest/harness_control.yaml", control)
+        self.fixture.put(".contest/approval_log.yaml", self.fixture.log)
+        result = subprocess.run([sys.executable, "-X", "utf8", str(ROOT / "scripts/check_harness_control.py"),
+                                 str(self.root), "--through", "H8"], capture_output=True, text=True, encoding="utf-8")
+        report = json.loads(result.stdout)
+        self.assertEqual(report["h8c_handoff"]["chapter_cards"], self.proof["chapter_cards"])
+        self.assertNotEqual(result.returncode, 0)
         self.assertNotEqual(report["status"], "PASS")
 
     def test_main_checker_does_not_offer_handoff_when_chapter_approval_is_missing(self):

@@ -128,6 +128,7 @@ def validate(root, control, log, missing, failures, admission_only=False):
     writer_id = control.get("agent_instances", {}).get("H8", {}).get("agent_instance_id")
     route = control.get("agent_runtime_routes", {}).get("H8", {})
     used = set()
+    draft_inputs = {}
 
     def call(task_id, chapter_id, phase, after):
         matches = [r for r in records if isinstance(r, dict) and r.get("task_id") == task_id]
@@ -151,6 +152,8 @@ def validate(root, control, log, missing, failures, admission_only=False):
         if not isinstance(receipt, dict) or any(receipt.get(k) != r.get(k) for k in ("task_id", "agent_instance_id", "task_card_sha256")):
             failures.append(f"{task_id}: genuine task receipt required")
         inputs = card.get("inputs", [])
+        if phase == "H8_chapter_draft" and isinstance(inputs, list):
+            draft_inputs[chapter_id] = inputs
         if not isinstance(inputs, list) or len(inputs) < 2 or prep.get("writing_plan") not in inputs:
             failures.append(f"{task_id}: approved plan and frozen scientific sources required")
         else:
@@ -350,9 +353,46 @@ def validate(root, control, log, missing, failures, admission_only=False):
             failures.append("H7 closure: selected versions must follow figure work")
     if closing and before == (len(missing), len(failures)):
         drafts = {item["chapter_id"]: item["draft"] for item in chapters if item.get("task_id")}
+        registered = nodes.get("H8", {}).get("chapter_writing_cards", [])
+        candidates = {}
+        for raw in registered if isinstance(registered, list) else []:
+            if not isinstance(raw, str) or not raw.strip() or Path(raw).is_absolute():
+                continue
+            try:
+                path = (root / raw).resolve()
+                if not path.is_relative_to(root) or not path.is_file():
+                    continue
+                raw_card = path.read_bytes()
+                card = yaml.safe_load(raw_card.decode("utf-8"))
+            except (OSError, ValueError, RuntimeError, yaml.YAMLError):
+                continue
+            chapter_id = card.get("chapter_id") if isinstance(card, dict) else None
+            if isinstance(chapter_id, str) and chapter_id in drafts:
+                candidates.setdefault(chapter_id, []).append((path, hashlib.sha256(raw_card).hexdigest()))
+        bound_cards, unverified = [], []
+        for chapter_id in (item for item in print_order if item in drafts):
+            paths = candidates.get(chapter_id, [])
+            matches = []
+            if len(paths) == 1:
+                path, card_digest = paths[0]
+                for ref in draft_inputs.get(chapter_id, []):
+                    if not isinstance(ref, dict) or not isinstance(ref.get("path"), str):
+                        continue
+                    try:
+                        source = (root / ref["path"]).resolve()
+                    except (OSError, ValueError, RuntimeError):
+                        continue
+                    if source == path and ref.get("sha256") == card_digest:
+                        matches.append(ref)
+            if matches:
+                bound_cards.append({"chapter_id": chapter_id, "path": path.relative_to(root).as_posix(),
+                                    "sha256": card_digest})
+            else:
+                unverified.append(chapter_id)
         return {"path": plan_path.relative_to(root).as_posix(), "sha256": digest(plan_path),
                 "approved_chapters": [{"chapter_id": chapter_id, "path": drafts[chapter_id]["path"],
                                        "sha256": drafts[chapter_id]["sha256"]}
                                       for chapter_id in print_order if chapter_id in drafts],
+                "chapter_cards": bound_cards, "unverified_chapter_card_ids": unverified,
                 "figure_registry": {"path": registry_path.relative_to(root).as_posix(),
                                     "sha256": digest(registry_path)}}
