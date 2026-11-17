@@ -46,9 +46,11 @@ jobs:
       - name: B project initialization tests
         working-directory: skills/01-core/contest-orchestrator
         run: python -m unittest discover -s tests -p 'test_init_b_project.py'
-      - name: Question-scoped sensitivity reports
+      - name: Method selection and sensitivity reports
         working-directory: skills/01-core/contest-orchestrator
-        run: python -m unittest discover -s tests -p 'test_sensitivity_report_contract.py'
+        run: |
+          python -m unittest discover -s tests -p 'test_method_selection.py'
+          python -m unittest discover -s tests -p 'test_sensitivity_report_contract.py'
       - name: Derived evidence index tests
         working-directory: skills/01-core/contest-orchestrator
         run: python -m unittest discover -s tests -p 'test_evidence_index.py'

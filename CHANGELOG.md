@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-17 — method review follows the chosen route
+
+- Let a retained simple baseline provide the common problem and method rationale without inventing failure points or a complex-method target.
+- Detect actual upgrades from existing upgrade records as well as legacy capability labels; request upgrade reasons and decision impact even when the mathematical capability remains optimization.
+- Preserve recorded zero and boolean baseline results instead of reporting them as missing. Keep missing results and incomplete upgrade records visible.
+- Align the method-review rubric with evidence that a simple method is sufficient. Method advice remains advisory, while scientific evidence checks and human approvals remain required.
+- Add focused and strict-check integration regressions, including read-only source checks, to CI and synchronize the affected implementation and protocol with the installed copy.
+
 ## 2026-11-17 — consistent registered question scope across handoffs
 
 - Read registered question IDs through one shared rule across solver dispatch, H6 verification, H7 visual planning and writing-evidence checks.

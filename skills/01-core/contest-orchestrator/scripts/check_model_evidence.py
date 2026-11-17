@@ -297,8 +297,8 @@ SENSITIVITY_REQUIRED_FIELDS = ("schema_version", "status", "results")
 
 # 方法选择质量检查：baseline-first、方法选择理由、防炫技
 COMPLEX_CAPABILITIES = {"deep_learning", "reinforcement_learning", "heuristic", "metaheuristic"}
-METHOD_JUSTIFICATION_REQUIRED = ("core_conflict", "method_role", "simple_method_failure",
-                                  "complex_method_target", "cost_benefit")
+METHOD_JUSTIFICATION_REQUIRED = ("core_conflict", "method_role")
+UPGRADE_JUSTIFICATION_REQUIRED = ("simple_method_failure", "complex_method_target", "cost_benefit")
 
 
 def _check_method_selection(item: dict, qid: str) -> list[str]:
@@ -308,6 +308,11 @@ def _check_method_selection(item: dict, qid: str) -> list[str]:
     """
     warnings = []
     method_selection = item.get("method_selection") if isinstance(item.get("method_selection"), dict) else {}
+    upgrade = method_selection.get("complexity_upgrade")
+    using_complex = (
+        any(cap in COMPLEX_CAPABILITIES for cap in _capability_names(item))
+        or upgrade is not None
+    )
 
     # 1. Baseline check: 每个子问题必须有简单基线
     baseline = method_selection.get("baseline")
@@ -319,25 +324,26 @@ def _check_method_selection(item: dict, qid: str) -> list[str]:
     elif isinstance(baseline, dict):
         if not baseline.get("baseline_method"):
             warnings.append(f"{qid}: baseline 缺少 baseline_method（基线方法名称）")
-        if not baseline.get("baseline_result"):
+        baseline_result = baseline.get("baseline_result")
+        if baseline_result is None or (
+            isinstance(baseline_result, (str, list, dict)) and not baseline_result
+        ):
             warnings.append(f"{qid}: baseline 缺少 baseline_result（基线结果）")
 
     # 2. Method justification check: 方法选择理由
     justification = method_selection.get("method_justification")
     if not justification:
         warnings.append(
-            f"{qid}: 缺少 method_justification（方法选择理由）。必须说明为什么选这个方法、为什么不用更简单的方法。"
+            f"{qid}: 缺少 method_justification（方法选择理由）。必须说明题目核心矛盾及方法如何解决它。"
         )
     elif isinstance(justification, dict):
-        missing = [field for field in METHOD_JUSTIFICATION_REQUIRED if not justification.get(field)]
+        required = METHOD_JUSTIFICATION_REQUIRED + (UPGRADE_JUSTIFICATION_REQUIRED if using_complex else ())
+        missing = [field for field in required if not justification.get(field)]
         if missing:
             warnings.append(f"{qid}: method_justification 缺少字段: {', '.join(missing)}")
 
     # 3. Complexity upgrade check: 使用复杂方法时必须有升级记录
-    capabilities = _capability_names(item)
-    using_complex = any(cap in COMPLEX_CAPABILITIES for cap in capabilities)
     if using_complex:
-        upgrade = method_selection.get("complexity_upgrade")
         if not upgrade:
             warnings.append(
                 f"{qid}: 使用复杂方法但缺少 complexity_upgrade（复杂度升级记录）。"
