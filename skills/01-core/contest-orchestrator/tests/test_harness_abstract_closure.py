@@ -143,6 +143,32 @@ class AbstractClosureTests(unittest.TestCase):
         self.node["paper_source"] = "paper/copied.tex"
         self.assertTrue(any("paper_source 不一致" in item for item in self.check()[1]))
 
+    def test_coverage_paper_source_is_bound_to_the_abstract_snapshot(self):
+        self.report(strict=True)
+        other = self.root / "paper/copied.tex"
+        other.write_bytes((self.root / "paper/paper.tex").read_bytes())
+        coverage = self.root / "paper_claim_coverage.yaml"
+        coverage.write_text("paper_source: paper/copied.tex\n", encoding="utf-8")
+        self.node.pop("paper_source")
+        self.node["paper_claim_coverage"] = "paper_claim_coverage.yaml"
+        self.assertTrue(any("paper_source 不一致" in item for item in self.check()[1]))
+        coverage.write_text("paper_source: paper/paper.tex\n", encoding="utf-8")
+        self.assertEqual(self.check(), ([], []))
+
+    def test_node_paper_source_takes_precedence_over_coverage(self):
+        self.report(strict=True)
+        (self.root / "paper_claim_coverage.yaml").write_text(
+            "paper_source: paper/other.tex\n", encoding="utf-8")
+        self.node["paper_claim_coverage"] = "paper_claim_coverage.yaml"
+        self.assertEqual(self.check(), ([], []))
+
+    def test_approved_coverage_source_requires_abstract_closure(self):
+        (self.root / "paper_claim_coverage.yaml").write_text(
+            "paper_source: paper/paper.tex\n", encoding="utf-8")
+        self.node.pop("paper_source")
+        self.node.update(paper_claim_coverage="paper_claim_coverage.yaml", abstract_written=False, status="approved")
+        self.assertTrue(any("abstract_written=true" in item for item in self.check()[0]))
+
     def test_snapshot_remains_usable_after_project_relocation(self):
         self.report(strict=True)
         with tempfile.TemporaryDirectory() as moved:
@@ -250,6 +276,24 @@ class AbstractClosureTests(unittest.TestCase):
         (contest / "approval_log.yaml").write_text("approvals: []\n", encoding="utf-8")
         report = harness.check_harness_control(self.root, through="H8")
         self.assertTrue(any("摘要或关键词已变化" in item for item in report["failures"]), report)
+        self.assertNotEqual(report["status"], "PASS")
+
+    def test_main_h8_entry_rejects_a_report_for_a_different_coverage_source(self):
+        self.report(strict=True)
+        (self.root / "paper/copied.tex").write_bytes((self.root / "paper/paper.tex").read_bytes())
+        (self.root / "paper_claim_coverage.yaml").write_text(
+            "paper_source: paper/copied.tex\n", encoding="utf-8")
+        self.node.pop("paper_source")
+        self.node["paper_claim_coverage"] = "paper_claim_coverage.yaml"
+        contest = self.root / ".contest"
+        contest.mkdir(exist_ok=True)
+        control = harness.default_control()
+        control["nodes"]["H8"].update(self.node)
+        control["problem_scope"] = {"subproblems": ["Q1"]}
+        (contest / "harness_control.yaml").write_text(yaml.safe_dump(control), encoding="utf-8")
+        (contest / "approval_log.yaml").write_text("approvals: []\n", encoding="utf-8")
+        report = harness.check_harness_control(self.root, through="H8")
+        self.assertTrue(any("paper_source 不一致" in item for item in report["failures"]), report)
         self.assertNotEqual(report["status"], "PASS")
 
     def test_omitting_strict_from_real_cli_does_not_produce_a_closure_report(self):

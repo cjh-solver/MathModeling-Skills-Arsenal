@@ -1788,6 +1788,13 @@ def _validate_abstract_argument_card(root: Path, node: dict[str, Any],
                     f"H8: abstract_argument_card.questions[{index}].evidence_refs[{ref_index}] "
                     "必须指向存在且未过期的证据"
                 )
+    paper_source = node.get("paper_source")
+    if not paper_source and node.get("paper_claim_coverage"):
+        # Coverage validation reports unreadable files separately; keep its source precedence.
+        _, coverage = _load_project_mapping(root, node["paper_claim_coverage"],
+                                            "H8: paper_claim_coverage", [], [])
+        if coverage is not None:
+            paper_source = coverage.get("paper_source")
     if node.get("abstract_written") is True:
         report_path, abstract_report = _load_project_mapping(
             root, node.get("abstract_contract_report"),
@@ -1802,7 +1809,7 @@ def _validate_abstract_argument_card(root: Path, node: dict[str, Any],
         if "content_snapshot" in abstract_report:
             from check_abstract_contract import validate_content_snapshot
             failures.extend(f"H8: abstract_contract_report: {issue}" for issue in
-                            validate_content_snapshot(abstract_report, root, node.get("paper_source")))
+                            validate_content_snapshot(abstract_report, root, paper_source))
         elif _h8_authoring_stage(root, node) == "H8C":
             missing.append("H8C: 摘要报告缺少内容快照，请重新运行严格摘要检查；不改写历史批准")
         card_hash = abstract_report.get("abstract_argument_card_sha256")
@@ -1810,7 +1817,7 @@ def _validate_abstract_argument_card(root: Path, node: dict[str, Any],
             failures.append("H8: abstract_contract_report 必须登记 abstract_argument_card_sha256")
         elif not same_digest(card_hash, digest(card_path)):
             failures.append("H8: abstract_contract_report 未绑定当前 abstract_argument_card")
-    elif node.get("status") in {"approved", "frozen"} and node.get("paper_source"):
+    elif node.get("status") in {"approved", "frozen"} and paper_source:
         missing.append("H8: 完成 H8C 前必须登记 abstract_written=true 并提交摘要专项检查报告")
 
 

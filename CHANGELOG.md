@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-17 — bind abstract closure to the registered paper
+
+- Apply the existing paper-source precedence consistently to abstract snapshots and closure, including sources registered in the claim-coverage record.
+- Reject a strict report for a different registered paper and require abstract closure for approved papers; retain human approval, legacy report handling and read-only checks.
+
 ## 2026-11-17 — align new-project guidance with the actual workflow
 
 - Guide initialized optimization projects through H6 approval, chapter-first writing, parallel figures, H8C integration and the complete H9 delivery command.
