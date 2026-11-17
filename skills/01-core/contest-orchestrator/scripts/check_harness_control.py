@@ -1364,7 +1364,7 @@ def _validate_h7_visual_argument_plan(root: Path, node: dict[str, Any], control:
             missing.append(f"H7: figure_registry 文件不存在: {registry_raw}")
     stage = "final" if node.get("status") in {"approved", "frozen"} else "plan"
     scope = control.get("problem_scope") if isinstance(control.get("problem_scope"), dict) else {}
-    expected = scope.get("subproblems") if isinstance(scope.get("subproblems"), list) else None
+    expected = _scope_subproblem_ids(scope) if isinstance(scope.get("subproblems"), list) else None
     report = validate_visual_argument_plan(
         plan,
         expected_subproblems=expected,
@@ -1504,6 +1504,19 @@ def _load_project_mapping(root: Path, raw_path: Any, label: str, missing: list[s
         return None, None
 
 
+def _scope_subproblem_ids(problem_scope: dict[str, Any] | None) -> list[str]:
+    """Read registered IDs in order, preserving duplicates for validation."""
+    items = problem_scope.get("subproblems", []) if isinstance(problem_scope, dict) else []
+    if not isinstance(items, list):
+        return []
+    result: list[str] = []
+    for item in items:
+        value = item.get("id") if isinstance(item, dict) else item
+        if isinstance(value, str) and value.strip():
+            result.append(value.strip())
+    return result
+
+
 def _h6_targeted_scope(root: Path, nodes: dict[str, Any],
                        problem_scope: dict[str, Any] | None = None, through: str | None = None) -> set[str] | None:
     """Return the subproblems explicitly rechecked by a targeted H6 run."""
@@ -1535,8 +1548,7 @@ def _h6_targeted_scope(root: Path, nodes: dict[str, Any],
     items = problem_scope.get("subproblems", []) if isinstance(problem_scope, dict) else []
     if not isinstance(items, list):
         return None
-    known = {item.get("id") if isinstance(item, dict) else item for item in items
-             if isinstance(item, str) or (isinstance(item, dict) and isinstance(item.get("id"), str))}
+    known = set(_scope_subproblem_ids(problem_scope))
     if not result or not result.issubset(known):
         return None
     return result or None
@@ -1563,13 +1575,7 @@ def _validate_abstract_argument_card(root: Path, node: dict[str, Any],
     )
     if card_path is None or card is None:
         return
-    expected_ids: list[str] = []
-    raw_scope = problem_scope.get("subproblems", []) if isinstance(problem_scope, dict) else []
-    if isinstance(raw_scope, list):
-        for item in raw_scope:
-            value = item.get("id") if isinstance(item, dict) else item
-            if isinstance(value, str) and value.strip():
-                expected_ids.append(value.strip())
+    expected_ids = _scope_subproblem_ids(problem_scope)
     report = validate_abstract_argument_card(card_path, expected_ids or None)
     for issue in report.get("issues", []):
         failures.append(f"H8: abstract_argument_card: {issue}")
@@ -1801,12 +1807,7 @@ def _validate_result_interpretation_cards(root: Path, nodes: dict[str, Any], thr
         return
     seen_ids: set[str] = set()
     problem_scope = (control or {}).get("problem_scope")
-    scope_items = problem_scope.get("subproblems", []) if isinstance(problem_scope, dict) else []
-    expected_ids: set[str] = set()
-    for item in scope_items if isinstance(scope_items, list) else []:
-        question = item.get("id") if isinstance(item, dict) else item
-        if isinstance(question, str) and question.strip():
-            expected_ids.add(question.strip())
+    expected_ids = set(_scope_subproblem_ids(problem_scope))
     covered_ids: set[str] = set()
     targeted_subproblems = _h6_targeted_scope(root, nodes, problem_scope, through)
     required_fields = ("card_id", "subproblem_id", "result_statement", "meaning", "reasoning_basis", "supported_scope")
@@ -1882,13 +1883,7 @@ def _validate_visual_evidence_packet(root: Path, nodes: dict[str, Any], problem_
     )
     if packet_path is None or packet is None:
         return
-    expected_ids: list[str] = []
-    raw_scope = problem_scope.get("subproblems", []) if isinstance(problem_scope, dict) else []
-    if isinstance(raw_scope, list):
-        for item in raw_scope:
-            value = item.get("id") if isinstance(item, dict) else item
-            if isinstance(value, str) and value.strip():
-                expected_ids.append(value.strip())
+    expected_ids = _scope_subproblem_ids(problem_scope)
     targeted_subproblems = _h6_targeted_scope(root, nodes, problem_scope, through)
     if targeted_subproblems is not None:
         expected_ids = [item for item in expected_ids if item in targeted_subproblems]
@@ -2192,13 +2187,7 @@ def _validate_model_summary_cards(root: Path, nodes: dict[str, Any], problem_sco
     if not isinstance(cards, list) or not cards:
         failures.append("model_summary_cards: cards 必须为非空列表")
         return
-    expected_ids: set[str] = set()
-    scope_items = problem_scope.get("subproblems", []) if isinstance(problem_scope, dict) else []
-    if isinstance(scope_items, list):
-        for item in scope_items:
-            value = item.get("id") if isinstance(item, dict) else item
-            if isinstance(value, str) and value.strip():
-                expected_ids.add(value.strip())
+    expected_ids = set(_scope_subproblem_ids(problem_scope))
     seen_ids: set[str] = set()
     targeted_subproblems = _h6_targeted_scope(root, nodes, problem_scope, through)
     for index, card in enumerate(cards):
@@ -2644,17 +2633,8 @@ def _validate_dispatch_records(root: Path, control: dict[str, Any], nodes: dict[
         if not isinstance(raw_subproblems, list) or not raw_subproblems:
             failures.append("H5: problem_scope.subproblems 必须为非空列表")
         else:
-            normalized = []
-            valid = True
-            for item in raw_subproblems:
-                if isinstance(item, str) and item.strip():
-                    normalized.append(item.strip())
-                elif isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"].strip():
-                    normalized.append(item["id"].strip())
-                else:
-                    valid = False
-                    break
-            if not valid:
+            normalized = _scope_subproblem_ids(problem_scope)
+            if len(normalized) != len(raw_subproblems):
                 failures.append("H5: problem_scope.subproblems 含无效小问标识（必须为字符串或含 id 的对象）")
             elif len(set(normalized)) != len(normalized):
                 failures.append("H5: problem_scope.subproblems 不得重复")
@@ -2802,14 +2782,7 @@ def _validate_h6_interface(root: Path, nodes: dict[str, Any], problem_scope: dic
     if not isinstance(per_sub, list) or not per_sub:
         failures.append("H6: global_interface_check 必须含非空 per_subproblem 列表（逐问接口明细）")
     else:
-        scope_subs = problem_scope.get("subproblems") if isinstance(problem_scope, dict) else None
-        expected_subs: set[str] = set()
-        if isinstance(scope_subs, list):
-            for item in scope_subs:
-                if isinstance(item, str) and item.strip():
-                    expected_subs.add(item.strip())
-                elif isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"].strip():
-                    expected_subs.add(item["id"].strip())
+        expected_subs = set(_scope_subproblem_ids(problem_scope))
         targeted_subproblems = _h6_targeted_scope(root, nodes, problem_scope, through)
         if targeted_subproblems is not None:
             expected_subs = expected_subs.intersection(targeted_subproblems)
@@ -3222,14 +3195,7 @@ def _validate_paper_materials(root: Path, nodes: dict[str, Any], problem_scope: 
             failures.append("paper_material_readiness: whole_pdf_recommended_range 必须为 [min, max] 数值列表")
         elif wpr[0] != 35 or wpr[1] != 51:
             failures.append(f"paper_material_readiness: whole_pdf_recommended_range 必须为 [35, 51]（当前: {wpr}）")
-    expected_ids = set()
-    scope_subs = problem_scope.get("subproblems") if isinstance(problem_scope, dict) else None
-    if isinstance(scope_subs, list):
-        for item in scope_subs:
-            if isinstance(item, str) and item.strip():
-                expected_ids.add(item.strip())
-            elif isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"].strip():
-                expected_ids.add(item["id"].strip())
+    expected_ids = set(_scope_subproblem_ids(problem_scope))
     actual_ids = []
     for item in readiness.get("subproblems", []) or []:
         if isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"].strip():

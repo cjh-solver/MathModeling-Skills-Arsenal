@@ -41,7 +41,7 @@
 
 ## 统一解题主线与调度留痕
 
-每次 Harness 运行在 `harness_control.yaml.problem_scope.subproblems` 登记完整且不重复的小问清单，并在 `solver_instance_id` 登记唯一 H5 主解题实例。主任务卡的 `covered_subproblems` 必须与该清单完全一致，且 `cross_question_interface: true`；该实例负责全部小问、跨问变量、参数传递、接口和整体结论。H5 节点、主任务卡和对应 `dispatch_record` 的 `solver_instance_id` 必须一致。H6 的 `agent_instance_id` 必须不同于 H5。
+每次 Harness 运行在 `harness_control.yaml.problem_scope.subproblems` 登记完整且不重复的小问清单，并在 `solver_instance_id` 登记唯一 H5 主解题实例。小问可使用 `Q1` 字符串、`{id: Q1, title: 问题一}` 对象或两者混合；所有阶段按同一规则读取 `id`，保留登记顺序，中文标题不参与编号匹配，不从产物补入额外小问。空值、非字符串编号与重复编号仍拒绝。主任务卡的 `covered_subproblems` 必须与该清单完全一致，且 `cross_question_interface: true`；该实例负责全部小问、跨问变量、参数传递、接口和整体结论。H5 节点、主任务卡和对应 `dispatch_record` 的 `solver_instance_id` 必须一致。H6 的 `agent_instance_id` 必须不同于 H5。
 
 `dispatch_records` 记录每次实际 `spawn_agent` 调度，且每条都包含 `task_id`、`node_id`、`owner_role`、`agent_instance_id`、实际 `model`、`reasoning_effort`、调用时间、任务卡相对路径和当前 SHA-256。检查器将记录与任务卡、节点模型路由和节点实例逐项核验。
 

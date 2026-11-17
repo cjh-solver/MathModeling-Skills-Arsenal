@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-17 — consistent registered question scope across handoffs
+
+- Read registered question IDs through one shared rule across solver dispatch, H6 verification, H7 visual planning and writing-evidence checks.
+- Accept string IDs, records with an `id` and optional Chinese title, and mixed lists without dropping questions at H7 or inferring additional scope from outputs.
+- Apply the same whitespace handling to H6 targeted rechecks; retain exact coverage, registered order, invalid/duplicate-ID rejection and complete downstream checks.
+- Add regressions using synthetic plan and dispatch fixtures, including read-only file checks; synchronize the affected functions and protocol with the installed copy.
+
 ## 2026-11-17 — focused skill entry and role warmups
 
 - Route H5–H8 details to their maintained protocols instead of repeating field schemas in the main skill entry; keep approval, actual-invocation and evidence obligations visible.
