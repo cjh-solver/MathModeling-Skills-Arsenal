@@ -16,7 +16,7 @@ Harness 控制记录启用 `visual_workflow: chapter_parallel` 时，先按 [逐
 
 ## H8B：逐章写作
 
-主 agent 每次从已批准的作者简报生成一个 `chapter_writing_card.yaml`，并更新一个 `paper_continuity_context.yaml`。两者必须携带并绑定同一 `paper_spine`，明确当前章节的角色、前后章节和 `handoff_question`。在 `chapter_parallel` 中只可派发 `writing_order` 的下一个依赖已满足章节；其草稿与 `quality_review` 必须绑定同一 SHA-256，并由用户以 `H7_CHAPTER:<chapter_id>` 批准后才可派发下一章。派发前依据当前冻结证据填写章节卡的 `abstract_contribution`，至少包含本章方法、冻结结果、结果意义和证据引用；该字段供 H8C 汇总摘要，不能由 H8B 临时改写成摘要。任务派发后保持章节卡及其他哈希输入不变，论文 agent 回传摘要贡献的核对结果；发现与冻结证据或完成正文不一致时返回证据缺口，由主控按现有影响范围处理，不覆盖历史输入。论文 agent 只使用当前章节卡、连续性包、模型总结卡、摘要论证卡和卡内列出的冻结材料写当前章节。连续性包只保留中心主张、已完成章节收束、术语口径和前后章节衔接，不携带全部历史原始材料。
+主 agent 每次从已批准的作者简报生成一个 `chapter_writing_card.yaml`，并更新一个 `paper_continuity_context.yaml`。两者必须携带并绑定同一 `paper_spine`，明确当前章节的角色、前后章节和 `handoff_question`。在 `chapter_parallel` 中只可派发 `writing_order` 的下一个依赖已满足章节；其草稿与 `quality_review` 必须绑定同一 SHA-256，并由用户以 `H7_CHAPTER:<chapter_id>` 批准后才可派发下一章。派发前依据当前冻结证据和章节适用性填写章节卡的 `abstract_contribution`；该字段供 H8C 汇总摘要，不能由 H8B 临时改写成摘要。任务派发后保持章节卡及其他哈希输入不变，论文 agent 回传摘要贡献的核对结果；发现与冻结证据或完成正文不一致时返回证据缺口，由主控按现有影响范围处理，不覆盖历史输入。论文 agent 只使用当前章节卡、连续性包、模型总结卡、摘要论证卡和卡内列出的冻结材料写当前章节。连续性包只保留中心主张、已完成章节收束、术语口径和前后章节衔接，不携带全部历史原始材料。
 
 | 章节类型 | 取用材料 | 写作重心 |
 |---|---|---|
@@ -33,6 +33,8 @@ Harness 控制记录启用 `visual_workflow: chapter_parallel` 时，先按 [逐
 `chapter_parallel` 的正式 H8 整合派发使用同一已登记论文角色，任务卡可明确标注 `authoring_protocol.stage: H8C`。输入按最终 `chapter_order` 绑定已批准的逐章正文原路径和 SHA-256、原写作计划及最终图件登记；这些引用取自已通过当前逐章闭合检查的现有记录，不复制正文或补造批准。另绑定当前作者简报、摘要论证卡、模型卡和视觉计划。H8C 仍须符合完整 H6/H7、H8 审查及 H9 门禁；历史 H8B 任务卡按原规则读取。
 
 为保留各章的 `abstract_contribution`，逐章写作时应保留独立章节卡，并在既有 `nodes.H8.chapter_writing_cards` 登记。正式 H8C 的 `inputs` 引用每个获批非摘要章节对应的登记卡原路径和当前 SHA-256；如某章材料缺失，返回缺口，不根据其他章节补造。既有章节卡内容与证据检查仍然执行，这些引用不构成额外的人为批准。
+
+作者简报和论文主线共同认定的非建模支撑章节，确实没有独立摘要主张时，可在 `abstract_contribution` 中登记 `status: not_applicable` 和具体 `reason`，不再填方法、结果、意义或证据；不能同时填贡献内容。建模章节以及实际有摘要贡献的支撑章节仍须填写完整方法、结果、意义与证据。此声明不代替章节批准或最终摘要检查。
 
 当前完整闭合检查通过时，Harness 检查报告的 `h8c_handoff` 给出原计划、最终图件登记以及按阅读顺序排列的获批章节路径与哈希，可据此填充整合任务卡。该字段仅描述逐章交接证据，不代表整个 Harness 检查通过，也不替代 H8/H9 的人工批准或交付检查。
 

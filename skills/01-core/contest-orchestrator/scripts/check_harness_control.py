@@ -2610,9 +2610,22 @@ def _validate_chapter_writing_cards(root: Path, node: dict[str, Any],
         for field in ("argument_ids", "evidence_refs", "figure_roles", "excluded_material"):
             if not isinstance(card.get(field), list):
                 failures.append(f"{label}: {field} 必须为列表")
+        is_modeling_question = (
+            brief_chapter.get("chapter_kind") in {"modeling", "modeling_question"}
+            or chapter_id.upper().startswith("Q")
+        )
         contribution = card.get("abstract_contribution")
         if not isinstance(contribution, dict):
             failures.append(f"{label}: 缺少 abstract_contribution（H8B 必须向 H8C 提供摘要证据）")
+        elif contribution.get("status") == "not_applicable":
+            if not (brief_spine is not None and chapter_id in brief_spine["support_chapters"]
+                    and brief_chapter.get("chapter_role") == card.get("chapter_role") == "support"
+                    and not is_modeling_question):
+                failures.append(f"{label}: 仅作者简报与论文主线一致的支撑章节可声明摘要贡献不适用")
+            if not isinstance(contribution.get("reason"), str) or not contribution["reason"].strip():
+                failures.append(f"{label}: abstract_contribution 不适用时必须说明原因")
+            if any(contribution.get(field) not in (None, "", []) for field in ("method", "result", "meaning", "evidence_refs")):
+                failures.append(f"{label}: abstract_contribution 不适用时不得同时填写贡献内容")
         else:
             for field in ("method", "result", "meaning"):
                 if not isinstance(contribution.get(field), str) or not contribution[field].strip():
@@ -2629,10 +2642,6 @@ def _validate_chapter_writing_cards(root: Path, node: dict[str, Any],
         }
         if brief_spine is not None:
             _validate_chapter_relation(label, card, brief_spine, failures, card_arguments)
-        is_modeling_question = (
-            brief_chapter.get("chapter_kind") in {"modeling", "modeling_question"}
-            or chapter_id.upper().startswith("Q")
-        )
         if is_modeling_question:
             _validate_question_structure(label, card, failures)
             summary_ref = card.get("model_summary_card")

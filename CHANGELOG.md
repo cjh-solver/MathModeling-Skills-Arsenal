@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-17 — allow support chapters without an abstract claim
+
+- Let a non-modeling support chapter explicitly record that it has no independent abstract contribution, with a reason, instead of requiring fabricated method and result fields.
+- Preserve full evidence requirements for modeling questions and actual contributions, chapter-card registration, human approvals and the final abstract checks. Reject contradictory or unexplained exemptions.
+
 ## 2026-11-17 — expose verified chapter-card handoffs
 
 - Reuse each actual chapter-writing task's frozen inputs and the existing H8 card registration to expose matching chapter-card paths and hashes in the H8C handoff.

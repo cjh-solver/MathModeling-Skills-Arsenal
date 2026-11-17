@@ -17,6 +17,7 @@ section_structure:
   summary_location: 模型建立小节末尾
   optional_sections: []
 model_summary_card: model_summary_cards.yaml
+# 支撑章节确无独立摘要主张时，可改为 {status: not_applicable, reason: <具体原因>}。
 abstract_contribution:
   method: <本章可进入摘要的方法概括>
   result: <本章可进入摘要的冻结结果>

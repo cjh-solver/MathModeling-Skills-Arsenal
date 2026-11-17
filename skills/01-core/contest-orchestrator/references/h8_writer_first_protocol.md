@@ -10,6 +10,8 @@
 
 摘要不作为 H8B 的先行写作任务。H8A 先生成并批准 `abstract_argument_card.yaml`，固定摘要的读者契约、统一建模主线、逐问方法—结果—意义、验证结论、总评和关键词；H8B 每张章节卡必须提供 `abstract_contribution`，H8C 在正文与附录定稿后据此最后写摘要。在 `chapter_parallel` 中，`writing_order` 与最终 `paper_spine`/`chapter_order` 分离：先写依赖满足的建模与求解章节，再写验证、评价、结论、问题分析、前置章节和附录；摘要仅在正式 H8 最后完成。
 
+支撑章节确无独立摘要主张时，按[章节执行协议](h8_chapter_execution.md)说明不适用原因；不为凑字段编造方法或结果。建模章节及实际存在的摘要贡献保持完整证据要求。
+
 每章写作前先读取当前章节的 `chapter_role`、`reads_from`、`feeds_to`、`new_claims_allowed` 和 `handoff_question`。在 `chapter_parallel` 中，正文阶段不以实际图件为前提：章节批准后才生成自包含图表提示词；若 `visuals_required: false`，明确记录且不生成提示词。正文必须回答当前 `reader_question`，承接 `reads_from` 指向的已完成论证，并以冻结证据支持的结果推进 `feeds_to` 指向的后续章节。`support` 章节的 `new_claims_allowed` 为空；结论只综合已冻结主张，不新增模型、数字、引用用途或图表解释。正式整合时才从已批准的 `visual_argument_plan.yaml` 与已选 `figure_registry.yaml` 核对图件。缺少图件不阻塞下一章；证据缺口仍返回 `evidence_gap`，不得自行添加计划外图表。
 
 章节之间必须形成自然的“前一章回答了什么—本章因此解决什么—下一章还要回答什么”的读者路径。章节卡字段、agent、节点和检查器属于内部导航，不能在论文中出现。
