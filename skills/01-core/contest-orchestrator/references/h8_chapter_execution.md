@@ -16,7 +16,7 @@ Harness 控制记录启用 `visual_workflow: chapter_parallel` 时，先按 [逐
 
 ## H8B：逐章写作
 
-主 agent 每次从已批准的作者简报生成一个 `chapter_writing_card.yaml`，并更新一个 `paper_continuity_context.yaml`。两者必须携带并绑定同一 `paper_spine`，明确当前章节的角色、前后章节和 `handoff_question`。在 `chapter_parallel` 中只可派发 `writing_order` 的下一个依赖已满足章节；其草稿与 `quality_review` 必须绑定同一 SHA-256，并由用户以 `H7_CHAPTER:<chapter_id>` 批准后才可派发下一章。每张章节卡必须填写 `abstract_contribution`，至少包含本章方法、冻结结果、结果意义和证据引用；该字段供 H8C 汇总摘要，不能由 H8B 临时改写成摘要。论文 agent 只使用当前章节卡、连续性包、模型总结卡、摘要论证卡和卡内列出的冻结材料写当前章节。连续性包只保留中心主张、已完成章节收束、术语口径和前后章节衔接，不携带全部历史原始材料。
+主 agent 每次从已批准的作者简报生成一个 `chapter_writing_card.yaml`，并更新一个 `paper_continuity_context.yaml`。两者必须携带并绑定同一 `paper_spine`，明确当前章节的角色、前后章节和 `handoff_question`。在 `chapter_parallel` 中只可派发 `writing_order` 的下一个依赖已满足章节；其草稿与 `quality_review` 必须绑定同一 SHA-256，并由用户以 `H7_CHAPTER:<chapter_id>` 批准后才可派发下一章。派发前依据当前冻结证据填写章节卡的 `abstract_contribution`，至少包含本章方法、冻结结果、结果意义和证据引用；该字段供 H8C 汇总摘要，不能由 H8B 临时改写成摘要。任务派发后保持章节卡及其他哈希输入不变，论文 agent 回传摘要贡献的核对结果；发现与冻结证据或完成正文不一致时返回证据缺口，由主控按现有影响范围处理，不覆盖历史输入。论文 agent 只使用当前章节卡、连续性包、模型总结卡、摘要论证卡和卡内列出的冻结材料写当前章节。连续性包只保留中心主张、已完成章节收束、术语口径和前后章节衔接，不携带全部历史原始材料。
 
 | 章节类型 | 取用材料 | 写作重心 |
 |---|---|---|

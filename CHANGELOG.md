@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-17 — keep chapter-card inputs frozen during writing
+
+- Populate each chapter's abstract contribution from frozen evidence before the H8B task is dispatched; return its consistency check without rewriting the hashed chapter-card input.
+- Keep the actual synthetic draft-dispatch input bound to its original card through chapter closure and H8C, and cover rejection when that input changes after dispatch.
+
 ## 2026-11-17 — carry chapter abstract evidence into H8C
 
 - Require the H8C task to bind each approved chapter's registered writing card by its actual path and current SHA-256, so the author can access that chapter's abstract contribution.

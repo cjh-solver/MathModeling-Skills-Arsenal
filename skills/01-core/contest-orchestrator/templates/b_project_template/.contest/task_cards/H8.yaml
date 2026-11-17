@@ -50,12 +50,13 @@ authoring_protocol:
 required_outputs:
   - 当前章节草稿
   - 章节证据引用清单
-  - abstract_contribution（写入当前章节卡，供 H8C 汇总摘要）
+  - abstract_contribution 核对结果（与冻结章节卡一致；不改写输入）
   - evidence_gap_matrix.yaml（仅材料不足时）
 verification:
   - 章节主张、图表和证据与章节写作卡一致
   - 不新增模型结论、数字、引用用途或图表解释
 prohibited_actions:
+  - 改写已哈希冻结的章节卡或其他任务输入
   - 改变模型、数据、结果、引用、图表或论文总体论证架构
   - 将流程规则、检查清单或内部交流写入论文
 evidence_handoff:

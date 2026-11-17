@@ -51,6 +51,17 @@ class H8IntegrationTests(unittest.TestCase):
             })
             self.node["chapter_writing_cards"].append(ref["path"])
             self.card["inputs"].append(ref)
+            draft = next(item for item in self.fixture.prep["chapters"] if item["chapter_id"] == chapter_id)
+            dispatch = next(item for item in self.control["dispatch_records"] if item["task_id"] == draft["task_id"])
+            task_path = self.root / dispatch["task_card_path"]
+            draft_task = yaml.safe_load(task_path.read_text(encoding="utf-8"))
+            draft_task["inputs"].append(ref)
+            frozen_task = self.fixture.put(dispatch["task_card_path"], draft_task)
+            dispatch["task_card_sha256"] = frozen_task["sha256"]
+            dispatch["spawn_receipt"]["task_card_sha256"] = frozen_task["sha256"]
+        missing, failures = [], []
+        self.proof = checker._validate_writer_preparation(self.root, self.control, self.fixture.log, missing, failures)
+        self.assertEqual((missing, failures), ([], []))
         self.save_card()
 
     def save_card(self):
@@ -102,6 +113,29 @@ class H8IntegrationTests(unittest.TestCase):
         path = self.root / self.node["chapter_writing_cards"][0]
         path.write_bytes(path.read_bytes() + b"\n# changed")
         self.assertTrue(any("任务输入缺少当前章节写作卡" in item for item in self.check()[1]))
+
+    def test_chapter_card_is_already_a_frozen_draft_input_before_h8c(self):
+        before = {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in self.root.rglob("*") if p.is_file()}
+        missing, failures = [], []
+        proof = checker._validate_writer_preparation(self.root, self.control, self.fixture.log, missing, failures)
+        self.assertEqual((missing, failures), ([], []))
+        self.assertIsNotNone(proof)
+        self.assertEqual(self.check(), ([], []))
+        self.assertEqual({p: (p.read_bytes(), p.stat().st_mtime_ns) for p in before}, before)
+
+    def test_editing_a_dispatched_chapter_card_invalidates_the_actual_draft_input(self):
+        path = self.root / self.node["chapter_writing_cards"][0]
+        path.write_bytes(path.read_bytes() + b"\n# changed after dispatch")
+        missing, failures = [], []
+        proof = checker._validate_writer_preparation(self.root, self.control, self.fixture.log, missing, failures)
+        self.assertIsNone(proof)
+        self.assertTrue(any("immutable source hash differs" in item for item in failures))
+
+    def test_h8b_template_does_not_instruct_modifying_its_frozen_card(self):
+        template = yaml.safe_load((ROOT / "templates/b_project_template/.contest/task_cards/H8.yaml").read_text(encoding="utf-8-sig"))
+        outputs = " ".join(template["required_outputs"])
+        self.assertNotIn("写入当前章节卡", outputs)
+        self.assertIn("不改写输入", outputs)
 
     def test_identical_copy_cannot_replace_the_registered_writing_card(self):
         path = self.node["chapter_writing_cards"][0]
