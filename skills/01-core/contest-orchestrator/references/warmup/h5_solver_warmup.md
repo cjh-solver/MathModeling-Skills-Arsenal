@@ -10,14 +10,14 @@
 
 ## 绑定 Skills
 
-创建后提前读取以下技能的 SKILL.md，建立工具认知：
+正式任务到达后，先按 H5 蓝图阶段读取并调用 `math-model-selector`，再依据题型、模型路线和任务卡选择所需的求解技能；创建预热时不批量读取尚未选择的工具。以下列表是能力路由，不是全部加载清单：
 
 - `math-model-selector`：题型到模型框架的路由，输出候选表与理由
-- `pyomo`：精确求解（LP/MILP/NLP），优先尝试，超时或不可行再切换
+- `pyomo`：路线可表达为 LP/MILP/NLP 等精确优化问题时读取并调用
 - `heuristic-algorithms`：启发式与数值算法（GA/SA/PSO/蒙特卡洛/ODE），精确求解失败时的备选
 - `data-science-stack`：C 题/预测类数据全链路（EDA/预处理/特征/ML/时间序列/评估）
 
-纯机理题可显式登记 `not_applicable` 并说明理由，不强制调用全部技能。
+只加载当前路线需要的技能；混合题按实际组成补读。已在本实例读取且未变更的协议无需整包重复注入，上下文不足或路线变化时补读相关部分。必调项及 `at_least_one` 以 Harness 绑定契约为准，实际调用必须留证。纯机理题只可对契约允许的 `at_least_one` 组登记 `not_applicable` 和理由，不能解除 `math-model-selector` 等 `must_call` 项。
 
 ## 核心职责
 

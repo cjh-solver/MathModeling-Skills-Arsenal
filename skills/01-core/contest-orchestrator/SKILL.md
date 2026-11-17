@@ -37,29 +37,32 @@ python scripts/scope_router.py --prompt "用户原话" --workspace <项目根>
 
 ### Harness 硬门禁
 
-仅当 `active_mode=full-contest-harness` 时，主 agent 必须在 H0 前实际调用 `superpowers:using-superpowers`，并按 `references/modes/full-contest-harness.md` 登记固定角色、节点任务卡和调用记录。题意理解、解题、验证、图表、论文由各自固定角色在其节点实际调度；主 agent 不代做这些专业产物。未调用、调用记录缺失、任务卡缺失或以单 agent 流程替代时，状态必须为 `BLOCKED_INPUT` 或 `PAUSE`。H8 必须实际调用 `academic-writing` 与 `mathmodel-latex-skill`；H9 必须实际调用 `bzd-review-paper` 与 `mathmodel-latex-skill`，每项都要登记可存在性校验的 `evidence_ref`，缺失即不得过门。
+仅当 `active_mode=full-contest-harness` 时，主 agent 必须在 H0 前实际调用 `superpowers:using-superpowers`，并按 [Harness 模式](references/modes/full-contest-harness.md) 登记固定角色、任务卡、模型与推理强度、真实调用和派发证据。任务卡显式指定节点绑定的 `model` 与 `reasoning_effort`；主会话负责裁决，固定角色承担各自专业任务；必要调用、实例或任务卡缺失时保持 `BLOCKED_INPUT` 或 `PAUSE`。H5 使用唯一主解题实例覆盖全部小问，H6 必须独立于 H5；创建角色与正式派发分开。
 
-Harness 的 H2、H3、H5–H9 均为人工批准门：节点完成后先提交 `review_packet` 中的重要文件，再由用户明确批准；审查包或产物哈希变化即暂停。每张实际子 agent 任务卡还必须显式指定节点绑定的 `model` 与 `reasoning_effort`，不得只依赖运行时默认值。使用 `templates/harness_control.yaml` 初始化项目控制记录；比赛期间使用 `validation.profile=competition_fast` 和 `.contest/change_impact_card.yaml` 选择增量复核范围。进入下一节点或完成变更复核前运行：
+H2、H3、H5–H9 均保留人工批准门。重要产物先组成 `review_packet`，由用户明确批准并绑定当前 SHA-256；审查包或产物变化时按影响范围回流。H8 必须实际调用 `academic-writing` 与 `mathmodel-latex-skill`，H9 必须实际调用 `bzd-review-paper` 与 `mathmodel-latex-skill`，各调用均登记可定位的 `evidence_ref`。预载协议不算实际调用。
+
+使用 `templates/harness_control.yaml` 初始化控制记录；比赛期间使用 `validation.profile=competition_fast` 和 `.contest/change_impact_card.yaml` 选择增量复核。进入下一节点或完成变更复核前运行：
 
 ```text
 python scripts/check_harness_control.py <project-root> --through H<n>
 ```
 
-H5 结果冻结后还必须登记 `run_manifest` 并运行 `python scripts/check_h5_result_traceability.py <project-root> --strict`。运行清单绑定 seed、可执行命令、主结果哈希、正式记录边界、模型契约哈希和敏感性/鲁棒性报告；敏感性/鲁棒性报告还必须登记 `canonical_report` 的路径与 SHA-256。缺少记录保持 `PAUSE`，路径、文件或哈希不一致为 `BLOCK`。该检查不替代 H6 独立验证、H8 素材准入或 H9 严格交付。
+H5 冻结后登记 `run_manifest`，运行 `scripts/check_h5_result_traceability.py <project-root> --strict`；运行命令、随机种子、结果、模型契约及适用的敏感性/鲁棒性报告均须真实登记，结果与 `canonical_report` 等证据绑定当前哈希。缺证据保持 `PAUSE`，路径、格式或哈希不一致为 `BLOCK`。H6 接口记录保留项目相对 `source_path` 和当前 `source_sha256`，结果卡与模型卡由当前独立 H6 实例核验。
 
-启用 `reader_evidence_protocol: "1.0"` 后，读者证据链成为 H5–H8 的机器门禁：H5 的每个小问模型卡必须登记问题需求、数据范围、假设可追溯性、推导链、最终求解模型和有证据的模型评价；结果解释卡必须登记观察模式、比较基准、决策含义和边界；H7 的每个视觉槽位必须明确 `figure`、`table` 或 `text` 及其读者职责；H8 的作者简报和章节卡必须登记“开篇张力—证据序列—解释动作—过渡问题”。H8 先读取 `references/paper_author_evidence_protocol.md`，将这些卡片转化为面向读者的论证与自然段；缺少证据链时返回 `evidence_gap`，回到对应上游节点补证，不得用格式性段落补齐正文。
+#### 按当前节点读取权威协议
 
-H8 论文 agent 必须先审查冻结素材是否覆盖目标篇幅和每个小问的推导、结果、验证、图表、引用依据。`paper_material_readiness.yaml` 使用 `schema_version: "2.0"` 时，必须提供 `evidence_matrix`：逐小问登记问题映射、假设、符号、推导、算法与参数、量化结果、验证、图表或表格、文献使用、结论与边界、敏感性或稳健性，并登记 `global.target_length`；状态为 `PASS` 时每格只能是 `ready` 或合法的 `not_applicable`。H5 必须为每个小问生成唯一的 `model_summary_cards.yaml`，集中登记最终可计算模型、求解接口、来源公式和模型契约哈希，并由 H6 核验为 `verified`。H5 还必须为核心结果生成含事实、意义、依据和适用范围的 `result_interpretation_cards.yaml`，并由 H6 核验。H8A 必须调用 `academic-writing` 生成哈希绑定的 `paper_argument_blueprint.yaml`、经用户批准的 `paper_author_brief.yaml` 和 `abstract_argument_card.yaml`；摘要论证卡固定读者契约、全文主张、统一建模主线、逐问方法—结果—意义、验证结论、总评和关键词，逐问绑定冻结证据。作者简报固定全文主张、读者问题、章节目的、问题引入段、双小节结构、论证、证据和图表职责。H8B 的论文 agent 每次只接收一个 `chapter_writing_card.yaml`、一个哈希绑定的 `paper_continuity_context.yaml`、已核验的 `model_summary_cards.yaml`、摘要论证卡和对应冻结材料；每张章节卡必须填 `abstract_contribution`。它遵循 `references/h8_writer_first_protocol.md` 与 `references/model_summary_protocol.md`：先回答读者问题、组织论证和自然段，再做硬性检查；按“问题引入与建模思路段—模型建立—模型求解与结果分析”写作，把最终模型框放在模型建立小节末尾；一级标题使用中文序号，“模型假设”和“符号说明”分设为两个全局一级章节；不将建模材料按产生顺序转写为论文，也不把质量门禁当作正文任务。H8B 不写最终摘要。H8C 由 `academic-writing` 先通读完整论文、检查读者路径和章节递进，再依据摘要论证卡和各章摘要贡献最后写摘要，并运行 `scripts/check_abstract_contract.py --strict` 登记 `abstract_contract_report`；报告未通过不得完成 H8。素材不足时返回 `evidence_gap` 并回到 H5/H6/H7 补足，不得用重复表述、泛泛背景、空洞评价或文献堆砌填充篇幅。
+| 当前任务 | 读取范围与保留的义务 |
+|---|---|
+| H5 建模与求解 | [Harness 模式](references/modes/full-contest-harness.md) 的 H5 输入/产物分工与工具绑定；[模型总结协议](references/model_summary_protocol.md) 和[作者证据协议](references/paper_author_evidence_protocol.md)定义逐问模型、结果与读者证据交接 |
+| H6 独立验证 | [H6 验证协议](references/h6_validation_protocol.md) 与当前 `h6_verification_scope.yaml`；首次按完整小问范围核验必查项与登记抽样，后续按模型、数据、关键结果或解释变化定向复核，普通正文与排版不触发 H6 |
+| H7 图表 | [图表模式](references/modes/figures.md) 与所选视觉工作流；图表生成绑定批准的槽位、提示词/计划版本和当前证据，保留用户选图与最终登记 |
+| H8 计划、章节、整合 | [章节执行协议](references/h8_chapter_execution.md)决定当前阶段的输入与交接；[写作者优先协议](references/h8_writer_first_protocol.md)、[模型总结协议](references/model_summary_protocol.md)、[作者证据协议](references/paper_author_evidence_protocol.md)分别负责叙事、最终模型呈现与证据转写 |
 
-Harness 每次运行只有一个 H5 `solver_instance_id`。同一解题实例负责所有小问、跨问接口和整体结论；条件辅助 agent 仅能回传局部计算、数据处理或代码实验的可验证证据。每次实际 `spawn_agent` 必须写入 `dispatch_records`，并与任务卡、节点角色、模型、推理强度、实例 ID 和任务卡 SHA-256 一致；H6 必须使用不同于 H5 的实例。
+启用 `reader_evidence_protocol: "1.0"` 后，H5–H8 按作者证据协议形成真实的读者证据链。正式 H8 素材准入使用 `paper_material_readiness.yaml`；`schema_version: "2.0"` 的 `evidence_matrix` 必须覆盖逐问与全局要求。素材不足时一次提交完整 `evidence_gap_matrix.yaml`，由主会话协调 H5/H6/H7 补证，不让作者以泛泛表述填充篇幅。
 
-H6 的 `global_interface_check.yaml` 中，每条结构化接口字段必须登记 `comparison_status`、项目相对 `source_path` 和当前文件的 `source_sha256`。H7 生成任务卡的 `scope.phase` 为 `H7_generate` 时，必须登记 `scope.approved_visual_plan_sha256`；检查器将其与当前视觉计划及对应 `H7_VISUAL_PLAN` 批准记录配对，并要求生成派发时间晚于批准时间。
+先按控制记录的 `visual_workflow` 选择准备时序：`chapter_parallel` 读取[逐章批准与并行图表协议](references/harness_chapter_parallel.md)，`writer_first_draft` 读取[初稿准备协议](references/harness_writer_preparation.md)，未声明时保持历史路径。逐章流程在 H6 获批、写作计划获批后按 `writing_order` 一次完成一章；用户批准完整章节后才派发下一章及该章图表提示词，图件制作/返修可与后续章节并行。正式 H7、H8、H9 的最终闭合要求仍保留。
 
-H8 开始写作前，主 agent 汇总并由 H6 核验 `paper_material_readiness.yaml`、`global_interface_check.yaml`、`result_interpretation_cards.yaml` 和 `paper_claim_coverage.yaml`。`academic-writing` 生成的 `paper_argument_blueprint.yaml` 与 `abstract_argument_card.yaml` 必须绑定叙事和解释卡哈希，并经用户与写作计划一并批准。每个 H8B 章节还必须生成与作者简报、当前章节卡绑定的 `paper_continuity_context.yaml`，只提供压缩后的全文主张、已完成章节收束、术语口径和前后章节衔接；章节卡的 `abstract_contribution` 必须提供方法、结果、意义和证据引用。素材准入必须为 `PASS`；首次预检未通过时只提交一份完整 `evidence_gap_matrix.yaml`，由主 agent 一次性协调 H5/H6/H7 补齐。H8 只组织已冻结且已登记证据，不新增模型结论、数字、引用用途或图表解释；摘要只能在正文与附录定稿后由 H8C 最后写作，并以严格摘要报告闭环。
-
-`paper_narrative.global.paper_spine` 是全文唯一章节主线，必须同步进入论证蓝图、作者简报、章节卡和连续性包。`core` 章节集中承载建模与求解，`support` 章节只为核心论证提供铺垫、连接、解释或收束；每章必须声明 `chapter_role`、`reads_from`、`feeds_to`、`new_claims_allowed` 和 `handoff_question`。检查器阻断孤立章节、角色错配、前后承接断裂和章节间主张漂移。
-
-H6 仅按 `h6_verification_scope.yaml` 派发：首次在 H5 结果冻结后执行关键核验与登记的深度抽样；后续仅在模型、数据、关键结果或结果解释卡变化时定向复核。普通正文、排版、图表美化和附录格式变化不触发 H6。
+`paper_narrative.global.paper_spine` 是唯一最终章节主线；作者简报、章节卡和连续性包复用同一主线。作者按当前章节的冻结证据连续写作并在完整章节后检查；摘要论证卡在计划阶段冻结结构，各章回传 `abstract_contribution`，最终摘要仅由 H8C 在正文与附录定稿后撰写，并以 `scripts/check_abstract_contract.py --strict` 和 `abstract_contract_report` 闭环。
 
 ### 增量回流与验证
 
@@ -90,6 +93,8 @@ H6 仅按 `h6_verification_scope.yaml` 派发：首次在 H5 结果冻结后执�
 - `LOCK`：冻结模型、数据、参数、结果和提交版本，只允许排版、可验证修复、图表美化和交付检查。
 
 ## 2. 全流程：FULL_CONTEST + STRICT
+
+以下 A–G 描述共同的产物和质量要求；实际节点、派发顺序和人工批准按已选模式执行。Harness 图文时序以 `visual_workflow` 对应协议为准。
 
 ### A. 题目理解
 
@@ -234,93 +239,12 @@ python scripts/delivery_all.py <项目根> --strict --research-evidence-strict
 
 只在命中任务范围时加载对应参考材料；历史归档和 `scripts/archive/` 不参与运行时路由。
 
-## 5. B 题项目模板与初始化（优化决策类）
+## 5. B 题项目初始化（优化决策类）
 
-B 题（优化决策类）项目配置复杂，包含 30+ 个 YAML 配置文件。为避免每次从零搭建，提供完整模板和一键初始化脚本。
-
-### 5.1 快速初始化
-
-```bash
-python scripts/init_b_project.py <项目目录> --name "项目名称" --date "2026-09-XX"
+```text
+python scripts/init_b_project.py <项目目录> --name "项目名称"
 ```
 
-示例：
-```bash
-python scripts/init_b_project.py "C:\Users\me\Workspace\2026国赛B题" --name "2026国赛B题"
-```
+从 `templates/b_project_template/` 创建待填写骨架、目录和项目 README，并填入项目名与日期；已有文件冲突时停止，不覆盖比赛输入。新项目保留 H4 并入 H5 的结构，批准、派发和验证记录等待真实任务发生后登记，初始化不代表节点完成。
 
-初始化脚本会：
-- 从 `templates/b_project_template/` 创建待填写配置和目录结构，不携带演示批准、派发或验证通过记录
-- 自动填充项目名称、日期
-- 生成 README.md（含项目结构和快速开始指南）
-
-### 5.2 模板目录结构
-
-```
-templates/b_project_template/
-├── .contest/                    # 主控配置
-│   ├── harness_control.yaml     # 节点状态、dispatch_records、skill_invocations
-│   ├── approval_log.yaml        # 用户批准日志
-│   ├── status_history.yaml      # 状态转移历史（P1-01 校验）
-│   ├── reviews/                 # 各节点审查包（H2、H3、H5-H9）
-│   └── task_cards/              # 各节点任务卡（H1, H5-H8）
-├── paper/                       # 论文素材目录
-├── figures/                     # 图表目录
-├── results/                     # 结果文件
-│   ├── input_manifest.yaml      # H9 输入清单（P0-06 校验）
-│   └── sensitivity_report.yaml  # 灵敏度/鲁棒性报告（P0-02 校验）
-├── run_manifest.yaml             # H5 可复现运行、正式记录与结果哈希
-├── problem_profile.yaml         # 题型画像（方向三：题型差异化）
-├── model_blueprint.yaml         # 模型蓝图
-├── model_contract.yaml          # 模型契约
-├── validation_contract.yaml     # 验证契约
-├── h6_verification_scope.yaml   # H6 触发原因与定向验证范围
-├── appendix_plan.yaml            # H8 附录覆盖与双层代码计划
-├── paper_material_readiness.yaml # 论文素材准入（P0-03 新增 sensitivity_or_robustness）
-├── evidence_gap_matrix.yaml     # 证据缺口矩阵
-├── global_interface_check.yaml  # 全局接口检查（P1-02 校验）
-├── paper_claim_coverage.yaml    # 主张覆盖表（P1-05 校验）
-├── paper_narrative.yaml         # 论文叙事蓝图
-├── visual_argument_plan.yaml    # H7 读者优先视觉论证计划
-├── visual_evidence_packet.yaml  # H5→H6→H7 轻量视觉证据单元包
-├── result_interpretation_cards.yaml # 核心结果解释卡（H5 产出，H6 核验）
-├── paper_argument_blueprint.yaml # 读者问题—论证—证据蓝图（H8 阶段一）
-├── paper_author_brief.yaml      # H8A 读者问题与章节目的简报
-├── abstract_argument_card.yaml  # H8A 摘要读者契约与逐问证据卡
-├── abstract_contract_report.json # H8C 严格摘要检查报告
-├── chapter_writing_card.yaml    # H8B 当前章节写作卡
-├── paper_continuity_context.yaml # H8B 全文连续性包
-├── chart_requirements.yaml      # H5 图表需求清单（原H4职责，已并入H5）
-├── model_summary_cards.yaml      # 每个小问的唯一最终求解模型卡（H5→H6→H8）
-└── figure_registry.yaml         # 图表登记（P0-05 校验 SVG/PNG 存在性）
-```
-
-### 5.3 轻量视觉证据包
-
-H5 以 `templates/visual_evidence_packet.yaml` 为模板，为每个小问登记可追溯的信息单元及哈希绑定证据；不得嵌入全文、完整代码、对话或调试材料。H6 核验来源文件、哈希、定位、模型契约绑定和信息单元完整性，并把当前验证实例写入包。H7 的视觉槽位与 `figure_registry` 必须绑定这些单元：`standard` 图至少包含两个独立单元，只有单一证据时才可使用 `compact`，并写明原因。该包是 H5→H6→H7 的最小证据接口，不能替代模型、结果、验证和图表登记文件。
-
-### 5.4 B 题特有硬门禁
-
-B 题（优化决策类）相比 A/C 题有额外硬门禁：
-
-| 门禁 | 位置 | 要求 |
-|------|------|------|
-| 结果与灵敏度追溯 | H5 → check_h5_result_traceability.py + check_model_evidence.py | 运行清单登记 seed、命令、结果哈希、正式记录边界和模型契约哈希；optimization 能力子问题还必须有 sensitivity/robustness 报告，status=verified，扰动点数值完整（P0-02） |
-| 灵敏度素材准入 | H8 → paper_material_readiness.yaml | 每个子问题必须登记 sensitivity_or_robustness 字段，文件存在且哈希匹配（P0-03） |
-| 图表产物存在 | H7 → check_harness_control.py | 每张图必须有 SVG 和 PNG 文件，路径字段名为 svg/png（不是 svg_path/png_path）（P0-05） |
-| 模板执行闭环 | H7/H8 → check_visual_evidence.py | 每张图必须登记精确 `template_id`、`visible_element_map`、`canvas_profile`、`template_sha256`、fixture 报告和视觉检查；流程图/TikZ 图还必须绑定 catalog starter、来源标记与哈希 |
-| 视觉论证覆盖 | H7 → check_visual_evidence.py / check_harness_control.py | 每个小问完成六类视觉审计，硬性槽位必须有独立图并闭合到 `figure_registry.visual_slot_ids`；计划外图表 BLOCK |
-| 输入哈希重算 | H9 → check_harness_control.py | input_manifest.yaml 中每个文件的 SHA-256 必须与实际文件一致，总哈希按路径排序的 path:sha256 列表计算（P0-06） |
-
-### 5.5 常见问题与经验
-
-详细的配置坑点、字段格式、调试经验见：
-`references/b_project_gotchas.md`
-
-该文档记录了实施过程中发现的所有"坑"，包括：
-- H7 图表字段名（svg/png 而非 svg_path/png_path）
-- paper_material_readiness verified_by 必须为 "H6"
-- target_length sections 中 evidence 和 appendix 类型都需要 material_refs
-- H9 input_sha256 重算逻辑
-- user_approval 循环依赖问题
-- 等等
+项目生成的 README 说明目录与使用步骤；字段、配置和历史兼容问题按需查看 [B 题配置说明](references/b_project_gotchas.md)。实际求解、科学核验、逐章批准和 H9 完整交付仍按当前模式执行。

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-17 — focused skill entry and role warmups
+
+- Route H5–H8 details to their maintained protocols instead of repeating field schemas in the main skill entry; keep approval, actual-invocation and evidence obligations visible.
+- Load H5 tools after selecting the problem route, preserving mandatory selector calls and explicit applicability records. Reuse unchanged context within the same role instance.
+- Separate chapter preparation from formal H8 integration, retaining complete-chapter approval while allowing figure production alongside later chapters.
+- Replace the duplicated B-project directory inventory with the initializer command and existing configuration reference; preserve templates, skills and historical projects.
+- Synchronize only the affected entry sections and H5/H8 warmups with the installed copy, preserving its separate figure compatibility policy.
+
 ## 2026-11-17 — compact document previews and prototype reconciliation
 
 - Remove empty trailing rows within the spreadsheet preview range while preserving internal gaps, formulas, zero and boolean values; retain row, column and cell-size limits despite inaccurate workbook dimensions.
