@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-17 — preserve writing order in H8C continuity
+
+- Check completed chapters against the validated, approved writing order when the registered H8C task reuses the last chapter's continuity context; retain the paper spine as the reader order.
+- Retain existing H8B behavior and block missing approval, stale plans, future chapters and writing orders that do not cover the paper spine. Add isolated main-entry and boundary regressions without changing approval records.
+
 ## 2026-11-17 — bind H8C integration to approved chapters
 
 - Expose the original approved chapter snapshots, final reading order and selected figure registry in the existing H7 closure handoff; retain the original plan reference and approval history.

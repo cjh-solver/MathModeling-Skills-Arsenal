@@ -167,6 +167,77 @@ class H8IntegrationTests(unittest.TestCase):
         self.save_card()
         self.assertEqual(self.check(), ([], []))
 
+    def continuity(self, current="analysis", completed="Q1"):
+        spine = {"core_chapters": ["Q1"], "support_chapters": ["analysis"],
+                 "chapter_order": ["analysis", "Q1"],
+                 "chapter_edges": [{"from": "analysis", "to": "Q1", "relation": "feeds", "handoff_question": "Why?"}]}
+        brief = self.fixture.put("paper_author_brief.yaml", {"paper_spine": spine, "central_thesis": "thesis", "reader_journey": "journey"})
+        card = self.fixture.put("chapter_card.yaml", {"chapter_id": current})
+        self.fixture.put("continuity.yaml", {"status": "current", "paper_author_brief_sha256": brief["sha256"],
+            "chapter_writing_card_sha256": card["sha256"], "central_thesis": "thesis", "reader_journey": "journey",
+            "current_chapter_id": current, "previous_section_takeaway": "prior result", "next_section_question": "next?",
+            "completed_chapters": [{"section_id": completed, "takeaway": "result"}],
+            "terminology_lock": [], "voice": "academic", "paper_spine": spine})
+        self.node.update(active_chapter_card="chapter_card.yaml", paper_continuity_context="continuity.yaml")
+        for item in self.card["inputs"]:
+            if item["path"] == brief["path"]:
+                item["sha256"] = brief["sha256"]
+        self.save_card()
+
+    def check_continuity(self, proof):
+        missing, failures = [], []
+        checker._validate_paper_continuity_context(self.root, self.node, missing, failures, chapter_plan=proof)
+        return missing, failures
+
+    def test_h8c_continuity_uses_approved_writing_order_not_reader_order(self):
+        self.continuity()
+        self.assertEqual(self.check_continuity(self.proof), ([], []))
+        control = checker.default_control()
+        control.update({key: copy.deepcopy(value) for key, value in self.control.items() if key != "nodes"})
+        for node_id, node in self.control["nodes"].items():
+            control["nodes"][node_id].update(node)
+        self.fixture.put(".contest/harness_control.yaml", control)
+        self.fixture.put(".contest/approval_log.yaml", self.fixture.log)
+        report = checker.check_harness_control(self.root, through="H8")
+        self.assertFalse([item for item in report["failures"] if item.startswith("paper_continuity_context:")], report)
+        self.assertNotEqual(report["status"], "PASS")
+
+    def test_h8c_continuity_rejects_chapters_after_current_writing_step(self):
+        self.continuity(current="Q1", completed="analysis")
+        self.assertTrue(any("必须位于当前章节之前" in item for item in self.check_continuity(self.proof)[1]))
+
+    def test_missing_or_stale_plan_does_not_change_legacy_order_check(self):
+        self.continuity()
+        self.assertTrue(self.check_continuity(None)[1])
+        plan_path = self.root / self.proof["path"]
+        plan_path.write_bytes(plan_path.read_bytes() + b"\n# changed")
+        self.assertTrue(self.check_continuity(self.proof)[1])
+
+    def test_h8b_keeps_existing_continuity_order(self):
+        self.continuity()
+        self.card["authoring_protocol"]["stage"] = "H8B"
+        self.save_card()
+        self.assertTrue(any("必须位于当前章节之前" in item for item in self.check_continuity(self.proof)[1]))
+
+    def test_h8c_continuity_requires_plan_to_cover_paper_spine(self):
+        self.continuity()
+        bad_plan = self.fixture.put("paper/incomplete-plan.yaml", {"writing_order": ["analysis"]})
+        self.assertTrue(any("writing_order" in item for item in self.check_continuity(bad_plan)[1]))
+
+    def test_main_checker_does_not_reuse_writing_order_without_approval(self):
+        self.continuity()
+        self.fixture.log["approvals"] = [row for row in self.fixture.log["approvals"] if row["gate"] != "H7_CHAPTER:Q1"]
+        control = checker.default_control()
+        control.update({key: copy.deepcopy(value) for key, value in self.control.items() if key != "nodes"})
+        for node_id, node in self.control["nodes"].items():
+            control["nodes"][node_id].update(node)
+        self.fixture.put(".contest/harness_control.yaml", control)
+        self.fixture.put(".contest/approval_log.yaml", self.fixture.log)
+        report = checker.check_harness_control(self.root, through="H8")
+        self.assertIsNone(report["h8c_handoff"])
+        self.assertNotEqual(report["status"], "PASS")
+        self.assertTrue(any("H8C:" in item for item in report["missing"] + report["failures"]))
+
 
 if __name__ == "__main__":
     unittest.main()

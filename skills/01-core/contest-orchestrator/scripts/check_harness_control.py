@@ -2431,7 +2431,8 @@ def _validate_model_summary_cards(root: Path, nodes: dict[str, Any], problem_sco
 
 
 def _validate_paper_continuity_context(root: Path, node: dict[str, Any],
-                                       missing: list[str], failures: list[str]) -> None:
+                                       missing: list[str], failures: list[str],
+                                       chapter_plan: dict[str, Any] | None = None) -> None:
     """Require a compact reader-path context for each H8B chapter draft."""
     if node.get("writing_started") is not True:
         return
@@ -2485,6 +2486,25 @@ def _validate_paper_continuity_context(root: Path, node: dict[str, Any],
         failures.append("paper_continuity_context: current_chapter_id 不在 paper_spine.chapter_order 中")
     completed = context.get("completed_chapters")
     if isinstance(completed, list):
+        actual_order = context_spine["chapter_order"] if context_spine is not None else []
+        task_path = resolve_project_path(root, node.get("task_card"))
+        try:
+            task = load_mapping(task_path) if task_path is not None and task_path.is_file() else {}
+        except (OSError, ValueError, yaml.YAMLError):
+            task = {}  # The task-card validator reports malformed cards.
+        protocol = task.get("authoring_protocol")
+        if (isinstance(protocol, dict) and protocol.get("stage") == "H8C"
+                and isinstance(chapter_plan, dict) and _reference_is_fresh(root, chapter_plan)[0]):
+            plan_path = resolve_project_path(root, chapter_plan.get("path"))
+            try:
+                order = load_mapping(plan_path).get("writing_order")
+            except (OSError, ValueError, yaml.YAMLError):
+                order = None
+            if (not isinstance(order, list) or any(not isinstance(item, str) for item in order)
+                    or len(order) != len(set(order)) or not set(actual_order).issubset(order)):
+                failures.append("paper_continuity_context: 已批准计划的 writing_order 无法覆盖论文主线")
+            else:
+                actual_order = order
         completed_ids: list[str] = []
         for index, item in enumerate(completed):
             if not isinstance(item, dict):
@@ -2496,12 +2516,12 @@ def _validate_paper_continuity_context(root: Path, node: dict[str, Any],
             if isinstance(item.get("section_id"), str) and item["section_id"].strip():
                 completed_ids.append(item["section_id"].strip())
         if context_spine is not None:
-            current_index = context_spine["chapter_order"].index(context.get("current_chapter_id")) \
-                if context.get("current_chapter_id") in context_spine["chapter_order"] else None
+            current_index = actual_order.index(context.get("current_chapter_id")) \
+                if context.get("current_chapter_id") in actual_order else None
             for completed_id in completed_ids:
                 if completed_id not in context_spine["chapter_order"]:
                     failures.append(f"paper_continuity_context: completed chapter {completed_id} 不在 paper_spine 中")
-                elif current_index is not None and context_spine["chapter_order"].index(completed_id) >= current_index:
+                elif current_index is not None and completed_id in actual_order and actual_order.index(completed_id) >= current_index:
                     failures.append(f"paper_continuity_context: completed chapter {completed_id} 必须位于当前章节之前")
 
 
@@ -3841,7 +3861,7 @@ def check_harness_control(root: Path, through: str = "H9", preflight_draft: bool
         if isinstance(h8_node, dict) and h8_node.get("writing_started") is True:
             _validate_paper_author_brief(root, h8_node, missing, failures, control=control)
             _validate_chapter_writing_cards(root, h8_node, missing, failures, control=control)
-            _validate_paper_continuity_context(root, h8_node, missing, failures)
+            _validate_paper_continuity_context(root, h8_node, missing, failures, chapter_plan=chapter_plan)
             _validate_h8_writing_plan(
                 root, h8_node, missing, failures, control=control, chapter_plan=chapter_plan,
             )
