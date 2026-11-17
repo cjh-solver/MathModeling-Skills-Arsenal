@@ -661,7 +661,7 @@ def main() -> int:
     if args.hard_requirements:
         hard_cmd.extend(["--profile", str(Path(args.hard_requirements).resolve())])
     step("F4 check_paper_hard_requirements", hard_cmd)
-    abstract_cmd = [py, str(SCRIPTS / "check_abstract_contract.py"), str(pdf),
+    abstract_cmd = [py, str(SCRIPTS / "check_abstract_contract.py"), str(pdf), "--source", str(tex),
                     "--project-root", str(root),
                     "--out", str(report_dir / "abstract_contract_report.json")]
     if args.strict:

@@ -60,11 +60,20 @@ def _locate_pdf(target: Path) -> Path:
     raise FileNotFoundError(f"未找到论文 PDF: {target}")
 
 
-def _locate_source(paper_dir: Path) -> Path | None:
-    candidates = [paper_dir / "paper.tex", paper_dir / "paper_pandoc.tex"]
-    candidates.extend(sorted(paper_dir.glob("*.tex")))
-    candidates = [path.resolve() for path in candidates if path.exists()]
-    for path in candidates:
+def _source_selection(paper_dir: Path, explicit: Path | None = None,
+                      project_root: Path | None = None) -> tuple[Path | None, Path | None]:
+    candidates = [explicit] if explicit is not None else [paper_dir / "paper.tex", paper_dir / "paper_pandoc.tex", *sorted(paper_dir.glob("*.tex"))]
+    candidates = [path.resolve() for path in candidates if path.is_file()]
+    if explicit is not None and not candidates:
+        raise FileNotFoundError(f"摘要主文件不存在: {explicit}")
+
+    def visit(path: Path, seen: set[Path]) -> Path | None:
+        path = path.resolve()
+        if project_root is not None and not path.is_relative_to(project_root.resolve()):
+            raise ValueError("摘要源文件必须位于项目内")
+        if path in seen or not path.is_file():
+            return None
+        seen.add(path)
         text = path.read_text(encoding="utf-8", errors="replace")
         if ABSTRACT_RE.search(text):
             return path
@@ -73,9 +82,21 @@ def _locate_source(paper_dir: Path) -> Path | None:
             if child.suffix == "":
                 child = child.with_suffix(".tex")
             child = (path.parent / child).resolve()
-            if child.exists() and ABSTRACT_RE.search(child.read_text(encoding="utf-8", errors="replace")):
-                return child
-    return candidates[0] if candidates else None
+            found = visit(child, seen)
+            if found is not None:
+                return found
+        return None
+
+    for path in candidates:
+        found = visit(path, set())
+        if found is not None:
+            return path, found
+    fallback = candidates[0] if candidates else None
+    return fallback, fallback
+
+
+def _locate_source(paper_dir: Path) -> Path | None:
+    return _source_selection(paper_dir)[1]
 
 
 def _pdf_text(pdf: Path) -> str:
@@ -116,6 +137,65 @@ def _keywords(pdf_text: str, source_text: str | None) -> list[str]:
         return []
     value = match.group(1).replace("\\textbf", "")
     return [item.strip(" {}\\[]（）()") for item in re.split(r"(?:\\quad|[、,，;；|｜]+)", value) if item.strip(" {}\\[]（）()")]
+
+
+def _content_digest(abstract: str, keywords: list[str]) -> str:
+    value = json.dumps({"abstract": abstract, "keywords": keywords}, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def validate_content_snapshot(report: dict, project_root: Path,
+                              paper_source: str | None = None) -> list[str]:
+    """Check only recorded abstract inputs; do not repeat the full content audit."""
+    root = project_root.resolve()
+    try:
+        snapshot = report.get("content_snapshot")
+        if not isinstance(snapshot, dict) or snapshot.get("schema_version") != "1.0":
+            raise ValueError("缺少有效的摘要内容快照")
+
+        def resolve(raw):
+            if not isinstance(raw, str) or not raw.strip() or Path(raw).is_absolute():
+                raise ValueError("摘要快照必须使用项目相对路径")
+            path = (root / raw).resolve()
+            if not path.is_relative_to(root) or not path.is_file():
+                raise ValueError("摘要快照来源不存在或超出项目")
+            return path
+
+        pdf = resolve(snapshot.get("paper"))
+        if pdf.suffix.lower() != ".pdf":
+            raise ValueError("摘要快照必须绑定论文 PDF")
+        entry = resolve(snapshot["entry_source"]) if snapshot.get("entry_source") is not None else None
+        if paper_source is not None:
+            expected = (root / paper_source).resolve()
+            if not expected.is_relative_to(root) or expected != (pdf if expected.suffix.lower() == ".pdf" else entry):
+                raise ValueError("摘要报告与登记的 paper_source 不一致")
+        _, source = _source_selection(pdf.parent, explicit=entry, project_root=root)
+        source_text = source.read_text(encoding="utf-8", errors="replace") if source is not None else None
+        pdf_text = "" if source_text and ABSTRACT_RE.search(source_text) else _pdf_text(pdf)
+        abstract, kind = _abstract_text(source, pdf_text)
+        actual_source = source if kind == "tex" else pdf
+        if kind != snapshot.get("source_kind") or actual_source != resolve(snapshot.get("abstract_source")):
+            raise ValueError("实际摘要来源已变化")
+        if _content_digest(abstract, _keywords(pdf_text, source_text)) != snapshot.get("content_sha256"):
+            raise ValueError("摘要或关键词已变化，请重新执行严格摘要检查")
+        refs = snapshot.get("numeric_sources")
+        if not isinstance(refs, list):
+            raise ValueError("摘要快照缺少数字来源记录")
+        expected_sources = {resolve(raw) for row in report.get("numeric_values", [])
+                            if isinstance(row, dict) for raw in row.get("source_files", [])}
+        actual_sources = set()
+        for ref in refs:
+            if not isinstance(ref, dict):
+                raise ValueError("摘要数字来源记录无效")
+            path = resolve(ref.get("path"))
+            actual_sources.add(path)
+            if hashlib.sha256(path.read_bytes()).hexdigest() != ref.get("sha256"):
+                raise ValueError("摘要数字来源已变化，请重新执行严格摘要检查")
+        if actual_sources != expected_sources:
+            raise ValueError("摘要数字来源快照不完整")
+    except (OSError, ValueError, TypeError, RuntimeError) as exc:
+        return [str(exc)]
+    return []
 
 
 def _numeric_tokens(text: str) -> list[str]:
@@ -175,7 +255,7 @@ def _provenance(tokens: list[str], root: Path) -> list[dict]:
         decimal_places = len(raw.partition(".")[2]) if "." in raw else 0
         tolerance = Decimal("0.5") * (Decimal(10) ** -decimal_places)
         matches = [
-            str(path.relative_to(root)) for path, values in source_values.items()
+            path.relative_to(root).as_posix() for path, values in source_values.items()
             if keys & values or any(abs(left - right) <= tolerance for left in keys for right in values)
         ]
         rows.append({"token": token, "source_files": matches, "status": "PASS" if matches else "UNVERIFIED"})
@@ -274,7 +354,7 @@ def _numeric_density_diagnostic(abstract: str) -> dict:
 
 
 def check(target: Path, project_root: Path | None = None, strict: bool = False,
-          capabilities: list[str] | None = None) -> dict:
+          capabilities: list[str] | None = None, source_path: Path | None = None) -> dict:
     pdf = _locate_pdf(target)
     paper_dir = pdf.parent
     root = (project_root or paper_dir.parent).resolve()
@@ -285,13 +365,22 @@ def check(target: Path, project_root: Path | None = None, strict: bool = False,
         if abstract_card_path is not None else None
     )
     pdf_text = _pdf_text(pdf)
-    source = _locate_source(paper_dir)
+    entry, source = _source_selection(paper_dir, explicit=source_path, project_root=root)
     source_text = source.read_text(encoding="utf-8", errors="replace") if source else None
     abstract, source_kind = _abstract_text(source, pdf_text)
     compact = _clean(abstract)
     keywords = _keywords(pdf_text, source_text)
     evidence = _evidence(abstract)
     numeric = _provenance(_numeric_tokens(abstract), root)
+    def relative(path):
+        return path.resolve().relative_to(root).as_posix()
+    numeric_paths = sorted({(root / raw).resolve() for row in numeric for raw in row["source_files"]})
+    snapshot = {"schema_version": "1.0", "paper": relative(pdf),
+                "entry_source": relative(entry) if entry is not None else None,
+                "abstract_source": relative(source if source_kind == "tex" else pdf), "source_kind": source_kind,
+                "content_sha256": _content_digest(abstract, keywords),
+                "numeric_sources": [{"path": relative(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+                                    for path in numeric_paths]}
     issues: list[str] = []
     warnings: list[str] = []
     if not abstract:
@@ -336,6 +425,7 @@ def check(target: Path, project_root: Path | None = None, strict: bool = False,
         "capabilities": capabilities or [],
         "abstract_argument_card": str(abstract_card_path) if abstract_card_path is not None else None,
         "abstract_argument_card_sha256": abstract_card_hash,
+        "content_snapshot": snapshot,
         "issues": issues,
         "warnings": warnings,
         "manual_notice": "本报告只生成核对清单；摘要仍需人工逐条回到正文核对数字来源，不得直接提交。",
@@ -385,6 +475,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("paper", help="PDF 文件或含 paper.pdf 的论文目录")
     parser.add_argument("--project-root", default=None)
+    parser.add_argument("--source", type=Path, default=None, help="明确指定 LaTeX 主文件，用于多文件项目的摘要来源绑定")
     parser.add_argument("--strict", action="store_true")
     parser.add_argument("--capabilities", default=None,
                         help="逗号分隔的能力列表（如 optimization,robustness）；优先使用此参数，否则自动从 model_contract.yaml 读取")
@@ -394,7 +485,7 @@ def main() -> int:
     capabilities = _discover_capabilities(paper_path, args.capabilities)
     try:
         report = check(paper_path, Path(args.project_root).resolve() if args.project_root else None,
-                        args.strict, capabilities=capabilities)
+                        args.strict, capabilities=capabilities, source_path=args.source)
     except Exception as exc:
         report = {"schema_version": "1.0", "strict": args.strict, "passed": False,
                   "gate_status": "BLOCK", "issues": [str(exc)], "warnings": [],

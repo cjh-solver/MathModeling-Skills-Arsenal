@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-17 — bind abstract reports to the checked content
+
+- Record a portable content snapshot of the actual abstract, keywords, selected source and numeric evidence; reject stale snapshots at H8 without repeating the full abstract analysis.
+- Support explicit LaTeX entry files and recursive inputs, and pass the actual entry file from formal delivery. Keep reports valid across unrelated body edits, PDF metadata changes and project relocation.
+- Require the new snapshot for explicit H8C tasks while retaining the historical H8B path. Preserve human approval and final delivery obligations; a valid snapshot does not certify mathematical correctness.
+
 ## 2026-11-17 — require strict abstract closure reports
 
 - Reject non-strict or unmarked abstract reports at H8 closure, even when advisory mode sets `passed` to true after converting content failures to warnings.

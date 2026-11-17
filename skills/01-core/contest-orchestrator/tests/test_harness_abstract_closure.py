@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -86,6 +87,143 @@ class AbstractClosureTests(unittest.TestCase):
         self.save_report(report)
         self.assertTrue(any("未绑定当前" in item for item in self.check()[1]))
 
+    def test_changed_abstract_invalidates_the_real_strict_report(self):
+        self.report(strict=True)
+        self.short_abstract()
+        self.assertTrue(any("摘要或关键词已变化" in item for item in self.check()[1]))
+
+    def test_changed_keywords_invalidate_the_report(self):
+        self.report(strict=True)
+        path = self.root / "paper/paper.tex"
+        path.write_text(path.read_text(encoding="utf-8").replace("机理模型；优化算法", "新关键词；优化算法"), encoding="utf-8")
+        self.assertTrue(any("摘要或关键词已变化" in item for item in self.check()[1]))
+
+    def test_unrelated_body_and_pdf_metadata_changes_do_not_repeat_abstract_audit(self):
+        self.report(strict=True)
+        source = self.root / "paper/paper.tex"
+        source.write_text(source.read_text(encoding="utf-8") + "\nUnrelated body paragraph.\n", encoding="utf-8")
+        import pymupdf
+        with pymupdf.open(self.root / "paper/paper.pdf") as document:
+            document.set_metadata({"title": "Updated metadata"})
+            document.saveIncr()
+        self.assertEqual(self.check(), ([], []))
+
+    def test_changed_numeric_evidence_invalidates_the_report(self):
+        self.report(strict=True)
+        (self.root / "results/q1_results.json").write_text('{"score": 0.5}', encoding="utf-8")
+        self.assertTrue(any("数字来源已变化" in item for item in self.check()[1]))
+
+    def test_unused_new_numeric_file_does_not_invalidate_the_report(self):
+        self.report(strict=True)
+        (self.root / "results/unrelated.json").write_text('{"unrelated": 99999}', encoding="utf-8")
+        self.assertEqual(self.check(), ([], []))
+
+    def test_nested_explicit_source_is_bound_and_include_changes_are_detected(self):
+        paper = self.root / "paper"
+        text = (paper / "paper.tex").read_text(encoding="utf-8")
+        (paper / "sections").mkdir()
+        (paper / "sections/abstract.tex").write_text(text, encoding="utf-8")
+        (paper / "sections/container.tex").write_text(r"\input{abstract}", encoding="utf-8")
+        entry = paper / "custom.tex"
+        entry.write_text(r"\input{sections/container}", encoding="utf-8")
+        report = abstract_checker.check(paper, self.root, strict=True, source_path=entry)
+        self.assertTrue(report["passed"], report)
+        self.assertEqual(report["content_snapshot"]["abstract_source"], "paper/sections/abstract.tex")
+        self.save_report(report)
+        self.node["paper_source"] = "paper/custom.tex"
+        self.assertEqual(self.check(), ([], []))
+        (paper / "sections/copy.tex").write_text(text, encoding="utf-8")
+        (paper / "sections/container.tex").write_text(r"\input{copy}", encoding="utf-8")
+        self.assertTrue(any("实际摘要来源已变化" in item for item in self.check()[1]))
+
+    def test_report_cannot_substitute_an_identical_registered_main_source(self):
+        self.report(strict=True)
+        other = self.root / "paper/copied.tex"
+        other.write_bytes((self.root / "paper/paper.tex").read_bytes())
+        self.node["paper_source"] = "paper/copied.tex"
+        self.assertTrue(any("paper_source 不一致" in item for item in self.check()[1]))
+
+    def test_snapshot_remains_usable_after_project_relocation(self):
+        self.report(strict=True)
+        with tempfile.TemporaryDirectory() as moved:
+            target = Path(moved) / "project"
+            shutil.copytree(self.root, target)
+            report = json.loads((target / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(abstract_checker.validate_content_snapshot(report, target, "paper/paper.tex"), [])
+
+    def test_explicit_source_cli_binds_the_requested_main_file(self):
+        custom = self.root / "paper/custom.tex"
+        custom.write_bytes((self.root / "paper/paper.tex").read_bytes())
+        result = subprocess.run([sys.executable, "-X", "utf8", str(ROOT / "scripts/check_abstract_contract.py"),
+                                 str(self.root / "paper"), "--project-root", str(self.root), "--strict",
+                                 "--source", str(custom), "--out", str(self.root / "report.json")],
+                                capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["content_snapshot"]["entry_source"], "paper/custom.tex")
+        self.node["paper_source"] = "paper/custom.tex"
+        self.assertEqual(self.check(), ([], []))
+
+    def test_source_selection_handles_include_cycles_and_rejects_external_sources(self):
+        paper = self.root / "paper"
+        (paper / "cycle.tex").write_text(r"\input{loop}", encoding="utf-8")
+        (paper / "loop.tex").write_text(r"\input{cycle}", encoding="utf-8")
+        entry, source = abstract_checker._source_selection(paper, paper / "cycle.tex", self.root)
+        self.assertEqual(entry, source)
+        with tempfile.TemporaryDirectory() as outside:
+            external = Path(outside) / "external.tex"
+            external.write_text(r"\begin{abstract}外部摘要\end{abstract}", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                abstract_checker.check(paper, self.root, strict=True, source_path=external)
+
+    def test_h8c_requires_snapshot_but_legacy_report_is_not_rewritten(self):
+        report = self.report(strict=True)
+        report.pop("content_snapshot")
+        self.save_report(report)
+        self.assertEqual(self.check(), ([], []))
+        task = self.root / "H8C.yaml"
+        task.write_text("authoring_protocol: {stage: H8C}\n", encoding="utf-8")
+        self.node["task_card"] = "H8C.yaml"
+        missing, _ = self.check()
+        self.assertTrue(any("缺少内容快照" in item for item in missing))
+
+    def test_snapshot_rejects_external_paths_and_missing_numeric_bindings(self):
+        report = self.report(strict=True)
+        report["content_snapshot"]["numeric_sources"] = []
+        self.save_report(report)
+        self.assertTrue(any("数字来源快照不完整" in item for item in self.check()[1]))
+        report = self.report(strict=True)
+        report["content_snapshot"]["paper"] = "../external.pdf"
+        self.save_report(report)
+        self.assertTrue(any("摘要快照来源" in item for item in self.check()[1]))
+
+    def test_pdf_only_snapshot_ignores_metadata_and_detects_changed_abstract_text(self):
+        import pymupdf
+        paper = self.root / "paper"
+        source = paper / "paper.tex"
+        source.rename(paper / "old-source.txt")
+        abstract, _ = abstract_checker._abstract_text(paper / "old-source.txt", "")
+        keywords = "关键词：机理模型；优化算法；数据预处理；稳健性分析"
+        with pymupdf.open() as document:
+            page = document.new_page()
+            page.insert_textbox(pymupdf.Rect(40, 40, 560, 790), "摘要\n" + abstract + "\n" + keywords,
+                                fontsize=8, fontname="china-s")
+            document.save(paper / "paper.pdf")
+        report = self.report(strict=True)
+        self.assertEqual(report["content_snapshot"]["source_kind"], "pdf")
+        self.node["paper_source"] = "paper/paper.pdf"
+        self.assertEqual(abstract_checker.validate_content_snapshot(report, self.root, "paper/paper.pdf"), [])
+        with pymupdf.open(paper / "paper.pdf") as document:
+            document.set_metadata({"title": "Metadata only"})
+            document.saveIncr()
+        self.assertEqual(abstract_checker.validate_content_snapshot(report, self.root, "paper/paper.pdf"), [])
+        with pymupdf.open() as document:
+            document.new_page().insert_textbox(pymupdf.Rect(40, 40, 560, 790), "摘要\n改变后的摘要\n" + keywords,
+                                                fontsize=8, fontname="china-s")
+            document.save(paper / "paper.pdf")
+        self.assertTrue(any("摘要或关键词已变化" in item for item in
+                            abstract_checker.validate_content_snapshot(report, self.root, "paper/paper.pdf")))
+
     def test_main_h8_entry_rejects_non_strict_report(self):
         self.short_abstract()
         self.report(strict=False)
@@ -98,6 +236,20 @@ class AbstractClosureTests(unittest.TestCase):
         (contest / "approval_log.yaml").write_text("approvals: []\n", encoding="utf-8")
         report = harness.check_harness_control(self.root, through="H8")
         self.assertTrue(any("strict=true" in item for item in report["failures"]), report)
+        self.assertNotEqual(report["status"], "PASS")
+
+    def test_main_h8_entry_rejects_a_report_for_previous_abstract_text(self):
+        self.report(strict=True)
+        self.short_abstract()
+        contest = self.root / ".contest"
+        contest.mkdir(exist_ok=True)
+        control = harness.default_control()
+        control["nodes"]["H8"].update(self.node)
+        control["problem_scope"] = {"subproblems": ["Q1"]}
+        (contest / "harness_control.yaml").write_text(yaml.safe_dump(control), encoding="utf-8")
+        (contest / "approval_log.yaml").write_text("approvals: []\n", encoding="utf-8")
+        report = harness.check_harness_control(self.root, through="H8")
+        self.assertTrue(any("摘要或关键词已变化" in item for item in report["failures"]), report)
         self.assertNotEqual(report["status"], "PASS")
 
     def test_omitting_strict_from_real_cli_does_not_produce_a_closure_report(self):

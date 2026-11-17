@@ -791,6 +791,16 @@ def _approval_for(log: dict[str, Any], node_id: str) -> dict[str, Any] | None:
     return matches[-1] if matches else None
 
 
+def _h8_authoring_stage(root: Path, node: dict[str, Any]) -> str | None:
+    path = resolve_project_path(root, node.get("task_card"))
+    try:
+        task = load_mapping(path) if path is not None and path.is_file() else {}
+    except (OSError, ValueError, yaml.YAMLError):
+        return None  # The task-card validator reports malformed cards.
+    protocol = task.get("authoring_protocol")
+    return protocol.get("stage") if isinstance(protocol, dict) else None
+
+
 def _validate_h8c_task(root: Path, node: dict[str, Any], card: dict[str, Any],
                        control: dict[str, Any] | None, chapter_plan: dict[str, Any] | None,
                        missing: list[str], failures: list[str]) -> None:
@@ -1789,6 +1799,12 @@ def _validate_abstract_argument_card(root: Path, node: dict[str, Any],
             failures.append("H8: abstract_contract_report.passed 必须为 true")
         if abstract_report.get("strict") is not True:
             failures.append("H8: abstract_contract_report 必须来自 strict=true 的严格摘要检查")
+        if "content_snapshot" in abstract_report:
+            from check_abstract_contract import validate_content_snapshot
+            failures.extend(f"H8: abstract_contract_report: {issue}" for issue in
+                            validate_content_snapshot(abstract_report, root, node.get("paper_source")))
+        elif _h8_authoring_stage(root, node) == "H8C":
+            missing.append("H8C: 摘要报告缺少内容快照，请重新运行严格摘要检查；不改写历史批准")
         card_hash = abstract_report.get("abstract_argument_card_sha256")
         if not isinstance(card_hash, str) or not card_hash.strip():
             failures.append("H8: abstract_contract_report 必须登记 abstract_argument_card_sha256")
@@ -2513,13 +2529,7 @@ def _validate_paper_continuity_context(root: Path, node: dict[str, Any],
     completed = context.get("completed_chapters")
     if isinstance(completed, list):
         actual_order = context_spine["chapter_order"] if context_spine is not None else []
-        task_path = resolve_project_path(root, node.get("task_card"))
-        try:
-            task = load_mapping(task_path) if task_path is not None and task_path.is_file() else {}
-        except (OSError, ValueError, yaml.YAMLError):
-            task = {}  # The task-card validator reports malformed cards.
-        protocol = task.get("authoring_protocol")
-        if (isinstance(protocol, dict) and protocol.get("stage") == "H8C"
+        if (_h8_authoring_stage(root, node) == "H8C"
                 and isinstance(chapter_plan, dict) and _reference_is_fresh(root, chapter_plan)[0]):
             plan_path = resolve_project_path(root, chapter_plan.get("path"))
             try:
