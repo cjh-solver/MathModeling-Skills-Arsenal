@@ -1787,6 +1787,8 @@ def _validate_abstract_argument_card(root: Path, node: dict[str, Any],
             return
         if abstract_report.get("passed") is not True:
             failures.append("H8: abstract_contract_report.passed 必须为 true")
+        if abstract_report.get("strict") is not True:
+            failures.append("H8: abstract_contract_report 必须来自 strict=true 的严格摘要检查")
         card_hash = abstract_report.get("abstract_argument_card_sha256")
         if not isinstance(card_hash, str) or not card_hash.strip():
             failures.append("H8: abstract_contract_report 必须登记 abstract_argument_card_sha256")

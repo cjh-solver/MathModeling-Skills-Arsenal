@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-17 — require strict abstract closure reports
+
+- Reject non-strict or unmarked abstract reports at H8 closure, even when advisory mode sets `passed` to true after converting content failures to warnings.
+- Preserve diagnostic warnings in genuine strict reports and the existing current-card hash requirement. Exercise real report generation, the CLI and the main H8 entrypoint with isolated synthetic documents.
+
 ## 2026-11-17 — allow support chapters without an abstract claim
 
 - Let a non-modeling support chapter explicitly record that it has no independent abstract contribution, with a reason, instead of requiring fabricated method and result fields.
