@@ -1,6 +1,6 @@
 <div align="center">
   <img src="docs/assets/mark.svg" width="64" height="64" alt="数模工作台标识">
-  <h1>数模军械库</h1>
+  <h1>数模装备库</h1>
   <p><strong>数模 Skills ＋ 本地工作台</strong></p>
   <p>从读题、建模到论文交付，让 AI 协作的过程更清楚、更可追溯。</p>
 </div>
